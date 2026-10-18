@@ -49,6 +49,12 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 4. Check `open-questions.md` — docs in service READMEs may be out of date; **code wins**.
 5. Use the `/feature-impact` skill for the standard output format; for multi-service features use the `oms-architect` agent, which delegates to the domain experts.
 
+## Git workflow
+
+- Service repos (`stores-service`, `inventory-service`): **`develop`** is the integration branch.
+  Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
+- `oms-core`, `development`, `oms-workspace`: `master` only.
+
 ## Build & run
 
 - Java 17, Spring Boot 3.2.3, Gradle. Each service `includeBuild('../oms-core')`, so **all repos must be siblings** — `repos/` keeps that layout.
