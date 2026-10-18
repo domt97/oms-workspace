@@ -1,12 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-18.
-
-## In review (PRs open)
-
-1. ~~Reservation statuses / movement types in inventory README~~ — fixed in domt97/inventory-service#17.
-2. ~~Stock movement endpoint in inventory README~~ — fixed in domt97/inventory-service#17.
-3. ~~Debezium connector in stores README outdated~~ — fixed in domt97/stores-service#35. Topic naming: ADR 0002.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-18. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002.
 
 ## Local infrastructure
 
