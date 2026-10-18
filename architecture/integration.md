@@ -38,9 +38,9 @@ The consumer double-decodes the value (JSON string inside JSON) because of the C
 | Method | Path | Visibility |
 |--------|------|------------|
 | POST | `/internal/v1/inventory/inventories` (create for a product's SKUs) | Internal only (`@Hidden`, blocked at gateway) |
-| POST | `/inventory/inventories/{inventoryId}` (adjust stock) | Public |
-| GET | `/inventory/inventories/{inventoryId}`, `/inventory/inventories/products/{productId}` | Public |
-| GET | `/inventory/inventories/stock-movements/{inventoryId}` | Public |
+| POST | `/v1/inventory/inventories/{inventoryId}` (adjust stock) | Public |
+| GET | `/v1/inventory/inventories/{inventoryId}`, `/v1/inventory/inventories/products/{productId}` | Public |
+| GET | `/v1/inventory/inventories/stock-movements/{inventoryId}` | Public |
 
 ## Synchronous calls between services
 
