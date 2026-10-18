@@ -1,0 +1,10 @@
+# Cloned service repos (managed by scripts/sync-repos.sh)
+repos/
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+
+# Claude Code personal settings
+.claude/settings.local.json

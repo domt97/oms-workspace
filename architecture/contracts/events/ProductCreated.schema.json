@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductCreated",
+  "description": "Published by stores-service via outbox (aggregateType=Product, key=productId). Consumed by inventory-service ProductCreatedConsumer.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "tenantId", "storeId", "productId", "skus"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "ProductCreated" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "storeId": { "type": "string", "format": "uuid" },
+    "productId": { "type": "string", "format": "uuid" },
+    "skus": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["value"],
+        "properties": { "value": { "type": "string", "maxLength": 50 } }
+      }
+    }
+  }
+}

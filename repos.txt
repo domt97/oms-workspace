@@ -1,0 +1,5 @@
+# owner/repo — one per line. Add new services here (e.g. domt97/order-service).
+domt97/oms-core
+domt97/stores-service
+domt97/inventory-service
+domt97/development
