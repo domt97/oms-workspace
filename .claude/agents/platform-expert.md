@@ -10,4 +10,5 @@ For each request return:
 - New Kafka topics / Debezium connector config (EventRouter routes by `event_type`, key `aggregate_id`)
 - New SQS queues, EventBridge rules, S3 buckets in `docker/infra/local/main.tf`
 - docker-compose changes
-- Cross-check against `architecture/open-questions.md` items 3–5 (topic naming, missing connector script, missing postgres init)
+- Topic naming follows ADR 0002 (topic = event type); a new producing service needs its own connector
+- Cross-check against `architecture/open-questions.md` items 3–5 (connector config not scripted, missing postgres init)
