@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
     subgraph stores-service
-        SAPI[REST /v1/tenants/...] --> SUC[Use cases]
+        SAPI[REST /v1/store/tenants/...] --> SUC[Use cases]
         SUC --> SDB[(Postgres: store)]
         SUC --> OB[(outbox_events)]
     end
@@ -12,7 +12,7 @@ flowchart LR
     K --> PC[ProductCreatedConsumer]
     subgraph inventory-service
         PC --> IUC[Use cases]
-        IAPI[REST /v1/inventories] --> IUC
+        IAPI[REST /v1/inventory/inventories] --> IUC
         SQS[SqsReservationExpireConsumer] --> IUC
         IUC --> IDB[(Postgres: inventory)]
     end
@@ -48,5 +48,5 @@ Tests: JUnit per layer, mirrored package structure (domain model tests, service 
 ## Multi-tenancy
 
 `TenantId` is carried in every aggregate and table. stores-service takes it from the path
-(`/v1/tenants/{tenantId}/...`); inventory-service REST does not (see `open-questions.md`).
+(`/v1/store/tenants/{tenantId}/...`); inventory-service REST does not (see `open-questions.md`).
 Tenant settings come from DynamoDB via `oms-core`.

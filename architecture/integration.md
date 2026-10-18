@@ -19,7 +19,7 @@ Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.
 The consumer double-decodes the value (JSON string inside JSON) because of the Connect JSON converter.
 
-## REST — stores-service (`:8048`, prefix `/v1/tenants/{tenantId}`)
+## REST — stores-service (`:8048`, prefix `/v1/store/tenants/{tenantId}`)
 
 | Method | Path |
 |--------|------|
@@ -33,14 +33,14 @@ The consumer double-decodes the value (JSON string inside JSON) because of the C
 | POST | `/stores/{storeId}/collections`, `.../{collectionId}/add-products`, `.../{collectionId}/remove-products` |
 | GET | `/stores/{storeId}/collections`, `/stores/{storeId}/collections/{collectionId}` |
 
-## REST — inventory-service (`:8058`, prefix `/v1`, no tenant in path)
+## REST — inventory-service (`:8058`, prefix `/v1/inventory`, no tenant in path yet)
 
-| Method | Path |
-|--------|------|
-| POST | `/inventories` (create for a product's SKUs) |
-| POST | `/inventories/{inventoryId}` (adjust stock) |
-| GET | `/inventories/{inventoryId}`, `/inventories/products/{productId}` |
-| GET | `/inventories/stock-movement/{inventoryId}` |
+| Method | Path | Visibility |
+|--------|------|------------|
+| POST | `/internal/v1/inventory/inventories` (create for a product's SKUs) | Internal only (`@Hidden`, blocked at gateway) |
+| POST | `/inventory/inventories/{inventoryId}` (adjust stock) | Public |
+| GET | `/inventory/inventories/{inventoryId}`, `/inventory/inventories/products/{productId}` | Public |
+| GET | `/inventory/inventories/stock-movements/{inventoryId}` | Public |
 
 ## Synchronous calls between services
 
