@@ -6,7 +6,7 @@ Found while building this workspace (2026-10-18). Resolve each item, then delete
 
 1. **Reservation statuses** — inventory README says `PENDING → CONFIRMED | EXPIRED`; code `ReservationStatus` has `RESERVED, CONFIRMED, RELEASED, EXPIRED, CANCELLED`.
 2. **Stock movement endpoint** — README `GET /v1/stock-movements`; code `GET /v1/inventories/stock-movement/{inventoryId}`.
-3. **Kafka topic name** — stores README says topic `store.outbox_events`; consumer listens on `ProductCreated`. With Debezium `EventRouter` routing by `event_type`, the default topic is `outbox.event.<event_type>` unless `route.topic.replacement` is set. Confirm the real connector config.
+3. **Debezium connector in stores README is outdated** — README shows topic `store.outbox_events`, a `debezium` user, and slot/publication `debezium_store_*`. The running connector (checked 2026-10-18) uses `route.topic.replacement=${routedByValue}`, user `postgres`, slot `debezium_store_v2_slot`, publication `debezium_store_v2_publication`. Topic naming itself is resolved — see ADR 0002. Fix the README together with item 4.
 
 ## Gaps
 

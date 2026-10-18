@@ -5,6 +5,10 @@ Every way services talk to each other. Generated contracts (OpenAPI, event schem
 
 ## Events
 
+Topic naming (ADR 0002): **topic = `event_type`** (e.g. `ProductCreated`), key = `aggregate_id`.
+Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` with
+`EventRouter` + `route.topic.replacement=${routedByValue}`.
+
 | Event | Producer | Transport | Consumer | Payload | Status |
 |-------|----------|-----------|----------|---------|--------|
 | `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, tenantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
