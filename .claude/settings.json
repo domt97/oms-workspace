@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git reset *)",
+      "Bash(git tag *)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh api *)"
+    ],
+    "deny": [
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git push * --force)",
+      "Bash(git push * -f)",
+      "Bash(git push * --force-with-lease)",
+      "Bash(git push * master)",
+      "Bash(git push * develop)",
+      "Bash(git push * HEAD:master)",
+      "Bash(git push * HEAD:develop)",
+      "Bash(git reset --hard *)",
+      "Bash(git branch -D *)"
+    ]
+  }
+}

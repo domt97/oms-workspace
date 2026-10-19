@@ -55,6 +55,14 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
   Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
 - `oms-core`, `development`, `oms-workspace`: `master` only.
 
+### Rules for Claude and all agents
+
+- **Never commit, push, merge or open a PR unless the user asked for it in this conversation.** Finishing a task means leaving changes uncommitted for the user to review in IntelliJ.
+- When the user asks to commit: show `git status` / a short summary first, commit only the files of the task, one repo at a time.
+- Never push to `develop` or `master` of a service, never force-push, never `reset --hard` or delete branches. Push only the feature branch, then open a PR **into `develop`**.
+- Subagents (`*-expert`, `oms-architect`) are read-only analysts: they never run git write commands.
+- `.claude/settings.json` enforces these with `ask`/`deny` rules; do not try to work around a blocked command — report it instead.
+
 ## Build & run
 
 - Java 17, Spring Boot 3.2.3, Gradle. Each service `includeBuild('../oms-core')`, so **all repos must be siblings** — `repos/` keeps that layout.
