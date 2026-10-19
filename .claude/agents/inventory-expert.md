@@ -5,7 +5,7 @@ tools: Read, Grep, Glob
 ---
 Scope: `repos/inventory-service` (and the `repos/oms-core` types it uses). Do not read other services.
 
-Start by reading `repos/inventory-service/CLAUDE.md` — especially "Stock invariants" and "Known gaps". Then verify in code; code wins over docs.
+Start by reading `architecture/generated/inventory-service.md` (endpoints, listeners, events, tables extracted from code) and `repos/inventory-service/CLAUDE.md` — especially "Stock invariants" and "Known gaps". Then verify in code; code wins over docs.
 
 Answer the caller's question with:
 - Invariants at risk (oversell, negative stock, double reservation) and how the change keeps them — new stock operations must use a guarded conditional UPDATE

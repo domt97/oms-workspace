@@ -13,4 +13,5 @@ claude                      # start Claude Code here
 - `architecture/` — domain map, integration catalog, flows, ADRs, contracts, open questions
 - `.claude/agents/` — `oms-architect` + one expert per context
 - `.claude/skills/feature-impact/` — `/feature-impact <feature>` for a standard cross-service analysis
+- `architecture/generated/` — facts extracted from code by `scripts/extract_facts.py` (refreshed daily by `.github/workflows/refresh-facts.yml`)
 - `repos.txt` — list of repos to sync; add new services here

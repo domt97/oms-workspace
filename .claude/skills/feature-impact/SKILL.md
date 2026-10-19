@@ -7,7 +7,7 @@ description: Analyse a new OMS feature or change across all services and produce
 Input: a feature description (from the user's message or `$ARGUMENTS`).
 
 ## Steps
-1. Read `CLAUDE.md`, `architecture/domain-map.md`, `architecture/integration.md`, `architecture/open-questions.md` and the flows that relate to the feature.
+1. Read `CLAUDE.md`, `architecture/domain-map.md`, `architecture/integration.md`, `architecture/open-questions.md` and the flows that relate to the feature. Cross-check endpoints, listeners, events and tables against `architecture/generated/` (extracted from code; it wins on conflict).
 2. If more than one context may be affected, hand the work to the `oms-architect` agent; otherwise ask the single domain expert directly.
 3. Verify every claim about existing behaviour in code under `repos/` — READMEs can be stale.
 4. Write the report below. Ask the user about genuinely open business rules instead of inventing them.

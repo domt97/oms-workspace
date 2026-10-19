@@ -1,0 +1,344 @@
+{
+  "inventory-service": {
+    "aggregates": [
+      "Inventory",
+      "StockMovement",
+      "StockReservation"
+    ],
+    "branch": "develop",
+    "listeners": [
+      {
+        "active": true,
+        "class": "ProductCreatedConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/ProductCreatedConsumer.java",
+        "group": "product-consumer",
+        "topics": [
+          "ProductCreated"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": false,
+        "class": "OrderCreatedEventConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/OrderCreatedEventConsumer.java",
+        "group": "order-consumer",
+        "topics": [
+          "OrderCreated"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "SqsReservationExpireConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/SqsReservationExpireConsumer.java",
+        "group": "",
+        "topics": [
+          "${aws.sqs.queues.reservation-expire}"
+        ],
+        "transport": "sqs"
+      }
+    ],
+    "migrations": {
+      "latest": "V1__init_inventory_tables.sql",
+      "tables": [
+        {
+          "created_in": "V1__init_inventory_tables.sql",
+          "table": "inventories"
+        },
+        {
+          "created_in": "V1__init_inventory_tables.sql",
+          "table": "stock_movements"
+        },
+        {
+          "created_in": "V1__init_inventory_tables.sql",
+          "table": "stock_reservations"
+        }
+      ]
+    },
+    "outbound_clients": [],
+    "published_events": [],
+    "rest": [
+      {
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/internal/InventoryInternalController.java",
+        "handler": "InventoryInternalController#create",
+        "hidden": true,
+        "method": "POST",
+        "path": "/internal/v1/inventory/inventories",
+        "visibility": "internal"
+      },
+      {
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/api/InventoryController.java",
+        "handler": "InventoryController#getAllProductInventory",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/inventory/inventories/products/{productId}",
+        "visibility": "public"
+      },
+      {
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/api/StockMovementController.java",
+        "handler": "StockMovementController#getAllProductInventory",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/inventory/inventories/stock-movements/{inventoryId}",
+        "visibility": "public"
+      },
+      {
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/api/InventoryController.java",
+        "handler": "InventoryController#getInventory",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/inventory/inventories/{inventoryId}",
+        "visibility": "public"
+      },
+      {
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/api/InventoryController.java",
+        "handler": "InventoryController#adjustStock",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/inventory/inventories/{inventoryId}",
+        "visibility": "public"
+      }
+    ],
+    "use_cases": [
+      "AdjustStockUseCase",
+      "ConfirmStockReservationUseCase",
+      "CreateInventoryUseCase",
+      "ExpireStockReservationUseCase",
+      "GetStockMovementsUseCase",
+      "LoadInventoryUseCase",
+      "ReleaseStockReservationUseCase",
+      "ReserveStockUseCase"
+    ]
+  },
+  "stores-service": {
+    "aggregates": [
+      "BusinessHour",
+      "ProductImage",
+      "ProductSku",
+      "Store",
+      "StoreAvailability",
+      "StoreCollection",
+      "StoreProduct"
+    ],
+    "branch": "develop",
+    "listeners": [],
+    "migrations": {
+      "latest": "V8__alter_product_fk.sql",
+      "tables": [
+        {
+          "created_in": "V7__add_outbox_events_table.sql",
+          "table": "outbox_events"
+        },
+        {
+          "created_in": "V6__add_store_product_collection_tables.sql",
+          "table": "product_collections"
+        },
+        {
+          "created_in": "V3__add_store_product_tables.sql",
+          "table": "product_images"
+        },
+        {
+          "created_in": "V3__add_store_product_tables.sql",
+          "table": "product_skus"
+        },
+        {
+          "created_in": "V1__init_store_tables.sql",
+          "table": "store_addresses"
+        },
+        {
+          "created_in": "V2__add_table_store_availability.sql",
+          "table": "store_availability"
+        },
+        {
+          "created_in": "V1__init_store_tables.sql",
+          "table": "store_business_hours"
+        },
+        {
+          "created_in": "V6__add_store_product_collection_tables.sql",
+          "table": "store_collections"
+        },
+        {
+          "created_in": "V1__init_store_tables.sql",
+          "table": "store_configs"
+        },
+        {
+          "created_in": "V3__add_store_product_tables.sql",
+          "table": "store_products"
+        },
+        {
+          "created_in": "V1__init_store_tables.sql",
+          "table": "stores"
+        }
+      ]
+    },
+    "outbound_clients": [
+      "InventoryServiceClient",
+      "PromotionServiceClient"
+    ],
+    "published_events": [
+      {
+        "event": "ProductCreated",
+        "files": [
+          "stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java"
+        ]
+      }
+    ],
+    "rest": [
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#createStore",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#getStore",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/tenants/{tenantId}/stores/{id}",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#addStoreAvailability",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{id}/availability",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#cancelStoreAvailability",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{id}/availability/{storeAvailabilityId}/cancel",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#closeStore",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/tenants/{tenantId}/stores/{id}/close",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#reopenStore",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/tenants/{tenantId}/stores/{id}/reopen",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreConfigController.java",
+        "handler": "StoreConfigController#updateBusinessHour",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/business-hours",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#getAll",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#create",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#getDetails",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#addProducts",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/add-products",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#removeProducts",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/remove-products",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreConfigController.java",
+        "handler": "StoreConfigController#updateBaseConfig",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/configs",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreProductController.java",
+        "handler": "StoreProductController#create",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreProductController.java",
+        "handler": "StoreProductController#importProducts",
+        "hidden": false,
+        "method": "POST",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/import",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreProductController.java",
+        "handler": "StoreProductController#getStoreProducts",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/search",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreProductController.java",
+        "handler": "StoreProductController#getProductDetails",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/{productId}",
+        "visibility": "public"
+      }
+    ],
+    "use_cases": [
+      "AddProductCollectionUseCase",
+      "AddStoreAvailabilityUseCase",
+      "CancelStoreAvailabilityUseCase",
+      "CloseStoreUseCase",
+      "CreateStoreCollectionUseCase",
+      "CreateStoreProductUseCase",
+      "CreateStoreUseCase",
+      "GetListStoreCollectionUseCase",
+      "GetStoreCollectionUseCase",
+      "GetStoreProductDetailUseCase",
+      "GetStoreUseCase",
+      "ImportStoreProductUseCase",
+      "RemoveProductFromCollectionUseCase",
+      "ReopenStoreUseCase",
+      "SearchProductUseCase",
+      "SettingStoreBusinessHourUseCase",
+      "SettingStoreConfigUseCase"
+    ]
+  }
+}

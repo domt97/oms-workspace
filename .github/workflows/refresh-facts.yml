@@ -1,0 +1,66 @@
+name: Refresh architecture facts
+
+# Re-extracts architecture facts (REST endpoints, listeners, events, tables, use cases)
+# from every service's `develop` branch and opens a PR when they changed.
+on:
+  schedule:
+    - cron: "23 0 * * *"        # daily, 07:23 Asia/Saigon
+  workflow_dispatch: {}          # manual run from the Actions tab
+  repository_dispatch:
+    types: [service-updated]     # optional: services can trigger after merging to develop
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-facts
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone service repos (develop, falling back to default branch)
+        env:
+          # Only needed once the service repos become private: a fine-grained token with read access.
+          REPOS_TOKEN: ${{ secrets.REPOS_TOKEN }}
+        run: |
+          mkdir -p repos
+          while read -r repo _; do
+            [[ -z "$repo" || "$repo" == \#* ]] && continue
+            name="${repo#*/}"
+            if [[ -n "$REPOS_TOKEN" ]]; then
+              url="https://x-access-token:${REPOS_TOKEN}@github.com/${repo}.git"
+            else
+              url="https://github.com/${repo}.git"
+            fi
+            git clone --quiet --depth 1 --branch develop "$url" "repos/$name" 2>/dev/null \
+              || git clone --quiet --depth 1 "$url" "repos/$name"
+            echo "$name -> $(git -C "repos/$name" rev-parse --abbrev-ref HEAD)"
+          done < repos.txt
+
+      - name: Extract facts
+        run: python3 scripts/extract_facts.py
+
+      - name: Open or update PR when facts changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: bot/refresh-facts
+          delete-branch: true
+          add-paths: architecture/generated/**
+          commit-message: "chore: refresh extracted architecture facts"
+          title: "chore: architecture facts changed in service code"
+          body: |
+            `scripts/extract_facts.py` found changes in the services' `develop` branches
+            (REST endpoints, listeners, published events, tables, use cases or clients).
+
+            **Review the diff of `architecture/generated/`**, then make sure the hand-written docs
+            still match: `architecture/domain-map.md`, `architecture/integration.md`, `architecture/flows/`,
+            and the services' `CLAUDE.md`. The weekly Claude drift task does this automatically
+            and opens its own PR; you can also ask Claude: "update the docs to match architecture/generated".
+
+            _Opened automatically by `.github/workflows/refresh-facts.yml`._
+          labels: architecture-drift
