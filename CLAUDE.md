@@ -72,15 +72,14 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 
 ## Keeping this map true
 
-Three layers keep the docs aligned with code:
+Two layers keep the docs aligned with code:
 
 1. **Extracted facts** — `scripts/extract_facts.py` reads every service (`develop`) and writes
    `architecture/generated/`. The GitHub Action `refresh-facts.yml` runs it daily and opens a PR
    (label `architecture-drift`) when facts change. Never edit `architecture/generated/` by hand.
-2. **Weekly drift task** — a scheduled Claude task compares the hand-written docs with the facts and
-   the code, and opens a PR to `oms-workspace` fixing `domain-map.md`, `integration.md`, `flows/`,
-   `system-overview.md`, `open-questions.md`. It never changes service code.
-3. **Same-PR rule** — when a change adds/changes a REST endpoint, event, table or aggregate, update
+   When that PR shows changes, update the hand-written docs to match (or ask Claude:
+   "update the docs to match architecture/generated").
+2. **Same-PR rule** — when a change adds/changes a REST endpoint, event, table or aggregate, update
    `domain-map.md` and `integration.md` in the same piece of work. Service PRs touching those areas
    get an automatic reminder comment.
 

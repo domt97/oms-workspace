@@ -59,8 +59,8 @@ jobs:
 
             **Review the diff of `architecture/generated/`**, then make sure the hand-written docs
             still match: `architecture/domain-map.md`, `architecture/integration.md`, `architecture/flows/`,
-            and the services' `CLAUDE.md`. The weekly Claude drift task does this automatically
-            and opens its own PR; you can also ask Claude: "update the docs to match architecture/generated".
+            and the services' `CLAUDE.md`. You can ask Claude in the workspace:
+            "update the docs to match architecture/generated".
 
             _Opened automatically by `.github/workflows/refresh-facts.yml`._
           labels: architecture-drift
