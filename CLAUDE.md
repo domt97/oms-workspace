@@ -50,9 +50,17 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 4. Check `open-questions.md` — docs in service READMEs may be out of date; **code wins**.
 5. Use the `/feature-impact` skill for the standard output format; for multi-service features use the `oms-architect` agent, which delegates to the domain experts.
 
+## How to implement a change
+
+Use the `/ship <service> <feature|fix> <slug>` skill for any implementation in a service: it branches
+from `develop`, plans with the domain expert (user approves), implements, runs `./gradlew test`,
+reviews, updates docs, and — after asking — commits, pushes and opens a PR **into `develop`**.
+For changes spanning several services, run `/feature-impact` first, then one `/ship` per service.
+
 ## Git workflow
 
-- Service repos (`stores-service`, `inventory-service`): **`develop`** is the integration branch.
+- Service repos (`stores-service`, `inventory-service`): `master` is the release branch; **`develop`** is the
+  integration branch and the GitHub default branch (new PRs and clones target `develop`).
   Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
 - `oms-workspace`: `master` is protected. Every change (docs, agents, skills, scripts, workflows)
   goes on a short-lived branch from `master` — `docs/...`, `chore/...`, `ci/...`, `feat/...` —
