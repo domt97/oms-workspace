@@ -4,7 +4,7 @@ name: Refresh architecture facts
 # from every service's `develop` branch and opens a PR when they changed.
 on:
   schedule:
-    - cron: "23 0 * * *"        # daily, 07:23 Asia/Saigon
+    - cron: "0 0 * * *"         # daily, 07:00 Asia/Saigon (00:00 UTC)
   workflow_dispatch: {}          # manual run from the Actions tab
   repository_dispatch:
     types: [service-updated]     # optional: services can trigger after merging to develop
