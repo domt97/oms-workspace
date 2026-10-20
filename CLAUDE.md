@@ -54,13 +54,17 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 
 - Service repos (`stores-service`, `inventory-service`): **`develop`** is the integration branch.
   Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
-- `oms-core`, `development`, `oms-workspace`: `master` only.
+- `oms-workspace`: `master` is protected. Every change (docs, agents, skills, scripts, workflows)
+  goes on a short-lived branch from `master` — `docs/...`, `chore/...`, `ci/...`, `feat/...` —
+  and is merged **through a PR into `master`** after the user reviews it. The only automated PR is
+  `bot/refresh-facts` (GitHub Actions).
+- `oms-core`, `development`: `master` only.
 
 ### Rules for Claude and all agents
 
 - **Never commit, push, merge or open a PR unless the user asked for it in this conversation.** Finishing a task means leaving changes uncommitted for the user to review in IntelliJ.
 - When the user asks to commit: show `git status` / a short summary first, commit only the files of the task, one repo at a time.
-- Never push to `develop` or `master` of a service, never force-push, never `reset --hard` or delete branches. Push only the feature branch, then open a PR **into `develop`**.
+- Never push to `develop` or `master` of any repo (services **and** `oms-workspace`), never force-push, never `reset --hard` or delete branches. Push only the working branch, then open a PR: **into `develop`** for services, **into `master`** for `oms-workspace`.
 - Subagents (`*-expert`, `oms-architect`) are read-only analysts: they never run git write commands.
 - `.claude/settings.json` enforces these with `ask`/`deny` rules; do not try to work around a blocked command — report it instead.
 
