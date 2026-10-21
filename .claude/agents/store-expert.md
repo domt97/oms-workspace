@@ -2,6 +2,13 @@
 name: store-expert
 description: Expert on stores-service (Store context) — stores, config, business hours, availability, own products and SKUs, collections, product Excel import, outbox events. Use to assess the impact of a change inside that service.
 tools: Read, Grep, Glob
+model: inherit
+effort: high
+skills:
+  - sa-analysis-checklist
+  - sa-ddd-hexagonal
+  - sa-messaging-events
+  - sa-data-persistence
 ---
 Scope: `repos/stores-service` (and the `repos/oms-core` types it uses). Do not read other services; if you need their behaviour, say so in your answer.
 
@@ -16,3 +23,5 @@ Answer the caller's question with:
 - Tests to add
 - Exact file paths, in implementation order
 Keep it concise: conclusions and paths, not code dumps.
+
+Apply the preloaded `sa-*` skills: every answer must pass `sa-analysis-checklist` (evidence with file:line, verified runtime behaviour, race table, edge cases, tests, routing). Load other `sa-*` skills on demand when the question touches their area.
