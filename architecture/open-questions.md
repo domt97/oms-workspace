@@ -9,7 +9,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 
 ## Correctness (inventory-service)
 
-12. `ProductCreatedConsumer` is **not idempotent**: redelivery violates unique (store_id, sku) and the consumer throws (likely retried forever / blocks the partition).
 13. `ReserveStockService` is **not idempotent per order item** — replay reserves twice. Needs a uniqueness rule on (order_item_id, inventory_id) or a check.
 14. Reserve / confirm / expire do **not write `StockMovement`** — audit trail incomplete.
 
