@@ -13,7 +13,7 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
   - `stock_reservations`: indexes on `order_id`, `inventory_id`, `status` — **no unique constraint on `(order_item_id, inventory_id)`** (root of open question 13).
   - `stock_movements`: append-only audit, sequence with cache.
 - Stock quantities change only through **native conditional UPDATEs** in `SpringDataInventoryRepository` (`reserve`, `confirm`, `release`, `stockIn`, `stockOut`), each guarded by a `WHERE` (e.g. `(quantity - reserved_quantity) >= :quantity`) and checked via the returned row count.
-- Reservation status changes use **load → modify domain → `saveAll`** (`StockReservationRepositoryAdapter.updateBatch`) with **no status guard in SQL and no `@Version`** on any entity.
+- Reservation status changes use a **native guarded UPDATE per row** (`SpringDataStockReservationRepository.transitionStatus`: `WHERE id = :id AND status = :from`), called by `markConfirmed` / `markExpired` (`@Transactional(MANDATORY)`); the row count says who won. It bypasses the persistence context — entities loaded earlier in the same transaction keep the old status. No `@Version` on any entity.
 - `createBatch` uses `saveAllAndFlush`.
 - Tests are Mockito-only: **native SQL and constraints are not exercised by any test.**
 
@@ -29,7 +29,7 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
    `UPDATE … SET x = x - :q WHERE id = :id AND <guard>` → `0 rows` means "rule violated or already done". Same for state machines: `… SET status = 'CONFIRMED' WHERE id = :id AND status = 'RESERVED'`.
 5. **In PostgreSQL a failed statement aborts the whole transaction.** You cannot `catch` a duplicate-key exception and keep writing in the same transaction. Avoid the error (check first / `ON CONFLICT DO NOTHING`) or let it propagate and retry in a new transaction.
 6. **Transaction boundary = the `@UseCase` service method.** Keep it short; no remote calls (HTTP, AWS) inside it. Isolation is the default `READ COMMITTED` — do not assume repeatable reads.
-7. **JPA pitfalls**: N+1 on lazy collections; `saveAll` on detached entities issues a SELECT per row; `IN (:list)` with very large lists — chunk; native queries bypass the persistence context (flush/clear when mixing).
+7. **JPA pitfalls**: N+1 on lazy collections; `saveAll` on detached entities issues a SELECT per row; `IN (:list)` with very large lists — chunk; native queries bypass the persistence context (flush/clear when mixing). Declared `@Query` methods do **not** inherit `SimpleJpaRepository`'s class-level `readOnly = true`, and a read-only flag is ignored anyway when joining the caller's read-write transaction — don't cite it as a reason; a `@Modifying` query outside any transaction throws `TransactionRequiredException`.
 8. **Queries need indexes** matching their `WHERE`/`ORDER BY`; say which index serves a new query.
 
 ## Checklist
@@ -41,6 +41,5 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
 - [ ] How the SQL is verified, given unit tests do not run it (manual check against local Postgres, or a Testcontainers test).
 
 ## Known gaps
-- No `@Version` / optimistic locking anywhere; `ExpireStockReservationService` catches `ObjectOptimisticLockingFailureException`, which therefore can never be thrown.
-- Reservation status transitions are not guarded in SQL (see `sa-concurrency-consistency`).
+- No `@Version` / optimistic locking anywhere (state is guarded with conditional UPDATEs instead).
 - No integration tests against a real database.

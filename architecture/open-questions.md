@@ -1,6 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-21. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-21. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service `fix/reservation-status-race`.
 
 ## Local infrastructure
 
@@ -11,8 +11,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 
 13. `ReserveStockService` is **not idempotent per order item** — replay reserves twice. Needs a uniqueness rule on (order_item_id, inventory_id) or a check.
 14. Reserve / confirm / expire do **not write `StockMovement`** — audit trail incomplete.
-15. **Race: confirm vs expire on the same reservation → oversell risk.** Both load the reservation as `RESERVED` and save the new status via load-modify-save (`StockReservationRepositoryAdapter.updateBatch`) with no `WHERE status = 'RESERVED'` and no `@Version`. If both run, `reserved_quantity` is decremented twice → available stock inflated. Fix: guarded status transition (`UPDATE … WHERE id = :id AND status = 'RESERVED'`), treat 0 rows as "handled by the other side".
-16. **Expiry run aborts on the first failure.** `ExpireStockReservationService` only catches `ObjectOptimisticLockingFailureException`, which can never be thrown (no `@Version`). Any other exception (e.g. `InvalidReservationException` when release updates 0 rows) stops the remaining inventories of that run.
 
 ## Reliability (messaging)
 
