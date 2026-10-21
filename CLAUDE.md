@@ -30,6 +30,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 | **Extracted facts (generated from code, ground truth)** | `architecture/generated/<service>.md`, `facts.json` |
 | Known gaps and doc/code drift | `architecture/open-questions.md` |
 | How to work inside one service (layout, checklist, invariants) | `repos/<service>/CLAUDE.md` |
+| Solution-architect knowledge (DDD, messaging, data, concurrency, analysis checklist) | `.claude/skills/sa-*/SKILL.md` |
 
 ## System rules (do not violate when designing features)
 
@@ -49,6 +50,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 3. Only then go into `repos/<service>`: read its `CLAUDE.md` first, then `application/usecase` and `domain/model`.
 4. Check `open-questions.md` — docs in service READMEs may be out of date; **code wins**.
 5. Use the `/feature-impact` skill for the standard output format; for multi-service features use the `oms-architect` agent, which delegates to the domain experts.
+6. Every analysis or plan must pass `sa-analysis-checklist`; have it challenged by the `plan-reviewer` agent before presenting it.
 
 ## How to implement a change
 

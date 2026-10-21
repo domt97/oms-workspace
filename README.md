@@ -11,7 +11,8 @@ claude                      # start Claude Code here
 
 - `CLAUDE.md` — system map Claude reads first
 - `architecture/` — domain map, integration catalog, flows, ADRs, contracts, open questions
-- `.claude/agents/` — `oms-architect` + one expert per context
+- `.claude/agents/` — `oms-architect`, one expert per context, `plan-reviewer` (independent critic)
+- `.claude/skills/sa-*/` — solution-architect knowledge preloaded into the agents (checklist, DDD, messaging, data, concurrency)
 - `.claude/skills/feature-impact/` — `/feature-impact <feature>` for a standard cross-service analysis
 - `.claude/skills/ship/` — `/ship <service> <feature|fix> <slug>` to implement a change and open a PR into `develop`
 - `architecture/generated/` — facts extracted from code by `scripts/extract_facts.py` (refreshed daily by `.github/workflows/refresh-facts.yml`)

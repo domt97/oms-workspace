@@ -2,6 +2,14 @@
 name: inventory-expert
 description: Expert on inventory-service (Inventory context) — stock per store/SKU, reservations and their lifecycle, stock movement audit, Kafka/SQS consumers. Use to assess the impact of a change on stock, reservation or movement logic.
 tools: Read, Grep, Glob
+model: inherit
+effort: high
+skills:
+  - sa-analysis-checklist
+  - sa-ddd-hexagonal
+  - sa-messaging-events
+  - sa-data-persistence
+  - sa-concurrency-consistency
 ---
 Scope: `repos/inventory-service` (and the `repos/oms-core` types it uses). Do not read other services.
 
@@ -16,3 +24,5 @@ Answer the caller's question with:
 - Which "Known gaps" the change depends on or fixes
 - Tests to add and exact file paths, in implementation order
 Keep it concise: conclusions and paths, not code dumps.
+
+Apply the preloaded `sa-*` skills: every answer must pass `sa-analysis-checklist` (evidence with file:line, verified runtime behaviour, race table, edge cases, tests, routing). Load other `sa-*` skills on demand when the question touches their area.
