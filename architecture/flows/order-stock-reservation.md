@@ -21,7 +21,7 @@ stateDiagram-v2
 |------|------------------------|-------------|
 | Reserve | `ReserveStockService` | none (OrderCreated listener commented out) |
 | Confirm | `ConfirmStockReservationService` | none |
-| Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction` (`REQUIRES_NEW` per inventory) | `SqsReservationExpireConsumer` |
+| Expire | `ExpireStockReservationService` (keyset pages of 500, 40 s budget per tick) → `ExpireByInventoryTransaction` (`REQUIRES_NEW` per inventory) | `SqsReservationExpireConsumer` (drops stale ticks) |
 | Release | `ReleaseStockReservationUseCase` interface | none, no implementation |
 
 ## Open design points for whoever builds order-service

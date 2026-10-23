@@ -1,6 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-21. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-21. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service `fix/sqs-message-is-only-a-signal`.
 
 ## Local infrastructure
 
@@ -17,7 +17,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 17. Kafka consumers have **no dead-letter topic / custom error handler**: spring-kafka default retries 10 times with no backoff, then skips the record — a failing message is silently lost.
 18. SQS `reservation-expire` queue has **no DLQ / redrive policy** (`development/docker/infra/local/main.tf`).
 19. **`outbox_events` is never cleaned up**: rows stay `PENDING` forever; no job deletes published rows.
-21. **Reservation-expire ticks can run concurrently.** Each SQS message is only a signal — `SqsReservationExpireConsumer` ignores the body and every message starts a full scan of expired reservations. Overlapping runs happen when ticks pile up (service down/restarting, then several instances or listener threads drain the backlog at once), when a run takes longer than the 1-minute schedule, or when it exceeds the default 30 s visibility timeout (same message redelivered); the standard queue may also deliver duplicates (`development/docker/infra/local/main.tf:43-53`). **Data is safe** since inventory-service#27 (guarded `markExpired` → the losing run updates 0 rows), but runs are redundant: wasted scans, lock waits, noisy logs. Options: single-flight per run (Postgres advisory lock / ShedLock, skip if held), drop stale ticks (compare message timestamp to now), listener `maxConcurrentMessages = 1`, visibility timeout > max run time, FIFO queue with one message group.
 
 ## Code hygiene
 
