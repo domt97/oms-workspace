@@ -2,9 +2,13 @@
 repos/
 
 # IDE / OS
-.idea/
 *.iml
 .DS_Store
 
-# Claude Code personal settings
+# Claude Code personal settings and auto-memory (lessons belong in skills / CLAUDE.md)
 .claude/settings.local.json
+memory/
+
+# IntelliJ: only .idea/vcs.xml is shared (registers repos/* as Git roots)
+.idea/*
+!.idea/vcs.xml
