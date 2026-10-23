@@ -64,7 +64,17 @@ plan: correctness, invariants, races, idempotency, missing tests. Fix real findi
 - Remove items from `open-questions.md` / "Known gaps" that this change fixes.
 
 ## 7. Commit and push — CHECKPOINT
+**Branch gate (do this first, every time):**
+```bash
+git -C repos/<service> branch --show-current
+```
+It must be the working branch from step 1 (`feature/…`, `fix/…`, `docs/…`, `refactor/…`).
+If it is `master` or `develop`, **stop**: do not commit there. Create the working branch from
+`origin/develop` (`git switch -c <branch> origin/develop`), carry the changes over, and continue.
+Same gate for oms-workspace: never commit on its `master`.
+
 Show the user: `git status`, a one-paragraph summary, test result. **Ask before committing.**
+Never commit IDE files (`.idea/`, `*.iml`) or `memory/`.
 Then:
 ```bash
 git add <only the files of this change>

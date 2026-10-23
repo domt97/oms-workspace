@@ -13,7 +13,8 @@
 #   - on an active work branch      → (never pushed, or still open) leave it untouched,
 #                                     only report how far it is from main
 #   - other local branches whose GitHub branch is gone and that are merged → deleted
-#   - uncommitted changes           → never switch branches, only report
+#   - uncommitted changes to tracked files → never switch branches, only report
+#     (untracked files do not block: a checkout keeps them)
 #
 # Usage: ./scripts/sync-repos.sh            # HTTPS
 #        GIT_PROTOCOL=ssh ./scripts/sync-repos.sh
@@ -91,13 +92,17 @@ sync_repo() {
 
   main=$(main_branch "$dir")
   current=$(git -C "$dir" branch --show-current)
-  dirty=$(git -C "$dir" status --porcelain)
+  # Only changes to tracked files block a branch switch; untracked files survive a checkout.
+  dirty=$(git -C "$dir" status --porcelain --untracked-files=no)
+  local untracked
+  untracked=$(git -C "$dir" ls-files --others --exclude-standard | wc -l | tr -d ' ')
 
   if [[ -z "$current" ]]; then
     warn "detached HEAD — left untouched"
     return
   fi
   step "main branch: $main · current branch: $current"
+  (( untracked > 0 )) && step "$untracked untracked file(s) present (kept, not committed)"
 
   if [[ "$current" == "$main" ]]; then
     [[ -n "$dirty" ]] && step "uncommitted changes present (kept)"
