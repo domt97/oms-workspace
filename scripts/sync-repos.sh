@@ -16,8 +16,8 @@
 #   - uncommitted changes to tracked files → never switch branches, only report
 #     (untracked files do not block: a checkout keeps them)
 #
-# Usage: ./scripts/sync-repos.sh            # HTTPS
-#        GIT_PROTOCOL=ssh ./scripts/sync-repos.sh
+# Usage: ./scripts/sync-repos.sh            # SSH (default)
+#        GIT_PROTOCOL=https ./scripts/sync-repos.sh
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -37,7 +37,7 @@ WARNINGS=()
 CURRENT_REPO=""
 
 repo_url() {
-  if [[ "${GIT_PROTOCOL:-https}" == "ssh" ]]; then echo "git@github.com:$1.git"; else echo "https://github.com/$1.git"; fi
+  if [[ "${GIT_PROTOCOL:-ssh}" == "https" ]]; then echo "https://github.com/$1.git"; else echo "git@github.com:$1.git"; fi
 }
 
 # Default branch of origin (develop / master), detected from GitHub.
