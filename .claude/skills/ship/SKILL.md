@@ -45,6 +45,8 @@ Do not start step 2 until the branch exists.
 ## 3. Implement
 Follow the "Adding a use case" checklist and the invariants in `repos/<service>/CLAUDE.md`.
 Keep the change limited to the approved plan. Write the tests the plan lists.
+For a runtime check, **ask before** seeding data into the local database or consuming messages from a local queue:
+say what you will insert or consume and how you will clean it up, then remove the test data afterwards.
 
 ## 4. Test — gate
 ```bash

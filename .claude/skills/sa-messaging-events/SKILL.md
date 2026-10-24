@@ -40,6 +40,12 @@ description: Event-driven integration in the OMS — transactional outbox with D
 5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert. Today the answer is "skipped after 10 tries" — call that out when it matters.
 6. **Event schema evolution** (recommended, not yet formalised in OMS): only additive, optional fields; never rename/remove/retype a field; a breaking change is a **new event type**. Producer and consumer DTOs are separate classes — change both and update `architecture/contracts/events/<Event>.schema.json`.
 7. **Payload = facts at the time of the event**, with `eventId`, `occurredAt`, `tenantId`. Consumers must not call back the producer synchronously to "complete" the event.
+8. **Scheduled triggers (EventBridge → SQS) are signals, not work items.**
+   - A check that compares a message timestamp with the local clock (e.g. drop ticks older than N) must **fail open**: on a missing,
+     unparseable or future timestamp, or when this instance has not run recently, do the work. Otherwise clock skew can switch the job off.
+   - The listener's visibility timeout must be longer than the longest run (time budget + the last batch), or the message reappears and
+     a second run starts while the first is still going. Validate the relation at startup.
+   - Spring Cloud AWS defaults to 10 messages in flight per listener; set `maxConcurrentMessages` / `maxMessagesPerPoll` explicitly.
 
 ## Checklist
 - [ ] Topic, key and therefore ordering scope of every event touched.

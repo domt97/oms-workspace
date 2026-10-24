@@ -34,6 +34,10 @@ description: Concurrency control and cross-service consistency in the OMS — ra
    Every step needs a **compensation** and every step + compensation must be idempotent.
 7. **Reservations (holds) need a TTL and a single owner of the expiry decision.** Confirm and expire must be mutually exclusive transitions on the same row (rule 3).
 8. **Make retries safe before adding them.** A retry on a non-idempotent step multiplies the bug.
+9. **Bound the work before adding a lock.** When a job or consumer can overlap with itself and the writes are already guarded,
+   overlap costs only redundant work. Limit that work first (keyset pages, a time budget, one message in flight, drop stale triggers);
+   add mutual exclusion only if the remaining overlap is still too costly. The user does not want Postgres advisory locks: offer a lease
+   row, ShedLock or a FIFO queue as options instead (inventory reservation expiry, inventory-service PR #28).
 
 ## Checklist
 - [ ] Race table (rule 1) with the mechanism for each pair.
