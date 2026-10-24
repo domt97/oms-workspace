@@ -24,7 +24,7 @@
 
 - none
 
-## Database tables (latest migration: `V1__init_inventory_tables.sql`)
+## Database tables (latest migration: `V2__add_stock_reservation_expiry_index.sql`)
 
 - `inventories` (created in V1__init_inventory_tables.sql)
 - `stock_movements` (created in V1__init_inventory_tables.sql)
