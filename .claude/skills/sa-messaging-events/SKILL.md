@@ -18,7 +18,7 @@ description: Event-driven integration in the OMS — transactional outbox with D
 - Delivery is **at-least-once** (Debezium + Kafka): every consumer must be idempotent (workspace rule 7).
 
 **Consuming — SQS (inventory-service)**
-- `SqsReservationExpireConsumer`: `@SqsListener("${aws.sqs.queues.reservation-expire}")`, Spring Cloud AWS 3.1.1. EventBridge sends a tick every minute (`development/docker/infra/local/main.tf`); the message body is ignored.
+- `SqsReservationExpireConsumer`: `@SqsListener` with `maxConcurrentMessages = 1`, `maxMessagesPerPoll = 1`, `messageVisibilitySeconds = 90` (Spring Cloud AWS 3.1.1; defaults would be 10/10 and the queue's 30 s). EventBridge sends a tick every minute (`development/docker/infra/local/main.tf`); the body is ignored. The `Sqs_Msa_SentTimestamp` header (`SqsHeaders.MessageSystemAttributes.SQS_SENT_TIMESTAMP`) is used to drop ticks older than `app.reservation-expiry.max-tick-age` when the instance swept recently (fails open otherwise).
 - Default acknowledgement is on success: if the listener throws, the message is not deleted and reappears after the visibility timeout. The Terraform queue has **no redrive policy / DLQ**.
 
 ## Rules

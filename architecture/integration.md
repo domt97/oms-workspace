@@ -13,7 +13,7 @@ Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` wi
 |-------|----------|-----------|----------|---------|--------|
 | `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, tenantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
 | `OrderCreated` | order-service (not built) | Kafka | inventory-service `OrderCreatedEventConsumer` (group `order-consumer`) | not defined | Listener commented out |
-| Reservation-expire tick | EventBridge rule `rate(1 minute)` | SQS `<profile>-reservation-expire-queue` | inventory-service `SqsReservationExpireConsumer` | ignored (trigger only) | Live |
+| Reservation-expire tick | EventBridge rule `rate(1 minute)` | SQS `<profile>-reservation-expire-queue` | inventory-service `SqsReservationExpireConsumer` (1 in flight, visibility 90 s) | body ignored (trigger only); SQS `SentTimestamp` used to drop stale ticks | Live |
 
 Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/event/ProductCreatedEvent`
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.

@@ -1,6 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-21. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-24. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service#28; its large-volume remainder is item 22.
 
 ## Local infrastructure
 
@@ -17,7 +17,15 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 17. Kafka consumers have **no dead-letter topic / custom error handler**: spring-kafka default retries 10 times with no backoff, then skips the record — a failing message is silently lost.
 18. SQS `reservation-expire` queue has **no DLQ / redrive policy** (`development/docker/infra/local/main.tf`).
 19. **`outbox_events` is never cleaned up**: rows stay `PENDING` forever; no job deletes published rows.
-21. **Reservation-expire ticks can run concurrently.** Each SQS message is only a signal — `SqsReservationExpireConsumer` ignores the body and every message starts a full scan of expired reservations. Overlapping runs happen when ticks pile up (service down/restarting, then several instances or listener threads drain the backlog at once), when a run takes longer than the 1-minute schedule, or when it exceeds the default 30 s visibility timeout (same message redelivered); the standard queue may also deliver duplicates (`development/docker/infra/local/main.tf:43-53`). **Data is safe** since inventory-service#27 (guarded `markExpired` → the losing run updates 0 rows), but runs are redundant: wasted scans, lock waits, noisy logs. Options: single-flight per run (Postgres advisory lock / ShedLock, skip if held), drop stale ticks (compare message timestamp to now), listener `maxConcurrentMessages = 1`, visibility timeout > max run time, FIFO queue with one message group.
+
+## Scale (inventory-service)
+
+22. **Reservation expiry has a throughput ceiling and no backlog signal.** Since inventory-service#28 each tick is bounded (keyset pages of 500, 40 s budget), but:
+    - `markExpired` updates **one row per statement** (`transitionStatus`), so a sweep costs one DB round trip per reservation. Measured locally ≈ 3k reservations/s; with production latency estimated ≈ 1k/s → roughly 40k per tick (estimate, not measured). If more reservations expire per minute than that, the backlog grows.
+    - **Instances do not share the work**: every sweep reads from the start in the same `(expires_at, id)` order. After downtime all instances run (stale-tick drop fails open) and contend for the same rows — safe because of the guard, but no faster than one instance.
+    - **No metrics**: only logs. Nothing reports the expired-but-still-`RESERVED` count or the age of the oldest one, so a growing backlog is invisible.
+    - A failing inventory near the front of the order (e.g. already-corrupted `reserved_quantity`) is retried first on every tick.
+    Options when volume requires it: set-based `markExpired` (`UPDATE … WHERE id IN (…) AND status = 'RESERVED' RETURNING id`) plus one release per inventory; claim pages with `SELECT … FOR UPDATE SKIP LOCKED LIMIT n` so instances split the work; Micrometer gauges (backlog, oldest expired age) with an alert; `CREATE INDEX CONCURRENTLY` for future indexes on large tables.
 
 ## Code hygiene
 
