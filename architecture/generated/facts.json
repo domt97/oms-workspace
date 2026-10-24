@@ -39,7 +39,7 @@
       }
     ],
     "migrations": {
-      "latest": "V1__init_inventory_tables.sql",
+      "latest": "V2__add_stock_reservation_expiry_index.sql",
       "tables": [
         {
           "created_in": "V1__init_inventory_tables.sql",
