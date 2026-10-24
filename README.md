@@ -3,9 +3,9 @@
 Cross-repo knowledge base and Claude Code workspace for the OMS.
 
 ```bash
-git clone https://github.com/domt97/oms-workspace.git
+git clone git@github.com:domt97/oms-workspace.git
 cd oms-workspace
-./scripts/sync-repos.sh     # clone/update every repo; finished branches go back to develop/master
+./scripts/sync-repos.sh     # clone/update every repo over SSH (GIT_PROTOCOL=https for HTTPS); finished branches go back to develop/master
 claude                      # start Claude Code here
 ```
 
