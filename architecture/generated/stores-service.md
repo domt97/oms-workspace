@@ -6,23 +6,23 @@
 
 | Visibility | Method | Path | Handler |
 |---|---|---|---|
-| public | POST | `/v1/store/tenants/{tenantId}/stores` | `StoreController#createStore` |
-| public | GET | `/v1/store/tenants/{tenantId}/stores/{id}` | `StoreController#getStore` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{id}/availability` | `StoreController#addStoreAvailability` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{id}/availability/{storeAvailabilityId}/cancel` | `StoreController#cancelStoreAvailability` |
-| public | PUT | `/v1/store/tenants/{tenantId}/stores/{id}/close` | `StoreController#closeStore` |
-| public | PUT | `/v1/store/tenants/{tenantId}/stores/{id}/reopen` | `StoreController#reopenStore` |
-| public | PUT | `/v1/store/tenants/{tenantId}/stores/{storeId}/business-hours` | `StoreConfigController#updateBusinessHour` |
-| public | GET | `/v1/store/tenants/{tenantId}/stores/{storeId}/collections` | `StoreCollectionController#getAll` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{storeId}/collections` | `StoreCollectionController#create` |
-| public | GET | `/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}` | `StoreCollectionController#getDetails` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/add-products` | `StoreCollectionController#addProducts` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/remove-products` | `StoreCollectionController#removeProducts` |
-| public | PUT | `/v1/store/tenants/{tenantId}/stores/{storeId}/configs` | `StoreConfigController#updateBaseConfig` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{storeId}/products` | `StoreProductController#create` |
-| public | POST | `/v1/store/tenants/{tenantId}/stores/{storeId}/products/import` | `StoreProductController#importProducts` |
-| public | GET | `/v1/store/tenants/{tenantId}/stores/{storeId}/products/search` | `StoreProductController#getStoreProducts` |
-| public | GET | `/v1/store/tenants/{tenantId}/stores/{storeId}/products/{productId}` | `StoreProductController#getProductDetails` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores` | `StoreController#createStore` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{id}` | `StoreController#getStore` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{id}/availability` | `StoreController#addStoreAvailability` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{id}/availability/{storeAvailabilityId}/cancel` | `StoreController#cancelStoreAvailability` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{id}/close` | `StoreController#closeStore` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{id}/reopen` | `StoreController#reopenStore` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/business-hours` | `StoreConfigController#updateBusinessHour` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections` | `StoreCollectionController#getAll` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections` | `StoreCollectionController#create` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}` | `StoreCollectionController#getDetails` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/add-products` | `StoreCollectionController#addProducts` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/remove-products` | `StoreCollectionController#removeProducts` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/configs` | `StoreConfigController#updateBaseConfig` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products` | `StoreProductController#create` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import` | `StoreProductController#importProducts` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/search` | `StoreProductController#getStoreProducts` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#getProductDetails` |
 
 ## Consumed (listeners)
 
