@@ -28,7 +28,7 @@ If an item does not apply, say so in one line — do not silently skip it.
 
 ## 4. Edge cases (list them explicitly)
 - [ ] empty input · duplicates inside the input · all items already exist · some exist · none exist
-- [ ] data that exists but belongs to another tenant / product / store (mismatch) → 404, nothing written
+- [ ] data that exists but belongs to another merchant / product / store (mismatch) → 404, nothing written
 - [ ] null / missing optional fields · very large batch
 - [ ] invalid state transition (e.g. confirming an expired reservation)
 
@@ -36,7 +36,7 @@ If an item does not apply, say so in one line — do not silently skip it.
 - [ ] Volume: how many rows/events/requests at peak and in a year? Fix the root problem for that volume, not only the reported symptom — or say explicitly what is deferred and add it to `open-questions.md`.
 - [ ] Every query and loop bounded (page size, budget); index named; N instances split or duplicate the work? (`sa-performance-scalability`)
 - [ ] Failure of each dependency: timeout, retry, DLQ, how we notice (metric/alert/log). (`sa-resilience-observability`)
-- [ ] Tenant scoping of every lookup; no secrets/PII in logs. (`sa-multitenancy-security`)
+- [ ] Merchant scoping of every lookup; no secrets/PII in logs. (`sa-multitenancy-security`)
 - [ ] New endpoint: validation, status codes, idempotency, BREAKING? (`sa-api-design`) New AWS resource: Terraform, DLQ, naming. (`sa-aws-platform`)
 
 ## 6. Tests

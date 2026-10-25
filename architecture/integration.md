@@ -11,7 +11,7 @@ Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` wi
 
 | Event | Producer | Transport | Consumer | Payload | Status |
 |-------|----------|-----------|----------|---------|--------|
-| `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, tenantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
+| `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, merchantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
 | `OrderCreated` | order-service (not built) | Kafka | inventory-service `OrderCreatedEventConsumer` (group `order-consumer`) | not defined | Listener commented out |
 | Reservation-expire tick | EventBridge rule `rate(1 minute)` | SQS `<profile>-reservation-expire-queue` | inventory-service `SqsReservationExpireConsumer` (1 in flight, visibility 90 s) | body ignored (trigger only); SQS `SentTimestamp` used to drop stale ticks | Live |
 
@@ -19,7 +19,9 @@ Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.
 The consumer double-decodes the value (JSON string inside JSON) because of the Connect JSON converter.
 
-## REST — stores-service (`:8048`, prefix `/v1/store/tenants/{tenantId}`)
+## REST — stores-service (`:8048`, prefix `/v1/store/merchants/{merchantId}`)
+
+> **BREAKING (2026-10):** `tenant` renamed to `merchant` everywhere: paths `/v1/store/tenants/{tenantId}/…` → `/v1/store/merchants/{merchantId}/…`; body/response fields `tenantId` → `merchantId` in stores (`CreateStoreRequest`, `StoreDetailResponse`) and inventory (`CreateInventoryRequest`, `AdjustStockRequest`, `InventoryDetailResponse`, `StockMovementResponse`); event `ProductCreated.tenantId` → `merchantId` (no alias: old messages must not be replayed).
 
 | Method | Path |
 |--------|------|
@@ -33,7 +35,7 @@ The consumer double-decodes the value (JSON string inside JSON) because of the C
 | POST | `/stores/{storeId}/collections`, `.../{collectionId}/add-products`, `.../{collectionId}/remove-products` |
 | GET | `/stores/{storeId}/collections`, `/stores/{storeId}/collections/{collectionId}` |
 
-## REST — inventory-service (`:8058`, prefix `/v1/inventory`, no tenant in path yet)
+## REST — inventory-service (`:8058`, prefix `/v1/inventory`, no merchant in path yet)
 
 | Method | Path | Visibility |
 |--------|------|------------|

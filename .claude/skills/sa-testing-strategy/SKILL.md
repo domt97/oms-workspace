@@ -42,7 +42,7 @@ description: Testing strategy in the OMS — what each test level proves (domain
 5. **Every edge case in the plan has a test**, including negative assertions:
    - "no row written", "no event", "never called";
    - duplicates in input;
-   - wrong tenant/store;
+   - wrong merchant/store;
    - redelivered message.
 6. **Event contracts**: when changing `ProductCreatedEvent` (duplicated in two repos), test serialisation on the producer and deserialisation of an **old** payload on the consumer (backward compatibility).
 7. **Test data** via aggregate builders and fixtures; fix the clock (`Clock` bean, `Clock.fixed`) for time-based logic.
@@ -51,7 +51,7 @@ description: Testing strategy in the OMS — what each test level proves (domain
 ## Checklist
 - [ ] Test list per level, one per edge case, with negative assertions.
 - [ ] What unit tests cannot prove here (SQL, constraint, transaction, serialisation, concurrency) and how it is verified instead.
-- [ ] Redelivery/idempotency test for consumers; cross-tenant test for lookups.
+- [ ] Redelivery/idempotency test for consumers; cross-merchant test for lookups.
 - [ ] Old-payload compatibility test if an event changed.
 - [ ] `./gradlew test` result in the PR; manual verification steps written down if any.
 

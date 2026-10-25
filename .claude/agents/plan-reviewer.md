@@ -36,7 +36,7 @@ Check, in this order:
    - Are queries bounded and indexed?
    - With N instances, is the work split or repeated?
    - Are there timeouts, DLQ and a metric/alert?
-   - Is every lookup scoped by tenant?
+   - Is every lookup scoped by merchant?
 7. **Tests** — negative assertions present? what remains untested (native SQL, transaction boundaries, validation/JSON mapping) and how is it verified (`sa-testing-strategy`)?
 8. **Routing** — each file's repo, branch and PR base correct (service → `develop`, workspace → `master`)?
 9. **Contracts & docs** — breaking changes (`sa-api-design`), migrations, AWS resources in Terraform (`sa-aws-platform`), docs to update.

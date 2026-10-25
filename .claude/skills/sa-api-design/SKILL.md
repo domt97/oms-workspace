@@ -6,8 +6,8 @@ description: REST API design in the OMS — resource paths and versioning, publi
 
 ## OMS today (verified in code)
 **Paths**
-- stores-service: `/v1/store/tenants/{tenantId}/stores/{storeId}/...` (controllers under `infrastructure/rest/api`, class-level `@RequestMapping("/v1/store")`).
-- inventory-service public: `/v1/inventory/inventories/...`, **without `tenantId`** (open question 6). Internal: `/internal/v1/inventory/inventories` (`InventoryInternalController`, `@Hidden`).
+- stores-service: `/v1/store/merchants/{merchantId}/stores/{storeId}/...` (controllers under `infrastructure/rest/api`, class-level `@RequestMapping("/v1/store")`).
+- inventory-service public: `/v1/inventory/inventories/...`, **without `merchantId`** (open question 6). Internal: `/internal/v1/inventory/inventories` (`InventoryInternalController`, `@Hidden`).
 - Prefix convention: `/v<major>/<service>/...` for public APIs and `/internal/v<major>/<service>/...` for service-to-service calls. `architecture/generated/<service>.md` lists every endpoint with its visibility.
 
 **Validation and errors**
@@ -37,14 +37,14 @@ description: REST API design in the OMS — resource paths and versioning, publi
 
 ## Rules
 1. **Resource paths**:
-   - nouns, plural, nested by ownership (`/tenants/{tenantId}/stores/{storeId}/products/{productId}`);
+   - nouns, plural, nested by ownership (`/merchants/{merchantId}/stores/{storeId}/products/{productId}`);
    - IDs are UUIDs in the path;
    - keep the service prefix (`/v1/store/...`, `/v1/inventory/...`).
    - Name non-CRUD state changes as action sub-resources (`/close`), and back each with a guarded domain transition.
 2. **Public vs internal**:
    - Anything only another service calls goes under `/internal/v1/<service>/...`, `@Hidden`, and is never exposed by a future gateway.
    - Prefer events over synchronous calls for cross-service writes (workspace rule 2). A synchronous call is for reads that need a fresh answer, or for commands that need an immediate yes/no, e.g. reserve stock at checkout.
-3. **Tenant in every public path** (or a verified token claim later). Every lookup is scoped by tenant, not by id alone (see `sa-multitenancy-security`).
+3. **Merchant in every public path** (or a verified token claim later). Every lookup is scoped by merchant, not by id alone (see `sa-multitenancy-security`).
 4. **Validate at the edge**:
    - `@Valid` on every body, with constraints on every field;
    - bounds on query params (`@Max` page size, an allow-list for `sortBy`);
@@ -58,7 +58,7 @@ description: REST API design in the OMS — resource paths and versioning, publi
    | read / update | 200 |
    | accepted async | 202 |
    | bad input | 400 |
-   | missing | 404 (also when it exists but belongs to another tenant — don't leak existence) |
+   | missing | 404 (also when it exists but belongs to another merchant — don't leak existence) |
    | conflict / duplicate | 409 |
    | rule violation | 422 |
 
@@ -82,7 +82,7 @@ description: REST API design in the OMS — resource paths and versioning, publi
     See `sa-resilience-observability`.
 
 ## Checklist
-- [ ] Path, method, visibility (public/internal), tenant scoping.
+- [ ] Path, method, visibility (public/internal), merchant scoping.
 - [ ] Request validation for every field and query param; what returns 400 vs 422 vs 409.
 - [ ] Idempotency on retry (same request twice → same result?).
 - [ ] Paging/sorting bounds for lists.
@@ -91,7 +91,7 @@ description: REST API design in the OMS — resource paths and versioning, publi
 - [ ] Docs: `integration.md` (service-to-service), `domain-map.md` (new resource).
 
 ## Known gaps
-- inventory public API has no tenant in the path (open question 6); reads are by id only.
+- inventory public API has no merchant in the path (open question 6); reads are by id only.
 - Import request not validated; invalid `sortBy`/`direction` → 500; no max page size.
 - No idempotency key on stock adjustment.
 - No HTTP client adapters, timeouts or retry policy defined for service-to-service calls.

@@ -12,7 +12,7 @@ description: Resilience and observability in the OMS — failure modes of depend
   - there is no DLQ or redrive policy (open question 18);
   - stale ticks are dropped (inventory-service#28).
 - **Expiry** isolates failures per inventory (`REQUIRES_NEW`); a failing inventory is logged and retried next tick.
-- **DynamoDB**: `DynamoDbTenantInfoRepository` wraps every SDK error in a plain `RuntimeException` → HTTP 500. It uses SDK default timeouts and retries; no client override is configured (`oms-core/.../cloud/dynamodb/DynamoDbConfig.java`).
+- **DynamoDB**: `DynamoDbMerchantInfoRepository` wraps every SDK error in a plain `RuntimeException` → HTTP 500. It uses SDK default timeouts and retries; no client override is configured (`oms-core/.../cloud/dynamodb/DynamoDbConfig.java`).
 - **S3** (`S3Config`): SDK defaults as well.
 - **Excel import**:
   - `ImportProductService` catches any exception and returns `ImportResult{status: FAILED}` with HTTP 200;
@@ -47,7 +47,7 @@ description: Resilience and observability in the OMS — failure modes of depend
 6. **Graceful shutdown**: `server.shutdown: graceful`, plus listener containers stopping after the in-flight message. Long jobs check a stop/budget signal between pages.
 7. **Health**: Actuator liveness and readiness. Readiness includes DB and, if required for serving, Kafka/SQS. Liveness never depends on external systems.
 8. **Logs**:
-   - one line per business event with ids (`tenantId`, `storeId`, `orderId`, `reservationId`);
+   - one line per business event with ids (`merchantId`, `storeId`, `orderId`, `reservationId`);
    - a correlation id from header or new UUID, put in MDC and propagated to events and outbound calls;
    - client errors (4xx) at WARN or INFO, server errors at ERROR;
    - no PII.

@@ -12,7 +12,7 @@ sequenceDiagram
     participant I as inventory-service
     participant IPG as Postgres (inventory)
 
-    M->>S: POST /v1/store/tenants/{t}/stores/{s}/products (or /products/import)
+    M->>S: POST /v1/store/merchants/{merchantId}/stores/{storeId}/products (or /products/import)
     S->>PG: tx: insert store_products + product_skus + outbox_events(ProductCreated)
     PG-->>D: WAL change on outbox_events
     D->>K: EventRouter, route by event_type, key = productId

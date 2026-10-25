@@ -1,6 +1,6 @@
 ---
 name: sa-performance-scalability
-description: Performance and scalability in the OMS — sizing a feature for large volume, bounded work, paging (offset vs keyset), batching, N+1, connection pools, horizontal scaling of consumers and jobs, back-pressure and capacity estimates. Use whenever a feature reads or writes many rows, runs on a schedule, consumes a stream, or must work with many tenants/stores/orders.
+description: Performance and scalability in the OMS — sizing a feature for large volume, bounded work, paging (offset vs keyset), batching, N+1, connection pools, horizontal scaling of consumers and jobs, back-pressure and capacity estimates. Use whenever a feature reads or writes many rows, runs on a schedule, consumes a stream, or must work with many merchants/stores/orders.
 ---
 # Performance & scalability
 
@@ -27,13 +27,13 @@ description: Performance and scalability in the OMS — sizing a feature for lar
   Its limits are open question 22: `markExpired` issues one statement per row, instances do not split the work, and there are no metrics.
 
 **Per-request remote calls**
-- Every stores use case that needs the tenant calls DynamoDB `GetItem` (`DynamoDbTenantInfoRepository.findByTenantId`). There is no cache.
+- Every stores use case that needs the merchant calls DynamoDB `GetItem` (`DynamoDbMerchantInfoRepository.findByMerchantId`). There is no cache.
 
 **Kafka**
 - `ProductCreatedConsumer` uses the default listener concurrency of 1. Throughput is bounded by the number of partitions × consumer instances.
 
 ## Rules
-1. **Size it first.** Before designing, write down the volumes: rows per tenant/store, requests or events per second at peak, growth per month. Then estimate cost per unit (DB round trips, remote calls) × volume. If a number is a guess, label it as an estimate and say how to measure it.
+1. **Size it first.** Before designing, write down the volumes: rows per merchant/store, requests or events per second at peak, growth per month. Then estimate cost per unit (DB round trips, remote calls) × volume. If a number is a guess, label it as an estimate and say how to measure it.
 2. **Every loop over data is bounded.** Use pages with a fixed size, a time or row budget per run, and leave the rest for the next run. Never "load all matching rows" on a table that grows with business volume.
 3. **Keyset paging for jobs and large lists** (`WHERE (k1, k2) > (:k1, :k2) ORDER BY k1, k2 LIMIT n`).
    - Offset paging is acceptable only for small, user-facing lists, and it needs a max page size.
@@ -52,7 +52,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
    - accept → return 202 + a job id;
    - process in chunks with a transaction per chunk;
    - report progress.
-9. **Cache only what is read far more than written**, and state its invalidation (e.g. tenant info with a short TTL). Never cache stock quantities.
+9. **Cache only what is read far more than written**, and state its invalidation (e.g. merchant info with a short TTL). Never cache stock quantities.
 10. **Measure.** A design for volume names its metrics: throughput, latency p95/p99, backlog, oldest unprocessed age. It also names the alert threshold.
 
 ## Checklist
@@ -69,4 +69,4 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 - Synchronous, single-transaction Excel import without a row limit.
 - Expiry throughput and lack of instance cooperation (open question 22).
 - No Micrometer/Actuator in either service, so no metrics exist yet (see `sa-resilience-observability`).
-- Tenant info read from DynamoDB on every call, no cache.
+- Merchant info read from DynamoDB on every call, no cache.
