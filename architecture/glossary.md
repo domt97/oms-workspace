@@ -2,7 +2,7 @@
 
 | Term | Meaning |
 |------|---------|
-| Tenant | A merchant company on the SaaS platform. Every record carries `tenant_id`. |
+| Tenant | A merchant company on the SaaS platform. Every record belongs to one tenant — through its own `tenant_id` or through a tenant-scoped parent (e.g. a store). |
 | Store | A shop of a tenant; has config, address, business hours, availability windows. |
 | Store product | A product owned by a store (own catalog), status `DRAFT/ACTIVE/INACTIVE`. |
 | SKU | Sellable variant of a store product (price, dimensions). Inventory is tracked per (store, SKU). |
