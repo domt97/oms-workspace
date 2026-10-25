@@ -10,6 +10,10 @@ skills:
   - sa-messaging-events
   - sa-data-persistence
   - sa-concurrency-consistency
+  - sa-performance-scalability
+  - sa-api-design
+  - sa-multitenancy-security
+  - sa-testing-strategy
 ---
 Scope: `repos/inventory-service` (and the `repos/oms-core` types it uses). Do not read other services.
 
