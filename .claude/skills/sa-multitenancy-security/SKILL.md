@@ -5,7 +5,7 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 # Multi-tenancy & security
 
 ## OMS today (verified in code)
-**Tenant model** (`vision.md`): **tenant = market** (country/region, like Shopee VN). Inside a tenant: merchants (sellers, often chains) → stores; customers belong to the tenant and buy across its merchants. In code today `tenant_id` sits directly on `stores` (no merchant level yet, open question 28).
+**Tenant model** (`vision.md`): **tenant = market** (country/region). Inside a tenant: merchants (sellers, often chains) → stores; customers belong to the tenant and buy across its merchants. In code today `tenant_id` sits directly on `stores` (no merchant level yet, open question 28).
 - `TenantId` (oms-core typed ID). Tenant metadata (`code`, `name`, `status`, `settings`) lives in DynamoDB `tenant_info`, read through `oms-core` `DynamoDbTenantInfoRepository.findByTenantId` and wrapped by each service's `TenantRepository` port.
 - **Tenant `status` is never checked**: services only test that the tenant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`, `AdjustStockService`). A suspended tenant keeps working.
 

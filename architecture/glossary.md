@@ -2,7 +2,7 @@
 
 | Term | Meaning |
 |------|---------|
-| Tenant | A **market** (country/region, e.g. Vietnam), like Shopee VN. Fully isolated: its own customers, merchants, currency and rules. Column `tenant_id`; config in DynamoDB `tenant_info`. |
+| Tenant | A **market** (country/region, e.g. Vietnam). Fully isolated: its own customers, merchants, currency and rules. Column `tenant_id`; config in DynamoDB `tenant_info`. |
 | Merchant | A seller company inside a tenant, often a chain; owns one or more stores. (Not in code yet — open question 28.) |
 | Store | A branch of a merchant; has config, address, business hours, availability windows, its own catalog and stock. |
 | Customer | A buyer of one market; one account buys from every merchant of that market. |

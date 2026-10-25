@@ -1,6 +1,6 @@
 # OMS Workspace — System Map
 
-Multi-tenant marketplace **Order Management System** (like Shopee): **tenant = market** (country/region, fully isolated); inside a tenant, **merchants** (sellers, often chains) run **stores**, and customers buy across merchants. Each bounded context lives in its own GitHub repo;
+Multi-tenant marketplace **Order Management System**: **tenant = market** (country/region, fully isolated); inside a tenant, **merchants** (sellers, often chains) run **stores**, and customers buy across merchants. Each bounded context lives in its own GitHub repo;
 this workspace holds the cross-repo knowledge (architecture, contracts, flows) and clones every
 repo into `repos/` so Claude can reason about the whole system.
 

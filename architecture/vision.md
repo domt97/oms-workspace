@@ -6,17 +6,17 @@
 
 ## 1. Domain vision statement *(Q1, Q2, Q3, Q8, Q20b decided 2026-10-25)*
 
-A **multi-tenant marketplace** (like Shopee / ShopeeFood), operated by us.
+A **multi-tenant marketplace**, operated by us.
 
 ```
 Tenant = market (e.g. "VN": country, currency VND, time zone, rules)      ← fully isolated
- ├─ Merchant = seller, often a chain (e.g. Phúc Long, Highlands, a small bakery)
+ ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)
  │   └─ Store = branch with its own hours, catalog and stock
  └─ Customer = buyer of that market (one account for all merchants of the market)
      └─ Cart → Checkout → one Order per store, one payment
 ```
 
-- **Tenant = market**, like Shopee VN / Shopee TH: customers, merchants, currency, payment and delivery are per market, and nothing crosses markets. The first tenant is Vietnam (VND). A new country is a new tenant.
+- **Tenant = market**: customers, merchants, currency, payment and delivery are per market, and nothing crosses markets. The first tenant is Vietnam (VND). A new country is a new tenant.
 - **Merchants** sell both made-to-order items (food & beverage) and stocked retail goods. One merchant = one seller company; it has one or more stores.
 - **Customers** use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants of the same market**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
 

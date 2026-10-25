@@ -14,7 +14,7 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-TEN-01 | **Tenant = market** (country/region), like Shopee VN / TH. Customers, merchants, stores, carts and orders belong to exactly one tenant; nothing crosses tenants. The first tenant is Vietnam. | 🟢 Q32 (2026-10-25) |
+| BR-TEN-01 | **Tenant = market** (country/region). Customers, merchants, stores, carts and orders belong to exactly one tenant; nothing crosses tenants. The first tenant is Vietnam. | 🟢 Q32 (2026-10-25) |
 | BR-TEN-02 | A tenant has **one currency** (VND for Vietnam, 0 decimals); every store, price, checkout and payment of the tenant uses it. | 🟢 Q33 (2026-10-25) |
 | BR-TEN-03 | Inside a tenant, a **merchant** is one seller company; it owns one or more **stores** (branches). A store belongs to exactly one merchant and never moves. | 🟢 Q32 (2026-10-25). **Gap:** no merchant level in code; stores point straight to `tenant_id` (open question 28) |
 | BR-TEN-04 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
@@ -25,7 +25,7 @@
 |----|------|--------|
 | BR-USR-01 | Customers order through the **customer app**; POS / staff-entered orders are out of scope for now. | 🟢 Q2 (2026-10-25) |
 | BR-USR-02 | A **customer account is required** to build a cart and order; no guest orders. Customers belong to a **tenant (market)**: one account works across all merchants of that market. | 🟢 Q15, Q20b, Q32 (2026-10-25) |
-| BR-USR-04 | Each market is a **multi-merchant marketplace** (like Shopee): one customer app shows stores of all merchants of the market. | 🟢 Q20b (2026-10-25) |
+| BR-USR-04 | Each market is a **multi-merchant marketplace**: one customer app shows stores of all merchants of the market. | 🟢 Q20b (2026-10-25) |
 | BR-USR-05 | Customers can **search products across all stores and merchants** (read model fed by catalog events). | 🟢 Q30 (2026-10-25), later phase |
 | BR-USR-03 | Merchant users have one of three roles:<br/>- **owner**: all stores of the merchant;<br/>- **manager**: one (or assigned) store(s);<br/>- **staff**: accept, prepare and hand over orders of their store. | 🟢 Q16 (2026-10-25) |
 
@@ -148,7 +148,7 @@
 | Q18 | Adding to the cart never holds stock. |
 | Q19 | Postgres for carts; Redis only if load requires. |
 | Q20 | A checkout may contain several stores; the system splits it into one order per store. |
-| Q20b | Marketplace across merchants (like Shopee): one customer app, one cart across merchants of the same market. |
+| Q20b | Marketplace across merchants: one customer app, one cart across merchants of the same market. |
 | Q21 | If one store's order fails at placement, the whole checkout fails with errors (all-or-nothing). |
 | Q22 | One payment for the whole checkout. |
 | Q24 | No real payment gateway: a mock payment provider; the platform covers the OMS only. |
@@ -159,11 +159,11 @@
 | Q29 | Settlement (commission, merchant balances, mocked payouts) is in scope, later. |
 | Q30 | Search across all stores, later. |
 | Q31 | Platform vouchers and shop vouchers, phase 3. |
-| Q32 | Tenant = market (country/region) as on Shopee; merchants and customers live inside a tenant. |
+| Q32 | Tenant = market (country/region); merchants and customers live inside a tenant. |
 | Q33 | One currency per tenant. |
 
 ## Open business questions
 
 | Id | Question | Why it matters | Proposed default |
 |----|----------|----------------|------------------|
-| Q34 | A group with several brands (e.g. one company owning Gogi, Kichi Kichi, Manwah): one merchant, or one merchant per brand? | Users/roles, settlement, reporting | One merchant per legal entity; brand is a store attribute (not blocking) |
+| Q34 | A group with several brands (e.g. one company owning three restaurant brands): one merchant, or one merchant per brand? | Users/roles, settlement, reporting | One merchant per legal entity; brand is a store attribute (not blocking) |
