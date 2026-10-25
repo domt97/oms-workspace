@@ -8,6 +8,9 @@ skills:
   - sa-analysis-checklist
   - sa-messaging-events
   - sa-data-persistence
+  - sa-aws-platform
+  - sa-resilience-observability
+  - sa-performance-scalability
 ---
 Scope: `repos/oms-core` and `repos/development`.
 

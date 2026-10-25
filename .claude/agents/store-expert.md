@@ -9,6 +9,10 @@ skills:
   - sa-ddd-hexagonal
   - sa-messaging-events
   - sa-data-persistence
+  - sa-performance-scalability
+  - sa-api-design
+  - sa-multitenancy-security
+  - sa-testing-strategy
 ---
 Scope: `repos/stores-service` (and the `repos/oms-core` types it uses). Do not read other services; if you need their behaviour, say so in your answer.
 

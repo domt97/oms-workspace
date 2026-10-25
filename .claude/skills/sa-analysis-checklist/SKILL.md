@@ -28,15 +28,22 @@ If an item does not apply, say so in one line — do not silently skip it.
 
 ## 4. Edge cases (list them explicitly)
 - [ ] empty input · duplicates inside the input · all items already exist · some exist · none exist
-- [ ] data that exists but belongs to another tenant / product / store (mismatch)
+- [ ] data that exists but belongs to another tenant / product / store (mismatch) → 404, nothing written
 - [ ] null / missing optional fields · very large batch
 - [ ] invalid state transition (e.g. confirming an expired reservation)
 
-## 5. Tests
-- [ ] One test per edge case above, including **negative assertions** (`verify(x, never())`, "no row written").
-- [ ] Say what is **not** covered by unit tests (e.g. native SQL, constraints) and how it is verified instead.
+## 5. Scale and operations
+- [ ] Volume: how many rows/events/requests at peak and in a year? Fix the root problem for that volume, not only the reported symptom — or say explicitly what is deferred and add it to `open-questions.md`.
+- [ ] Every query and loop bounded (page size, budget); index named; N instances split or duplicate the work? (`sa-performance-scalability`)
+- [ ] Failure of each dependency: timeout, retry, DLQ, how we notice (metric/alert/log). (`sa-resilience-observability`)
+- [ ] Tenant scoping of every lookup; no secrets/PII in logs. (`sa-multitenancy-security`)
+- [ ] New endpoint: validation, status codes, idempotency, BREAKING? (`sa-api-design`) New AWS resource: Terraform, DLQ, naming. (`sa-aws-platform`)
 
-## 6. Change surface and routing
+## 6. Tests
+- [ ] One test per edge case above, including **negative assertions** (`verify(x, never())`, "no row written").
+- [ ] Say what is **not** covered by unit tests (e.g. native SQL, constraints, `@Transactional` boundaries, JSON/validation mapping) and how it is verified instead. (`sa-testing-strategy`)
+
+## 7. Change surface and routing
 Present a table — one row per file you will change:
 
 | File | Repo | Branch | PR base |
@@ -48,7 +55,7 @@ Present a table — one row per file you will change:
 - [ ] Contracts touched? REST / events / DB migration — mark **BREAKING** if consumers must change.
 - [ ] Docs to update (`domain-map.md`, `integration.md`, flows, service `CLAUDE.md` Known gaps, `open-questions.md`).
 
-## 7. Safety rules (never break)
+## 8. Safety rules (never break)
 - Never ask the user to paste tokens, passwords, keys or `gh auth token` output into the chat.
   If `gh` is not authenticated, ask the user to run `gh auth login`, or give the compare URL.
 - Never push to `develop`/`master`, never force-push, never merge. Ask before commit, push and PR.

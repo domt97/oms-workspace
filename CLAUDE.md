@@ -30,14 +30,14 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 | **Extracted facts (generated from code, ground truth)** | `architecture/generated/<service>.md`, `facts.json` |
 | Known gaps and doc/code drift | `architecture/open-questions.md` |
 | How to work inside one service (layout, checklist, invariants) | `repos/<service>/CLAUDE.md` |
-| Solution-architect knowledge (DDD, messaging, data, concurrency, analysis checklist) | `.claude/skills/sa-*/SKILL.md` |
+| Solution-architect knowledge (DDD, messaging, data, concurrency, performance/scale, API design, multi-tenancy/security, resilience/observability, testing, AWS platform, analysis checklist) | `.claude/skills/sa-*/SKILL.md` |
 
 ## System rules (do not violate when designing features)
 
 1. **Database per service.** stores → Postgres DB `store`, inventory → DB `inventory`. Never query or join across.
 2. **Cross-service writes go through events**, published with the **transactional outbox + Debezium CDC** (`outbox_events` table). Never publish to Kafka directly from a use case.
 3. **Hexagonal / DDD in every service**: `domain` (pure Java) ← `application` (use cases, ports) ← `infrastructure` (adapters). External event DTOs live in `infrastructure/message/dto` (anti-corruption layer) and are mapped to commands.
-4. **Multi-tenant**: `TenantId` is part of every aggregate and every table. Tenant metadata lives in DynamoDB (`tenant_info`).
+4. **Multi-tenant**: every aggregate root is tenant-scoped — directly (`tenant_id`) or through an immutable parent (e.g. `store_id` → store → tenant). Every query filters by the tenant or by a tenant-checked parent, never by id alone. Tenant metadata lives in DynamoDB (`tenant_info`).
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).

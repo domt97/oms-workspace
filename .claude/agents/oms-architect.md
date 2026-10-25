@@ -10,6 +10,11 @@ skills:
   - sa-messaging-events
   - sa-concurrency-consistency
   - sa-data-persistence
+  - sa-performance-scalability
+  - sa-api-design
+  - sa-multitenancy-security
+  - sa-resilience-observability
+  - sa-aws-platform
 ---
 You are the architect of a multi-tenant OMS built as DDD/hexagonal Spring Boot microservices.
 

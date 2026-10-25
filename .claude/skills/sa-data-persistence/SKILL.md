@@ -7,7 +7,7 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
 ## OMS today (verified in code)
 - PostgreSQL 16, one database + schema per service (`store`, `inventory`). Spring Data JPA / Hibernate 6.4, Flyway.
 - Migrations: `src/main/resources/db/migration/V<n>__<what>.sql` — stores-service up to `V8`, inventory-service `V2`.
-- Every table has `tenant_id` (workspace rule 4).
+- `tenant_id`: every inventory-service table has it; in stores-service only `stores` does and child tables are scoped by `store_id` by design (`sa-multitenancy-security` rule 1).
 - Inventory constraints (`inventory-service/.../V1__init_inventory_tables.sql`):
   - `inventories`: `UNIQUE (store_id, sku)` (`uk_inventory_store_sku`), indexes on store, sku, (store, product).
   - `stock_reservations`: indexes on `order_id`, `inventory_id`, `status`, plus partial `idx_stock_reservation_expiry (expires_at, id) WHERE status = 'RESERVED'` (V2, serves the expiry keyset query — keep `status = 'RESERVED'` a SQL literal there, a bound parameter stops the planner using a partial index under generic plans) — **no unique constraint on `(order_item_id, inventory_id)`** (root of open question 13).

@@ -12,7 +12,8 @@ If the change spans more than one service, stop and suggest `/feature-impact` fi
 
 Work in the service repo at `repos/<service>`. Never touch `master` or `develop` directly. Never merge.
 Apply `sa-analysis-checklist` throughout; load other `sa-*` skills when the change touches their area
-(messaging, data, concurrency, DDD).
+(messaging, data, concurrency, DDD, performance/scale, API, multi-tenancy/security, resilience/observability,
+testing, AWS platform).
 
 ## 1. Branch from latest develop
 ```bash
