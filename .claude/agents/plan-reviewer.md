@@ -27,6 +27,7 @@ Check, in this order:
 1. **Unverified claims** — every statement about current/runtime behaviour: is there `file:line` evidence?
    Verify the important ones yourself (framework defaults, retries, transactions, constraints).
 2. **Root cause and impact** — correct? real impact stated (data loss, duplicates, noise)?
+   **Business rules** — does the plan rely on a rule that is 🟡/❓ in `architecture/business-rules.md` (or not there at all) without the user's confirmation? That is a Must fix.
 3. **Concurrency** — build the race table (`sa-concurrency-consistency`). Any pair without a mechanism?
 4. **Idempotency / redelivery** — for every consumer or retryable step.
 5. **Edge cases** — the list in `sa-analysis-checklist` §4; which are not handled or not tested?

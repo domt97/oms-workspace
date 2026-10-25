@@ -28,6 +28,13 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
     - stores-service enforces `UNIQUE (product_id, sku)` only (`V3`), so two products in the same store may share a SKU.
     - inventory-service is unique on `(store_id, sku)`. `CreateInventoryService` logs "Inventory exists … with different productId … skipping", so the second product silently gets **no inventory**.
     - Decide whether a SKU is unique per store (then enforce it in stores-service), or key inventory by (store, product, sku).
+28. **No merchant level (tenant = market, `vision.md`, BR-TEN-01..03).** In code `stores.tenant_id` points straight to the tenant, so a merchant (chain) cannot own several stores.
+    Plan (one `/ship` each, before cart/order services):
+    - oms-core: `MerchantId`;
+    - stores-service: `Merchant` aggregate + `merchants (id, tenant_id, code, name, status)` with `UNIQUE (tenant_id, code)`; `stores.merchant_id NOT NULL`; store code unique per merchant; merchant-facing API scoped by merchant; `merchantId` added to `ProductCreated` (additive);
+    - inventory-service: `inventories.merchant_id` from the event;
+    - docs: `domain-map.md`, `integration.md`, `contracts/events/ProductCreated.schema.json`.
+    `tenant_id` columns keep their name; their meaning becomes "market". No production data exists, so migrations need no backfill beyond local data.
 27. **Collection use cases are not tenant/store-scoped.** The `tenantId`/`storeId` in the path are not checked against the data:
     - `AddProductCollectionService`, `RemoveProductFromCollectionService`, `GetStoreCollectionService` load the collection with `repository.getById(collectionId)` (`StoreCollectionPersistenceAdapter.getById` → `findById`).
     - `AddProductCollectionService` loads products with `findAllByIdIn(productIds)` (`createProductCollectionList`): another store's or tenant's products can be attached, and unknown ids are silently skipped.

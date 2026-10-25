@@ -5,7 +5,7 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 # Multi-tenancy & security
 
 ## OMS today (verified in code)
-**Tenant model**
+**Tenant model** (`vision.md`): **tenant = market** (country/region, like Shopee VN). Inside a tenant: merchants (sellers, often chains) → stores; customers belong to the tenant and buy across its merchants. In code today `tenant_id` sits directly on `stores` (no merchant level yet, open question 28).
 - `TenantId` (oms-core typed ID). Tenant metadata (`code`, `name`, `status`, `settings`) lives in DynamoDB `tenant_info`, read through `oms-core` `DynamoDbTenantInfoRepository.findByTenantId` and wrapped by each service's `TenantRepository` port.
 - **Tenant `status` is never checked**: services only test that the tenant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`, `AdjustStockService`). A suspended tenant keeps working.
 
@@ -36,6 +36,7 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
    - A **top-level root** (e.g. `stores`) has `tenant_id NOT NULL`; per-tenant uniqueness includes it (`UNIQUE (tenant_id, code)`).
    - A **table owned by a tenant-scoped parent** (store products, collections, availability…) may rely on the parent key (`store_id`), as long as that parent never moves to another tenant. Do not duplicate `tenant_id` there.
    - A table in **another service** has no parent to join to, so it carries its own `tenant_id` (inventory does).
+   - **Two owners inside a tenant**: merchant-owned data (merchant, store, catalog, inventory, order) is filtered by tenant **and** merchant/store for merchant users; customer-owned data (cart, checkout, payment) by tenant **and** customer. A checkout spans several merchants of one tenant; each order it creates belongs to one merchant/store. Nothing ever spans two tenants.
    - Add `tenant_id` to child tables only when needed: Postgres row-level security, tenant-wide queries/exports/deletion without the parent, or partitioning by tenant.
 2. **Every query is scoped — never by id alone.**
    - Load the root by `(tenant_id, id)` (`findByTenantIdAndStoreId`).

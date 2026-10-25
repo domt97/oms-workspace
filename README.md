@@ -10,7 +10,7 @@ claude                      # start Claude Code here
 ```
 
 - `CLAUDE.md` — system map Claude reads first
-- `architecture/` — domain map, integration catalog, flows, ADRs, contracts, open questions
+- `architecture/` — vision & context map, business rules, domain map, integration catalog, flows, ADRs, contracts, open questions
 - `.claude/agents/` — `oms-architect`, one expert per context, `plan-reviewer` (independent critic)
 - `.claude/skills/sa-*/` — solution-architect knowledge preloaded into the agents (analysis checklist, DDD, messaging, data, concurrency, performance/scale, API design, multi-tenancy/security, resilience/observability, testing, AWS platform)
 - `.claude/skills/feature-impact/` — `/feature-impact <feature>` for a standard cross-service analysis

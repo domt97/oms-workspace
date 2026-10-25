@@ -2,8 +2,11 @@
 
 | Term | Meaning |
 |------|---------|
-| Tenant | A merchant company on the SaaS platform. Every record belongs to one tenant — through its own `tenant_id` or through a tenant-scoped parent (e.g. a store). |
-| Store | A shop of a tenant; has config, address, business hours, availability windows. |
+| Tenant | A **market** (country/region, e.g. Vietnam), like Shopee VN. Fully isolated: its own customers, merchants, currency and rules. Column `tenant_id`; config in DynamoDB `tenant_info`. |
+| Merchant | A seller company inside a tenant, often a chain; owns one or more stores. (Not in code yet — open question 28.) |
+| Store | A branch of a merchant; has config, address, business hours, availability windows, its own catalog and stock. |
+| Customer | A buyer of one market; one account buys from every merchant of that market. |
+| Checkout | One customer action that turns a cart into one order per store, with one payment. |
 | Store product | A product owned by a store (own catalog), status `DRAFT/ACTIVE/INACTIVE`. |
 | SKU | Sellable variant of a store product (price, dimensions). Inventory is tracked per (store, SKU). |
 | Collection | Merchandising group of products inside a store. |
