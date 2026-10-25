@@ -32,15 +32,28 @@ Mermaid sequence diagram across services.
 
 ### 6. Consistency & failure handling
 Transactions, outbox, idempotency key for each consumer, compensation per failure point, concurrency (oversell etc.).
+Failure table per dependency: slow / down / partial → behaviour → recovery (`sa-resilience-observability`).
 
-### 7. Implementation plan per repo
+### 7. Volume & performance
+Expected volumes (state which are estimates), bounded queries and jobs, indexes, whether N instances split or repeat the work, capacity limit (`sa-performance-scalability`).
+
+### 8. Tenancy & security
+How every new query is tenant-scoped, cross-tenant behaviour (404, nothing written), ids in request bodies, secrets/PII (`sa-multitenancy-security`).
+
+### 9. Observability
+Logs (ids, levels), metrics and the alert that would show this feature failing or falling behind.
+
+### 10. Implementation plan per repo
 Ordered list of files/classes to add or change, following hexagonal layout (domain → application → infrastructure → tests).
 
-### 8. Rollout order
+### 11. Test strategy
+Tests per level and edge case, and how what unit tests cannot prove (SQL, transactions, JSON/validation, event compatibility) is verified (`sa-testing-strategy`).
+
+### 12. Rollout order
 Which repo ships first so nothing breaks (oms-core → producers of new events → consumers → API callers), feature flags if needed.
 
-### 9. Risks & open questions
-Including any item from `open-questions.md` the feature depends on.
+### 13. Risks & open questions
+Including any item from `open-questions.md` the feature depends on. Anything deliberately deferred goes into `open-questions.md`.
 
-### 10. Docs to update
+### 14. Docs to update
 `domain-map.md`, `integration.md`, flows, new ADR if a system rule changes.

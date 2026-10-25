@@ -29,7 +29,7 @@ Design rules you enforce:
 - Database per service; no cross-DB reads. Cross-context state changes travel as events through the outbox.
 - New events get a JSON Schema in `architecture/contracts/events/` and a row in `integration.md`.
 - Consumers are idempotent; say how (unique key, processed-event table, state check).
-- Every aggregate and table carries `TenantId`.
+- Every aggregate root is tenant-scoped (its own `tenant_id`, or an immutable parent such as `store_id`); every query is scoped, never by id alone (`CLAUDE.md` rule 4, `sa-multitenancy-security`).
 - Prefer choreography with clear compensations; name the saga owner if orchestration is chosen.
 - Do not move code to `oms-core` unless at least two contexts need it.
 

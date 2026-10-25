@@ -47,6 +47,10 @@ Tests: JUnit per layer, mirrored package structure (domain model tests, service 
 
 ## Multi-tenancy
 
-`TenantId` is carried in every aggregate and table. stores-service takes it from the path
-(`/v1/store/tenants/{tenantId}/...`); inventory-service REST does not (see `open-questions.md`).
+Hierarchical tenancy (`CLAUDE.md` rule 4):
+- Every aggregate root is tenant-scoped.
+- In stores-service, only `stores` has `tenant_id`; child tables are scoped by `store_id`.
+- Every inventory-service table has `tenant_id`.
+
+stores-service takes the tenant from the path (`/v1/store/tenants/{tenantId}/...`); inventory-service REST does not (open question 6).
 Tenant settings come from DynamoDB via `oms-core`.
