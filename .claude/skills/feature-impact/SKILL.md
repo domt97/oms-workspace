@@ -38,7 +38,7 @@ Failure table per dependency: slow / down / partial → behaviour → recovery (
 Expected volumes (state which are estimates), bounded queries and jobs, indexes, whether N instances split or repeat the work, capacity limit (`sa-performance-scalability`).
 
 ### 8. Tenancy & security
-How every new query is tenant-scoped, cross-tenant behaviour (404, nothing written), ids in request bodies, secrets/PII (`sa-multitenancy-security`).
+How every new query is merchant-scoped, cross-merchant behaviour (404, nothing written), ids in request bodies, secrets/PII (`sa-multitenancy-security`).
 
 ### 9. Observability
 Logs (ids, levels), metrics and the alert that would show this feature failing or falling behind.

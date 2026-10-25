@@ -5,7 +5,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 ## Store context — `stores-service`
 
-**Owns:** merchants' stores and their own product catalog. The merchant is called *tenant* in code (`tenant_id`); rename to merchant planned (open question 28).
+**Owns:** merchants' stores and their own product catalog. Stores carry `merchant_id`.
 
 | Aggregate | Holds | Tables |
 |-----------|-------|--------|
@@ -18,7 +18,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 **Publishes:** `ProductCreated` (on create and on Excel import).
 **Consumes:** nothing yet.
 **Outbound ports (not implemented yet):** `InventoryServiceClient.checkItemDetail`, `PromotionServiceClient`.
-**Other storage:** DynamoDB tenant info, S3 (product import files / images).
+**Other storage:** DynamoDB merchant info, S3 (product import files / images).
 
 ## Inventory context — `inventory-service`
 
@@ -36,10 +36,10 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 ## Shared kernel — `oms-core`
 
-Typed IDs: `TenantId`, `StoreId`, `ProductId`, `SKU`, `InventoryId`, `OrderId`, `OrderItemId`,
+Typed IDs: `MerchantId`, `StoreId`, `ProductId`, `SKU`, `InventoryId`, `OrderId`, `OrderItemId`,
 `CustomerId`, `CategoryId`, `ReferenceId`, `EventId`. Value objects: `Money`, `Address`, `PriceRange`.
 Base: `AggregateRoot`, `BaseDomain`, `PagedResult`. Exceptions: `BusinessException`,
-`NotFoundException`, `ValidationException`. Infra: DynamoDB tenant info, S3, Excel import template,
+`NotFoundException`, `ValidationException`. Infra: DynamoDB merchant info, S3, Excel import template,
 request logging, Swagger config.
 
 Note: `OrderId`, `OrderItemId`, `CustomerId` already exist here, ahead of the order context.

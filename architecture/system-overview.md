@@ -3,7 +3,7 @@
 ```mermaid
 flowchart LR
     subgraph stores-service
-        SAPI[REST /v1/store/tenants/...] --> SUC[Use cases]
+        SAPI[REST /v1/store/merchants/...] --> SUC[Use cases]
         SUC --> SDB[(Postgres: store)]
         SUC --> OB[(outbox_events)]
     end
@@ -19,7 +19,7 @@ flowchart LR
     EB[EventBridge 1 min] --> Q[(SQS reservation-expire)] --> SQS
     ORD[order-service<br/>planned] -. OrderCreated .-> K
     SUC -. checkItemDetail .-> IAPI
-    DDB[(DynamoDB tenant_info)] --- SUC
+    DDB[(DynamoDB merchant_info)] --- SUC
     DDB --- IUC
 ```
 
@@ -48,9 +48,8 @@ Tests: JUnit per layer, mirrored package structure (domain model tests, service 
 ## Multi-tenancy
 
 Merchant isolation (`CLAUDE.md` rule 4, `vision.md`): merchant → store; customers are platform users.
-- In code the merchant is called *tenant*; rename planned (open question 28).
-- In stores-service, only `stores` has `tenant_id`; child tables are scoped by `store_id`.
-- Every inventory-service table has `tenant_id`.
+- In stores-service, only `stores` has `merchant_id`; child tables are scoped by `store_id`.
+- Every inventory-service table has `merchant_id`.
 
-stores-service takes the tenant from the path (`/v1/store/tenants/{tenantId}/...`); inventory-service REST does not (open question 6).
-Tenant settings come from DynamoDB via `oms-core`.
+stores-service takes the merchant from the path (`/v1/store/merchants/{merchantId}/...`); inventory-service REST does not (open question 6).
+Merchant settings come from DynamoDB via `oms-core`.

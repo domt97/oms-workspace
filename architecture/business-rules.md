@@ -15,7 +15,7 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-MER-01 | The platform serves **one market** (Vietnam) with **one currency** (VND, 0 decimals); every store, price, checkout and payment uses it. More markets are out of scope. | 🟢 Q32, Q33 (2026-10-25) |
-| BR-MER-02 | **Merchant = tenant**: a merchant is one seller company and owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ store → `tenant_id` (`V4`); 🟢 Q32 (2026-10-25). **Gap:** the code calls the merchant *tenant*; rename planned (open question 28) |
+| BR-MER-02 | **Merchant** (formerly called *tenant* in code): one seller company that owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ `stores.merchant_id` (`V1`), `MerchantId`; 🟢 Q32 (2026-10-25) |
 | BR-MER-03 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
 
 ## Channels & users
@@ -28,11 +28,11 @@
 | BR-USR-05 | Customers can **search products across all stores and merchants** (read model fed by catalog events). | 🟢 Q30 (2026-10-25), later phase |
 | BR-USR-03 | Merchant users have one of three roles:<br/>- **owner**: all stores of the merchant;<br/>- **manager**: one (or assigned) store(s);<br/>- **staff**: accept, prepare and hand over orders of their store. | 🟢 Q16 (2026-10-25) |
 
-## Tenant & store
+## Store
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-STO-01 | A store belongs to one merchant (BR-MER-02). Store `code` is unique per merchant. | ✅ `UNIQUE (tenant_id, code)` (`V4`; `tenant_id` = merchant) |
+| BR-STO-01 | A store belongs to one merchant (BR-MER-02). Store `code` is unique per merchant. | ✅ `UNIQUE (merchant_id, code)` (`V4`) |
 | BR-STO-02 | Store status is `ACTIVE`, `INACTIVE`, `SUSPENDED` or `CLOSED`; only `ACTIVE` stores take orders. | ✅ statuses (`StoreStatus`); 🟡 order rule |
 | BR-STO-03 | A store has its own time zone; its currency is the **platform currency** VND (BR-MER-01). Every SKU price is in that currency. | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). **Gap:** `StoreConfig.currency` and `ProductSku.currency` are free fields; nothing checks they equal VND |
 | BR-STO-04 | A store is open when the current local time is within that day's business hours **and** no active availability window (closure, holiday, maintenance, staff shortage, inventory) covers now. | ✅ hours check `Store.isOpen` (opening < closing, so no overnight hours); 🟡 combining with `StoreAvailability` (not done anywhere today) |
@@ -158,7 +158,7 @@
 | Q29 | Settlement (commission, merchant balances, mocked payouts) is in scope, later. |
 | Q30 | Search across all stores, later. |
 | Q31 | Platform vouchers and shop vouchers, phase 3. |
-| Q32 | Tenant = merchant; one market (Vietnam) only; customers are platform users. The code's `tenant` will be renamed to `merchant`. |
+| Q32 | The old *tenant* is the merchant; one market (Vietnam) only; customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
 | Q33 | One currency (VND) for the platform. |
 
 ## Open business questions

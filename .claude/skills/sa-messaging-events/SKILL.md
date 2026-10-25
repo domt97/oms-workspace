@@ -34,12 +34,12 @@ description: Event-driven integration in the OMS — transactional outbox with D
    - empty input → return early, call no repository;
    - load what already exists in **one** query;
    - skip existing items, log at `info` (`skipping existing …`);
-   - existing item with conflicting data (other product/tenant) → log `warn`, do not overwrite;
+   - existing item with conflicting data (other product/merchant) → log `warn`, do not overwrite;
    - write only the missing items; do not call the write with an empty list;
    - the unique constraint stays as the last line of defence.
 5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert. Today the answer is "skipped after 10 tries" — call that out when it matters.
 6. **Event schema evolution** (recommended, not yet formalised in OMS): only additive, optional fields; never rename/remove/retype a field; a breaking change is a **new event type**. Producer and consumer DTOs are separate classes — change both and update `architecture/contracts/events/<Event>.schema.json`.
-7. **Payload = facts at the time of the event**, with `eventId`, `occurredAt`, `tenantId`. Consumers must not call back the producer synchronously to "complete" the event.
+7. **Payload = facts at the time of the event**, with `eventId`, `occurredAt`, `merchantId`. Consumers must not call back the producer synchronously to "complete" the event.
 
 ## Checklist
 - [ ] Topic, key and therefore ordering scope of every event touched.

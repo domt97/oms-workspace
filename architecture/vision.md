@@ -16,7 +16,7 @@ Platform (one market: Vietnam, VND)
      └─ Cart → Checkout → one Order per store, one payment
 ```
 
-- **Merchant = tenant.** Merchants are isolated from each other: a merchant sees only its own stores, catalog, stock and orders. In current code the merchant is called *tenant* (`tenant_id`); the code will be renamed (open question 28).
+- **Merchant** (formerly *tenant* in code). Merchants are isolated from each other: a merchant sees only its own stores, catalog, stock and orders.
 - **Merchants** sell both made-to-order items (food & beverage) and stocked retail goods. One merchant = one seller company; it has one or more stores.
 - **Customers** belong to the platform and use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
 - **One market** for now: one currency (VND) and one set of rules for the whole platform. Adding a second country later means adding a "market" level above merchants.
@@ -70,7 +70,7 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 | Discovery / search | planned (read model) | later (Q30) | search index of stores and products across merchants | — | catalog and store events |
 | Settlement | planned (mock payouts) | later (Q29) | per-merchant balance, commission, payouts | — | order and payment events |
 | Notification | planned | planned | templates, delivery log | — | all customer-facing events |
-| Merchant | `tenant_info` (DynamoDB) = merchant profile today; `Merchant` aggregate inside `stores-service` later | partial: profile exists under the name *tenant* (rename: open question 28) | `TenantInfo` → `Merchant`, merchant users and roles | *proposed*: `MerchantStatusChanged` | — |
+| Merchant | `<profile>_merchant_info` (DynamoDB) = merchant profile today; `Merchant` aggregate inside `stores-service` later | partial: profile in DynamoDB, no merchant aggregate/API yet | `MerchantInfo` → `Merchant`, merchant users and roles | *proposed*: `MerchantStatusChanged` | — |
 | Identity | IdP (to choose) | planned | customer and merchant accounts, tokens with `customerId` or `merchantId` + roles | — | — |
 
 **Rule of thumb for new contexts:**

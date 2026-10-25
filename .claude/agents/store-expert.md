@@ -21,7 +21,7 @@ Start by reading `architecture/generated/stores-service.md` (endpoints, listener
 Answer the caller's question with:
 - Aggregates and invariants affected (cite `domain/model` files)
 - Use cases to add/change, with commands and DTOs
-- REST changes under `/v1/store/tenants/{tenantId}/stores/...` (public) or `/internal/v1/store/...` (internal) — mark **BREAKING** where applicable
+- REST changes under `/v1/store/merchants/{merchantId}/stores/...` (public) or `/internal/v1/store/...` (internal) — mark **BREAKING** where applicable
 - Flyway migration needed (next version number)
 - Outbox events to add/change and their payload; note consumers that must change too
 - Tests to add
