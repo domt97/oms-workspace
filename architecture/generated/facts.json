@@ -189,7 +189,7 @@
         "handler": "StoreController#createStore",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores",
+        "path": "/v1/store/merchants/{merchantId}/stores",
         "visibility": "public"
       },
       {
@@ -197,7 +197,7 @@
         "handler": "StoreController#getStore",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/tenants/{tenantId}/stores/{id}",
+        "path": "/v1/store/merchants/{merchantId}/stores/{id}",
         "visibility": "public"
       },
       {
@@ -205,7 +205,7 @@
         "handler": "StoreController#addStoreAvailability",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{id}/availability",
+        "path": "/v1/store/merchants/{merchantId}/stores/{id}/availability",
         "visibility": "public"
       },
       {
@@ -213,7 +213,7 @@
         "handler": "StoreController#cancelStoreAvailability",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{id}/availability/{storeAvailabilityId}/cancel",
+        "path": "/v1/store/merchants/{merchantId}/stores/{id}/availability/{storeAvailabilityId}/cancel",
         "visibility": "public"
       },
       {
@@ -221,7 +221,7 @@
         "handler": "StoreController#closeStore",
         "hidden": false,
         "method": "PUT",
-        "path": "/v1/store/tenants/{tenantId}/stores/{id}/close",
+        "path": "/v1/store/merchants/{merchantId}/stores/{id}/close",
         "visibility": "public"
       },
       {
@@ -229,7 +229,7 @@
         "handler": "StoreController#reopenStore",
         "hidden": false,
         "method": "PUT",
-        "path": "/v1/store/tenants/{tenantId}/stores/{id}/reopen",
+        "path": "/v1/store/merchants/{merchantId}/stores/{id}/reopen",
         "visibility": "public"
       },
       {
@@ -237,7 +237,7 @@
         "handler": "StoreConfigController#updateBusinessHour",
         "hidden": false,
         "method": "PUT",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/business-hours",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/business-hours",
         "visibility": "public"
       },
       {
@@ -245,7 +245,7 @@
         "handler": "StoreCollectionController#getAll",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections",
         "visibility": "public"
       },
       {
@@ -253,7 +253,7 @@
         "handler": "StoreCollectionController#create",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections",
         "visibility": "public"
       },
       {
@@ -261,7 +261,7 @@
         "handler": "StoreCollectionController#getDetails",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}",
         "visibility": "public"
       },
       {
@@ -269,7 +269,7 @@
         "handler": "StoreCollectionController#addProducts",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/add-products",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/add-products",
         "visibility": "public"
       },
       {
@@ -277,7 +277,7 @@
         "handler": "StoreCollectionController#removeProducts",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/collections/{collectionId}/remove-products",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/remove-products",
         "visibility": "public"
       },
       {
@@ -285,7 +285,7 @@
         "handler": "StoreConfigController#updateBaseConfig",
         "hidden": false,
         "method": "PUT",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/configs",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/configs",
         "visibility": "public"
       },
       {
@@ -293,7 +293,7 @@
         "handler": "StoreProductController#create",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products",
         "visibility": "public"
       },
       {
@@ -301,7 +301,7 @@
         "handler": "StoreProductController#importProducts",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/import",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/import",
         "visibility": "public"
       },
       {
@@ -309,7 +309,7 @@
         "handler": "StoreProductController#getStoreProducts",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/search",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/search",
         "visibility": "public"
       },
       {
@@ -317,7 +317,7 @@
         "handler": "StoreProductController#getProductDetails",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/tenants/{tenantId}/stores/{storeId}/products/{productId}",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}",
         "visibility": "public"
       }
     ],
