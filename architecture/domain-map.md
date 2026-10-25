@@ -5,7 +5,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 ## Store context — `stores-service`
 
-**Owns:** merchant stores and their own product catalog.
+**Owns:** merchants' stores and their own product catalog. The merchant is called *tenant* in code (`tenant_id`); rename to merchant planned (open question 28).
 
 | Aggregate | Holds | Tables |
 |-----------|-------|--------|
@@ -45,6 +45,8 @@ request logging, Swagger config.
 Note: `OrderId`, `OrderItemId`, `CustomerId` already exist here, ahead of the order context.
 
 ## Planned contexts
+
+Full target picture (subdomains, context map, roadmap): `vision.md`.
 
 | Context | Expected responsibility | Evidence in code |
 |---------|------------------------|------------------|

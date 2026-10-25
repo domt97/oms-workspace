@@ -47,8 +47,8 @@ Tests: JUnit per layer, mirrored package structure (domain model tests, service 
 
 ## Multi-tenancy
 
-Hierarchical tenancy (`CLAUDE.md` rule 4):
-- Every aggregate root is tenant-scoped.
+Merchant isolation (`CLAUDE.md` rule 4, `vision.md`): merchant → store; customers are platform users.
+- In code the merchant is called *tenant*; rename planned (open question 28).
 - In stores-service, only `stores` has `tenant_id`; child tables are scoped by `store_id`.
 - Every inventory-service table has `tenant_id`.
 

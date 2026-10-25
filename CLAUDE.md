@@ -1,6 +1,6 @@
 # OMS Workspace — System Map
 
-Multi-tenant SaaS **Order Management System**. Each bounded context lives in its own GitHub repo;
+Multi-merchant marketplace **Order Management System** for one market (Vietnam, VND): **merchants** (sellers, often chains) run **stores**; customers are platform users who buy across merchants. In current code the merchant is called **tenant** (`tenant_id`, `TenantId`) — to be renamed (open question 28). Each bounded context lives in its own GitHub repo;
 this workspace holds the cross-repo knowledge (architecture, contracts, flows) and clones every
 repo into `repos/` so Claude can reason about the whole system.
 
@@ -21,6 +21,8 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 
 | Need | File |
 |------|------|
+| Product vision, subdomains, bounded contexts (built + planned), context map, roadmap | `architecture/vision.md` |
+| Business rules (✅ in code / 🟡 proposed / ❓ open) and open business questions | `architecture/business-rules.md` |
 | Big picture, tech stack, conventions | `architecture/system-overview.md` |
 | Who owns what (entities, tables, APIs, events) | `architecture/domain-map.md` |
 | Every event and REST endpoint between services | `architecture/integration.md` |
@@ -37,7 +39,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 1. **Database per service.** stores → Postgres DB `store`, inventory → DB `inventory`. Never query or join across.
 2. **Cross-service writes go through events**, published with the **transactional outbox + Debezium CDC** (`outbox_events` table). Never publish to Kafka directly from a use case.
 3. **Hexagonal / DDD in every service**: `domain` (pure Java) ← `application` (use cases, ports) ← `infrastructure` (adapters). External event DTOs live in `infrastructure/message/dto` (anti-corruption layer) and are mapped to commands.
-4. **Multi-tenant**: every aggregate root is tenant-scoped — directly (`tenant_id`) or through an immutable parent (e.g. `store_id` → store → tenant). Every query filters by the tenant or by a tenant-checked parent, never by id alone. Tenant metadata lives in DynamoDB (`tenant_info`).
+4. **Merchant isolation (tenant = merchant)**: every merchant-owned aggregate root (store, catalog, inventory, order) belongs to exactly one merchant — directly (`merchant_id`, today still `tenant_id`) or through an immutable parent (`store_id` → store → merchant). Customer-owned data (customer, cart, checkout, payment) belongs to the platform and is scoped by `customer_id`. Every query filters by merchant (or a merchant-checked parent) or by customer — never by id alone. Merchant metadata lives in DynamoDB (`tenant_info`, to be renamed).
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).
@@ -45,7 +47,8 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 
 ## How to analyse a feature
 
-1. Read `domain-map.md`, `integration.md` and the relevant flow **before** opening code.
+1. Read `vision.md`, `business-rules.md`, `domain-map.md`, `integration.md` and the relevant flow **before** opening code.
+   Design only on business rules marked ✅ or confirmed by the user; for 🟡/❓ rules **ask the user** (quote the id) — never invent business rules.
 2. List the bounded contexts affected and why.
 3. Only then go into `repos/<service>`: read its `CLAUDE.md` first, then `application/usecase` and `domain/model`.
 4. Check `open-questions.md` — docs in service READMEs may be out of date; **code wins**.
