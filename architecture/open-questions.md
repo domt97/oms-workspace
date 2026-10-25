@@ -1,6 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-25. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service#28; its large-volume remainder is item 22.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-25. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service#28; its large-volume remainder is item 22. Item 23 decided: stores-service keeps store-scoped child tables (hierarchical tenancy, `sa-multitenancy-security` rule 1); add `tenant_id` only for row-level security or tenant-wide queries.
 
 ## Local infrastructure
 
@@ -28,6 +28,11 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
     - stores-service enforces `UNIQUE (product_id, sku)` only (`V3`), so two products in the same store may share a SKU.
     - inventory-service is unique on `(store_id, sku)`. `CreateInventoryService` logs "Inventory exists … with different productId … skipping", so the second product silently gets **no inventory**.
     - Decide whether a SKU is unique per store (then enforce it in stores-service), or key inventory by (store, product, sku).
+27. **Collection use cases are not tenant/store-scoped.** The `tenantId`/`storeId` in the path are not checked against the data:
+    - `AddProductCollectionService`, `RemoveProductFromCollectionService`, `GetStoreCollectionService` load the collection with `repository.getById(collectionId)` (`StoreCollectionPersistenceAdapter.getById` → `findById`).
+    - `AddProductCollectionService` loads products with `findAllByIdIn(productIds)` (`createProductCollectionList`): another store's or tenant's products can be attached, and unknown ids are silently skipped.
+    - `GetListStoreCollectionService` and `CreateStoreCollectionService` use `storeId` without checking it belongs to `tenantId` (create does check products belong to that store).
+    - Fix: load the store by `(tenantId, storeId)`, the collection by `(storeId, id)`, products by `(storeId, ids)`, reject if any id is missing; add cross-tenant tests. (Found by reading code; not reproduced.)
 
 ## Reliability (messaging)
 
@@ -51,10 +56,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 ## Design decisions pending (decide when a feature needs them)
 
 6. inventory-service REST has **no `tenantId`** in path or header, unlike stores-service.
-23. **stores-service child tables have no `tenant_id`.**
-    - Only `stores` has it (`V4`). Products, SKUs, images, collections, availability, configs, business hours, addresses and `outbox_events` are isolated by `store_id` only, which relies on every use case loading the store by `(tenant_id, id)` first.
-    - Workspace rule 4 says every table has `tenant_id`. Decide whether to add the column (expand → backfill → `NOT NULL`) or to amend the rule to "every aggregate root" and keep the store-scoped pattern.
-    - In both cases, new tables follow `sa-multitenancy-security` rule 2.
 7. `InventoryServiceClient` (stores → inventory) and `PromotionServiceClient` have no adapter.
 8. `ReleaseStockReservationUseCase` has no implementation; reserve/confirm have no entry points.
 9. Only `ProductCreated` is published — no event for product/SKU update, deactivation, or store close.

@@ -13,7 +13,7 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 - **Only the `stores` table has `tenant_id`** (added in `V4__add_unique_constraints.sql`, with `UNIQUE (tenant_id, code)`).
 - Every child table (products, SKUs, images, collections, availability, configs, business hours, addresses, `outbox_events`) is isolated **by `store_id` only**.
 - Isolation therefore depends on every use case first loading the store with `findByTenantIdAndStoreId` (e.g. `GetStoreProductDetailService`) and then querying children by that store id.
-- Workspace rule 4 ("every table has `tenant_id`") is **not true** in stores-service; see open question 23.
+- This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check: the collection use cases do (open question 27).
 
 **Isolation in data — inventory-service**
 - Every table (`inventories`, `stock_reservations`, `stock_movements`) has `tenant_id`.
@@ -32,12 +32,15 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 - `oms-core` `RequestResponseLoggingFilter` logs method, URI and **all headers** at INFO. It redacts `authorization`, `cookie`, `x-api-key` and similar headers, and token-like query params. It does not log bodies.
 
 ## Rules
-1. **Tenant is part of every lookup.**
-   - Load the aggregate root by `(tenant_id, id)`.
-   - Load children only through a root that was loaded with the tenant.
-   - Never fetch by a bare id coming from a request.
-   - A record of another tenant is reported as **404**, never 403, so existence is not leaked.
-2. **New tables get `tenant_id NOT NULL`**, and every unique constraint that is unique *per tenant* includes it (`UNIQUE (tenant_id, code)`). This keeps queries, constraints and future row-level security or partitioning possible. Do not copy the stores child-table pattern for new aggregates.
+1. **Where the tenant lives** (hierarchical tenancy):
+   - A **top-level root** (e.g. `stores`) has `tenant_id NOT NULL`; per-tenant uniqueness includes it (`UNIQUE (tenant_id, code)`).
+   - A **table owned by a tenant-scoped parent** (store products, collections, availability…) may rely on the parent key (`store_id`), as long as that parent never moves to another tenant. Do not duplicate `tenant_id` there.
+   - A table in **another service** has no parent to join to, so it carries its own `tenant_id` (inventory does).
+   - Add `tenant_id` to child tables only when needed: Postgres row-level security, tenant-wide queries/exports/deletion without the parent, or partitioning by tenant.
+2. **Every query is scoped — never by id alone.**
+   - Load the root by `(tenant_id, id)` (`findByTenantIdAndStoreId`).
+   - Load children by the checked parent: `WHERE store_id = :storeId AND id = :id`, and `WHERE store_id = :storeId AND id IN (:ids)` for lists of ids from the request (verify all were found).
+   - Another tenant's or store's record → **404**, nothing written (don't leak existence with 403).
 3. **Tenant in every event** (`tenantId` in the payload). Consumers validate it against the data they touch (e.g. inventory checks the store belongs to the same tenant).
 4. **Tenant lifecycle**: decide what a non-active tenant can do (read-only? nothing?) and enforce it in one place. Until auth exists, that place is the use case that loads `TenantInfo`.
 5. **Trust boundary (until auth is built)**: assume the caller is trusted, but design so it can be added without changing use cases:
@@ -60,7 +63,8 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 ## Checklist
 - [ ] Every query in the change scoped by tenant (directly or through a tenant-scoped root)? Show the line.
 - [ ] Cross-tenant test: an id that exists in another tenant → 404, nothing written.
-- [ ] New table: `tenant_id NOT NULL`, tenant in unique constraints and indexes.
+- [ ] Ids in the request body (lists) checked to belong to the same store/tenant.
+- [ ] New table: top-level → `tenant_id NOT NULL` (in unique constraints and indexes); child of a tenant-scoped parent → parent key, or `tenant_id` if rule 1 says so.
 - [ ] Event payload carries `tenantId`; consumer validates it.
 - [ ] Tenant status handled (or explicitly out of scope).
 - [ ] No secrets or PII in code, YAML defaults, logs, or event payloads beyond what the consumer needs.
@@ -68,7 +72,7 @@ description: Multi-tenancy and security in the OMS — tenant isolation in data,
 
 ## Known gaps
 - No authentication or authorization; the path tenant is trusted; internal endpoints unprotected.
-- stores-service child tables have no `tenant_id` (open question 23).
+- Collection use cases load collections and products by id only (open question 27).
 - inventory public reads are not tenant-scoped (open question 6).
 - Tenant `status` ignored everywhere.
 - S3 import uses the request's `path` as the **bucket** and `fileName` as the key (`ProductExcelReader` → `S3ObjectStorageReader.read(bucket, key)`). The caller can read any object the service's credentials allow; there is no tenant prefix (open question 25).
