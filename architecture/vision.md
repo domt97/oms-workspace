@@ -4,25 +4,26 @@
 > (🟢 Decided). Items marked *proposed* (relationships, flows, roadmap phases) are architecture
 > recommendations: agents may use them as the default design, but flag them in plans.
 
-## 1. Domain vision statement *(Q1, Q2, Q3, Q8, Q20b decided 2026-10-25)*
+## 1. Domain vision statement *(Q1, Q2, Q3, Q8, Q20b, Q32 decided 2026-10-25)*
 
-A **multi-tenant marketplace**, operated by us.
+A **multi-merchant marketplace** for **one market** (Vietnam, VND), operated by us.
 
 ```
-Tenant = market (e.g. "VN": country, currency VND, time zone, rules)      ← fully isolated
- ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)
+Platform (one market: Vietnam, VND)
+ ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)   ← isolated from each other
  │   └─ Store = branch with its own hours, catalog and stock
- └─ Customer = buyer of that market (one account for all merchants of the market)
+ └─ Customer = platform user (one account for all merchants)
      └─ Cart → Checkout → one Order per store, one payment
 ```
 
-- **Tenant = market**: customers, merchants, currency, payment and delivery are per market, and nothing crosses markets. The first tenant is Vietnam (VND). A new country is a new tenant.
+- **Merchant = tenant.** Merchants are isolated from each other: a merchant sees only its own stores, catalog, stock and orders. In current code the merchant is called *tenant* (`tenant_id`); the code will be renamed (open question 28).
 - **Merchants** sell both made-to-order items (food & beverage) and stocked retail goods. One merchant = one seller company; it has one or more stores.
-- **Customers** use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants of the same market**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
+- **Customers** belong to the platform and use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
+- **One market** for now: one currency (VND) and one set of rules for the whole platform. Adding a second country later means adding a "market" level above merchants.
 
-**Scopes inside a tenant:**
+**Two scopes of data:**
 - **merchant-owned**: merchant, stores, catalog, inventory, and each order (an order belongs to one store, hence one merchant);
-- **customer-owned**: customer profile, cart, checkout and its payment.
+- **customer-owned** (platform level, no merchant): customer profile, cart, checkout and its payment, later settlement.
 
 The platform covers **order management only**: payment gateways and delivery partners are external and
 represented by **mock providers** behind ACLs.
@@ -51,7 +52,7 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 | Fulfillment & delivery (preparation, handover, third-party delivery booking and tracking) | Supporting | Delivery is by third-party partners (Q8): we own the booking state and translate partner callbacks; the partner owns the driver. |
 | Customer | Supporting | Profile, addresses, order history. |
 | Payment | **Generic** | Use a gateway; we own only the payment *state* and its reconciliation. |
-| Market (tenant) & merchant management | Supporting | Market config; merchant onboarding, status, commission, users and roles. |
+| Merchant management | Supporting | Merchant onboarding, status, commission, users and roles. |
 | Notification, Identity & access | Generic | Buy/standard components. |
 
 ## 3. Bounded contexts
@@ -60,17 +61,17 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 |---------|---------|--------|-------------------|-----------|----------|
 | Store & Catalog | `stores-service` | built | `Store`, `StoreAvailability`, `StoreProduct`, `StoreCollection` | `ProductCreated`; *proposed*: `ProductUpdated`, `ProductStatusChanged`, `StoreStatusChanged` | — |
 | Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *proposed*: `StockReserved`, `StockReservationFailed`, `StockReservationExpired` | `ProductCreated`; *proposed*: order events |
-| **Cart** | `cart-service` (owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants of the same tenant | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductStatusChanged`, `ProductUpdated` (to flag unavailable lines) |
+| **Cart** | `cart-service` (platform level, owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductStatusChanged`, `ProductUpdated` (to flag unavailable lines) |
 | **Ordering** | `order-service` | planned (next) | `Checkout` (owned by the customer, one payment) groups N `Order`s (each owned by one merchant/store, + `OrderLine` snapshots) | `OrderPlaced`, `OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderCompleted` | inventory, payment, store events |
 | Payment | `payment-service` (mock provider) | planned | `Payment` (intent, attempts, refunds) | `PaymentSucceeded`, `PaymentFailed`, `RefundSucceeded` | order events |
 | Promotion | `promotion-service` | planned | `Promotion`, `Voucher`, redemption | `VoucherRedeemed` | order events |
 | Fulfillment & delivery | inside `order-service` first (mock partner); own service when a real partner or own fleet arrives | planned | `DeliveryBooking` per order | — | partner callbacks (via ACL) |
-| Customer | planned (per tenant) | planned | `Customer`, addresses | — | — |
+| Customer | planned (platform level) | planned | `Customer`, addresses | — | — |
 | Discovery / search | planned (read model) | later (Q30) | search index of stores and products across merchants | — | catalog and store events |
 | Settlement | planned (mock payouts) | later (Q29) | per-merchant balance, commission, payouts | — | order and payment events |
 | Notification | planned | planned | templates, delivery log | — | all customer-facing events |
-| Market & merchant | `tenant_info` (DynamoDB) = market config; `Merchant` inside `stores-service` first | partial: market config exists, **merchant level missing** (open question 28) | `TenantInfo` (market), `Merchant`, merchant users and roles | *proposed*: `MerchantStatusChanged` | — |
-| Identity | IdP (to choose) | planned | customer and merchant accounts, tokens with `tenantId` (+ `merchantId`, roles) | — | — |
+| Merchant | `tenant_info` (DynamoDB) = merchant profile today; `Merchant` aggregate inside `stores-service` later | partial: profile exists under the name *tenant* (rename: open question 28) | `TenantInfo` → `Merchant`, merchant users and roles | *proposed*: `MerchantStatusChanged` | — |
+| Identity | IdP (to choose) | planned | customer and merchant accounts, tokens with `customerId` or `merchantId` + roles | — | — |
 
 **Rule of thumb for new contexts:**
 - a context gets its own service when it has its own lifecycle, its own team concern, or a different scaling/consistency need;
@@ -166,4 +167,4 @@ sequenceDiagram
 | Later | Returns, reporting, pickup, search | Return/refund flow, analytics read models, pickup (Q25), search across stores (Q30). Pre-order (Q7, up to the next day) fits in phase 1–2 |
 
 ## 8. Out of scope (until decided otherwise)
-Cross-market (cross-border) checkout, real payment gateways, real delivery partners, POS orders, guest orders, multi-currency within one market, split shipments, B2B invoicing, loyalty points.
+More than one market (countries, currencies), cross-border checkout, real payment gateways, real delivery partners, POS orders, guest orders, multi-currency, split shipments, B2B invoicing, loyalty points.

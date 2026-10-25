@@ -2,10 +2,10 @@
 
 | Term | Meaning |
 |------|---------|
-| Tenant | A **market** (country/region, e.g. Vietnam). Fully isolated: its own customers, merchants, currency and rules. Column `tenant_id`; config in DynamoDB `tenant_info`. |
-| Merchant | A seller company inside a tenant, often a chain; owns one or more stores. (Not in code yet — open question 28.) |
+| Merchant | A seller company on the platform, often a chain; owns one or more stores. Isolated from other merchants. Called **tenant** in current code (`tenant_id`, `TenantId`, DynamoDB `tenant_info`) until renamed (open question 28). |
+| Tenant | Old name in code for **merchant**. Do not use it in new designs. |
 | Store | A branch of a merchant; has config, address, business hours, availability windows, its own catalog and stock. |
-| Customer | A buyer of one market; one account buys from every merchant of that market. |
+| Customer | A platform user; one account buys from every merchant. |
 | Checkout | One customer action that turns a cart into one order per store, with one payment. |
 | Store product | A product owned by a store (own catalog), status `DRAFT/ACTIVE/INACTIVE`. |
 | SKU | Sellable variant of a store product (price, dimensions). Inventory is tracked per (store, SKU). |

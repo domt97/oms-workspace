@@ -1,6 +1,6 @@
 # OMS Workspace — System Map
 
-Multi-tenant marketplace **Order Management System**: **tenant = market** (country/region, fully isolated); inside a tenant, **merchants** (sellers, often chains) run **stores**, and customers buy across merchants. Each bounded context lives in its own GitHub repo;
+Multi-merchant marketplace **Order Management System** for one market (Vietnam, VND): **merchants** (sellers, often chains) run **stores**; customers are platform users who buy across merchants. In current code the merchant is called **tenant** (`tenant_id`, `TenantId`) — to be renamed (open question 28). Each bounded context lives in its own GitHub repo;
 this workspace holds the cross-repo knowledge (architecture, contracts, flows) and clones every
 repo into `repos/` so Claude can reason about the whole system.
 
@@ -39,7 +39,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 1. **Database per service.** stores → Postgres DB `store`, inventory → DB `inventory`. Never query or join across.
 2. **Cross-service writes go through events**, published with the **transactional outbox + Debezium CDC** (`outbox_events` table). Never publish to Kafka directly from a use case.
 3. **Hexagonal / DDD in every service**: `domain` (pure Java) ← `application` (use cases, ports) ← `infrastructure` (adapters). External event DTOs live in `infrastructure/message/dto` (anti-corruption layer) and are mapped to commands.
-4. **Multi-tenant (tenant = market)**: every aggregate root belongs to exactly one tenant — directly (`tenant_id`) or through an immutable parent (`store_id` → store → merchant → tenant). **Nothing crosses tenants.** Inside a tenant, merchant-owned data (merchant, store, catalog, inventory, order) is also scoped by merchant/store for merchant users, and customer-owned data (cart, checkout, payment) by customer. Every query filters by tenant **and** owner (merchant/store or customer) — never by id alone. Market config lives in DynamoDB (`tenant_info`); the merchant level is not in code yet (open question 28).
+4. **Merchant isolation (tenant = merchant)**: every merchant-owned aggregate root (store, catalog, inventory, order) belongs to exactly one merchant — directly (`merchant_id`, today still `tenant_id`) or through an immutable parent (`store_id` → store → merchant). Customer-owned data (customer, cart, checkout, payment) belongs to the platform and is scoped by `customer_id`. Every query filters by merchant (or a merchant-checked parent) or by customer — never by id alone. Merchant metadata lives in DynamoDB (`tenant_info`, to be renamed).
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).

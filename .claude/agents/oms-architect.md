@@ -29,7 +29,7 @@ Design rules you enforce:
 - Database per service; no cross-DB reads. Cross-context state changes travel as events through the outbox.
 - New events get a JSON Schema in `architecture/contracts/events/` and a row in `integration.md`.
 - Consumers are idempotent; say how (unique key, processed-event table, state check).
-- Tenant = market: every aggregate root belongs to one tenant (its own `tenant_id`, or an immutable parent such as `store_id`); nothing crosses tenants; every query is scoped by tenant and owner (merchant/store or customer), never by id alone (`CLAUDE.md` rule 4, `sa-multitenancy-security`).
+- Merchant isolation: merchant-owned data belongs to one merchant (`merchant_id` — `tenant_id` in current code — or an immutable parent such as `store_id`); customer-owned data (cart, checkout, payment) is platform level, scoped by customer; never query by id alone (`CLAUDE.md` rule 4, `sa-multitenancy-security`). Use the word *merchant* in new designs.
 - Prefer choreography with clear compensations; name the saga owner if orchestration is chosen.
 - Do not move code to `oms-core` unless at least two contexts need it.
 

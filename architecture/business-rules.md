@@ -10,22 +10,21 @@
 > For ❓ items, ask the user (quote the question id). Never invent a rule. When the user decides, update
 > the status here in the same piece of work.
 
-## Market (tenant) & merchant
+## Platform & merchant
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-TEN-01 | **Tenant = market** (country/region). Customers, merchants, stores, carts and orders belong to exactly one tenant; nothing crosses tenants. The first tenant is Vietnam. | 🟢 Q32 (2026-10-25) |
-| BR-TEN-02 | A tenant has **one currency** (VND for Vietnam, 0 decimals); every store, price, checkout and payment of the tenant uses it. | 🟢 Q33 (2026-10-25) |
-| BR-TEN-03 | Inside a tenant, a **merchant** is one seller company; it owns one or more **stores** (branches). A store belongs to exactly one merchant and never moves. | 🟢 Q32 (2026-10-25). **Gap:** no merchant level in code; stores point straight to `tenant_id` (open question 28) |
-| BR-TEN-04 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
+| BR-MER-01 | The platform serves **one market** (Vietnam) with **one currency** (VND, 0 decimals); every store, price, checkout and payment uses it. More markets are out of scope. | 🟢 Q32, Q33 (2026-10-25) |
+| BR-MER-02 | **Merchant = tenant**: a merchant is one seller company and owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ store → `tenant_id` (`V4`); 🟢 Q32 (2026-10-25). **Gap:** the code calls the merchant *tenant*; rename planned (open question 28) |
+| BR-MER-03 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
 
 ## Channels & users
 
 | Id | Rule | Status |
 |----|------|--------|
 | BR-USR-01 | Customers order through the **customer app**; POS / staff-entered orders are out of scope for now. | 🟢 Q2 (2026-10-25) |
-| BR-USR-02 | A **customer account is required** to build a cart and order; no guest orders. Customers belong to a **tenant (market)**: one account works across all merchants of that market. | 🟢 Q15, Q20b, Q32 (2026-10-25) |
-| BR-USR-04 | Each market is a **multi-merchant marketplace**: one customer app shows stores of all merchants of the market. | 🟢 Q20b (2026-10-25) |
+| BR-USR-02 | A **customer account is required** to build a cart and order; no guest orders. Customers are **platform users**: one account works across all merchants. | 🟢 Q15, Q20b, Q32 (2026-10-25) |
+| BR-USR-04 | The platform is a **multi-merchant marketplace**: one customer app shows stores of all merchants. | 🟢 Q20b (2026-10-25) |
 | BR-USR-05 | Customers can **search products across all stores and merchants** (read model fed by catalog events). | 🟢 Q30 (2026-10-25), later phase |
 | BR-USR-03 | Merchant users have one of three roles:<br/>- **owner**: all stores of the merchant;<br/>- **manager**: one (or assigned) store(s);<br/>- **staff**: accept, prepare and hand over orders of their store. | 🟢 Q16 (2026-10-25) |
 
@@ -33,9 +32,9 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-STO-01 | A store belongs to one merchant (BR-TEN-03), hence one tenant. Store `code` is unique per merchant. | ✅ store → tenant with `UNIQUE (tenant_id, code)` (`V4`); 🟡 unique per merchant once the merchant level exists (open question 28) |
+| BR-STO-01 | A store belongs to one merchant (BR-MER-02). Store `code` is unique per merchant. | ✅ `UNIQUE (tenant_id, code)` (`V4`; `tenant_id` = merchant) |
 | BR-STO-02 | Store status is `ACTIVE`, `INACTIVE`, `SUSPENDED` or `CLOSED`; only `ACTIVE` stores take orders. | ✅ statuses (`StoreStatus`); 🟡 order rule |
-| BR-STO-03 | A store has its own time zone; its currency is the **tenant's currency** (BR-TEN-02). Every SKU price is in that currency. | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). **Gap:** `StoreConfig.currency` and `ProductSku.currency` are free fields; nothing checks they equal the tenant's currency |
+| BR-STO-03 | A store has its own time zone; its currency is the **platform currency** VND (BR-MER-01). Every SKU price is in that currency. | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). **Gap:** `StoreConfig.currency` and `ProductSku.currency` are free fields; nothing checks they equal VND |
 | BR-STO-04 | A store is open when the current local time is within that day's business hours **and** no active availability window (closure, holiday, maintenance, staff shortage, inventory) covers now. | ✅ hours check `Store.isOpen` (opening < closing, so no overnight hours); 🟡 combining with `StoreAvailability` (not done anywhere today) |
 | BR-STO-05 | `autoAcceptOrder`: orders are accepted without staff action; otherwise staff must accept or reject. | ✅ setting exists, unused; 🟡 behaviour, see BR-ORD-08 |
 | BR-STO-06 | `allowPreOrder`: when on, customers may order for a later time (e.g. tonight for tomorrow 7:00, or while the store is closed), choosing a time slot inside future opening hours. Stock is held at placement (BR-INV-02). | ✅ setting exists, unused; 🟢 pre-order supported, at most until the next day (Q7, Q27, 2026-10-25); 🟡 15-min slots |
@@ -68,7 +67,7 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-CRT-01 | A cart belongs to one logged-in customer of one tenant. A customer has **one active cart**, which may hold items from **several stores of different merchants of that tenant**; checkout splits it into one order per store. | 🟢 Q3, Q15, Q20, Q20b (2026-10-25) |
+| BR-CRT-01 | A cart belongs to one logged-in customer (platform level, no merchant). A customer has **one active cart**, which may hold items from **several stores of different merchants**; checkout splits it into one order per store. | 🟢 Q3, Q15, Q20, Q20b (2026-10-25) |
 | BR-CRT-02 | A cart line references store, product and SKU with a quantity (> 0, ≤ a per-line maximum). Adding the same SKU again increases the quantity. Lines are shown grouped by store. | 🟡 |
 | BR-CRT-03 | Adding to the cart **never holds stock** and never creates a payment. Prices and availability are **indicative**, refreshed when the cart is viewed; unavailable lines are flagged, not silently removed. | 🟢 no stock hold (Q18, 2026-10-25); 🟡 indicative prices / flagging |
 | BR-CRT-04 | Checkout sends **one** request to order-service with all lines grouped by store and idempotency key = cart id + cart version. Order-service creates **one order per store** (BR-ORD-01). The cart is locked (`CHECKING_OUT`) during the call. Retrying returns the same result. On success the cart becomes `CHECKED_OUT`; on rejection it returns to `ACTIVE` with reasons per line. | 🟢 split per store (Q3), all-or-nothing (Q21) (2026-10-25); 🟡 mechanics |
@@ -79,7 +78,7 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-ORD-01 | An order belongs to exactly **one store** (one merchant, one tenant, one currency). A checkout with items from N stores creates **N orders**, linked by one `checkoutId`. | 🟢 Q3 (2026-10-25) |
+| BR-ORD-01 | An order belongs to exactly **one store** (hence one merchant). A checkout with items from N stores creates **N orders**, linked by one `checkoutId`. | 🟢 Q3 (2026-10-25) |
 | BR-ORD-02 | An order can be placed only if all of these hold, checked at placement time; otherwise it is rejected with a reason per line:<br/>- the store is `ACTIVE`;<br/>- the store is open, or pre-order is allowed for the requested slot;<br/>- the products and SKUs are `ACTIVE`;<br/>- the stock reservation succeeds;<br/>- the daily cap is not reached. | 🟡 |
 | BR-ORD-03 | Each order line **snapshots** SKU, product name, unit price and currency at placement. Totals are computed by the server from the snapshots; client-sent prices are ignored. | 🟡 |
 | BR-ORD-04 | Money = amount + ISO-4217 currency; amounts are rounded to the currency's minor unit with HALF_UP, at line level then summed. | 🟡 (currency per store is 🟢, BR-STO-03) |
@@ -111,7 +110,7 @@
 | BR-PAY-02 | The order is the source of truth for "what is owed"; payment owns "what was paid". Payment results arrive as events and are idempotent per gateway transaction id. | 🟡 |
 | BR-PAY-03 | Refunds are full on cancellation (BR-ORD-09); partial refunds only via an explicit store action. | 🟢 Q13 (2026-10-25) |
 | BR-PAY-04 | COD: the delivery driver collects the cash. The amount to collect is sent to the delivery partner with the booking and reconciled from the partner's settlement. | 🟡 |
-| BR-PAY-05 | A multi-store checkout paid online is **one payment** for the checkout total, collected by the **marketplace operator** for all merchants of the checkout; refunds are made per order. | 🟢 Q22, Q20b (2026-10-25) |
+| BR-PAY-05 | A multi-store checkout paid online is **one payment** for the checkout total, collected by the **platform** for all merchants of the checkout; refunds are made per order. | 🟢 Q22, Q20b (2026-10-25) |
 | BR-PAY-06 | The platform owes each merchant the value of its completed orders minus a commission, paid out on a schedule (payouts mocked). | 🟢 in scope, later phase (Q29, 2026-10-25); 🟡 commission % per merchant, balance per merchant |
 
 ## Fulfillment
@@ -135,7 +134,7 @@
 | Q5 | Both COD and online payment. |
 | Q6 | Orchestration by order-service. |
 | Q8 | Third-party delivery. |
-| Q9 | One currency per store — refined by Q33: the store uses its tenant's currency. |
+| Q9 | One currency per store — refined by Q33: one currency (VND) for the whole platform. |
 | Q10 | SKU unique within a store. |
 | Q11 | `trackStock` flag per SKU — nice to have. |
 | Q13 | Customer cancels until accepted; then store only; full refund; stock returned only if reusable. |
@@ -148,7 +147,7 @@
 | Q18 | Adding to the cart never holds stock. |
 | Q19 | Postgres for carts; Redis only if load requires. |
 | Q20 | A checkout may contain several stores; the system splits it into one order per store. |
-| Q20b | Marketplace across merchants: one customer app, one cart across merchants of the same market. |
+| Q20b | Marketplace across merchants: one customer app, one cart across merchants. |
 | Q21 | If one store's order fails at placement, the whole checkout fails with errors (all-or-nothing). |
 | Q22 | One payment for the whole checkout. |
 | Q24 | No real payment gateway: a mock payment provider; the platform covers the OMS only. |
@@ -159,8 +158,8 @@
 | Q29 | Settlement (commission, merchant balances, mocked payouts) is in scope, later. |
 | Q30 | Search across all stores, later. |
 | Q31 | Platform vouchers and shop vouchers, phase 3. |
-| Q32 | Tenant = market (country/region); merchants and customers live inside a tenant. |
-| Q33 | One currency per tenant. |
+| Q32 | Tenant = merchant; one market (Vietnam) only; customers are platform users. The code's `tenant` will be renamed to `merchant`. |
+| Q33 | One currency (VND) for the platform. |
 
 ## Open business questions
 

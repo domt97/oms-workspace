@@ -5,7 +5,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 ## Store context — `stores-service`
 
-**Owns:** merchants' stores and their own product catalog. Planned: the `Merchant` aggregate (tenant → merchant → store, open question 28).
+**Owns:** merchants' stores and their own product catalog. The merchant is called *tenant* in code (`tenant_id`); rename to merchant planned (open question 28).
 
 | Aggregate | Holds | Tables |
 |-----------|-------|--------|
