@@ -23,7 +23,8 @@ carry members/roles, commission and payouts. The DynamoDB design had these probl
 - Creating a store takes the merchant from the path (`/v1/store/merchants/{merchantId}/stores`), no longer from the body.
 - inventory-service does not look merchants up. It stores the `merchant_id` received with `ProductCreated`, and
   `Inventory.validateMerchantAndStore` checks requests against it.
-- DynamoDB is removed from `oms-core`, both services and the LocalStack services in `development`.
+- DynamoDB is removed from `oms-core` and both services. LocalStack in `development` still starts DynamoDB
+  (`SERVICES=s3,dynamodb,sqs,events`, kept on purpose for local experiments); no service uses it.
 - Local migration: stores `V1` was edited in place (no production data). Local databases are recreated: delete the
   connector, drop its replication slot (`debezium_store_v2_slot`, Postgres refuses to drop a database with a slot),
   recreate the databases, register the connector again (steps in the description of stores-service#43).
