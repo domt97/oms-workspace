@@ -6,6 +6,8 @@
 
 | Visibility | Method | Path | Handler |
 |---|---|---|---|
+| public | POST | `/v1/store/merchants` | `MerchantController#registerMerchant` |
+| public | GET | `/v1/store/merchants/{merchantId}` | `MerchantController#getMerchant` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores` | `StoreController#createStore` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{id}` | `StoreController#getStore` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{id}/availability` | `StoreController#addStoreAvailability` |
@@ -36,6 +38,7 @@
 
 ## Database tables (latest migration: `V8__alter_product_fk.sql`)
 
+- `merchants` (created in V1__init_store_tables.sql)
 - `outbox_events` (created in V7__add_outbox_events_table.sql)
 - `product_collections` (created in V6__add_store_product_collection_tables.sql)
 - `product_images` (created in V3__add_store_product_tables.sql)
@@ -51,6 +54,7 @@
 ## Aggregates / domain models
 
 - `BusinessHour`
+- `Merchant`
 - `ProductImage`
 - `ProductSku`
 - `Store`
@@ -64,10 +68,12 @@
 - `AddStoreAvailabilityUseCase`
 - `CancelStoreAvailabilityUseCase`
 - `CloseStoreUseCase`
+- `CreateMerchantUseCase`
 - `CreateStoreCollectionUseCase`
 - `CreateStoreProductUseCase`
 - `CreateStoreUseCase`
 - `GetListStoreCollectionUseCase`
+- `GetMerchantUseCase`
 - `GetStoreCollectionUseCase`
 - `GetStoreProductDetailUseCase`
 - `GetStoreUseCase`
