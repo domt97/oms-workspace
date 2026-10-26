@@ -26,7 +26,7 @@ carry members/roles, commission and payouts. The DynamoDB design had these probl
 - DynamoDB is removed from `oms-core`, both services and the LocalStack services in `development`.
 - Local migration: stores `V1` was edited in place (no production data). Local databases are recreated: delete the
   connector, drop its replication slot (`debezium_store_v2_slot`, Postgres refuses to drop a database with a slot),
-  recreate the databases, register the connector again (steps in the stores-service README).
+  recreate the databases, register the connector again (steps in the description of stores-service#43).
 
 ## Consequences
 - Merchant integrity is enforced by the database (FK, unique code). Merchant checks are a local primary-key lookup.
