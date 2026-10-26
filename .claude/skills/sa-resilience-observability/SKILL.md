@@ -1,6 +1,6 @@
 ---
 name: sa-resilience-observability
-description: Resilience and observability in the OMS — failure modes of dependencies (Postgres, Kafka, SQS, DynamoDB, S3, other services), timeouts, retries with backoff, dead-letter handling, graceful shutdown, health checks, structured logging, correlation ids, metrics and alerts. Use when a change calls a dependency, consumes messages, runs a job, or when asking "how would we notice and recover if this fails?".
+description: Resilience and observability in the OMS — failure modes of dependencies (Postgres, Kafka, SQS, S3, other services), timeouts, retries with backoff, dead-letter handling, graceful shutdown, health checks, structured logging, correlation ids, metrics and alerts. Use when a change calls a dependency, consumes messages, runs a job, or when asking "how would we notice and recover if this fails?".
 ---
 # Resilience & observability
 
@@ -12,7 +12,6 @@ description: Resilience and observability in the OMS — failure modes of depend
   - there is no DLQ or redrive policy (open question 18);
   - stale ticks are dropped (inventory-service#28).
 - **Expiry** isolates failures per inventory (`REQUIRES_NEW`); a failing inventory is logged and retried next tick.
-- **DynamoDB**: `DynamoDbMerchantInfoRepository` wraps every SDK error in a plain `RuntimeException` → HTTP 500. It uses SDK default timeouts and retries; no client override is configured (`oms-core/.../cloud/dynamodb/DynamoDbConfig.java`).
 - **S3** (`S3Config`): SDK defaults as well.
 - **Excel import**:
   - `ImportProductService` catches any exception and returns `ImportResult{status: FAILED}` with HTTP 200;

@@ -56,6 +56,6 @@ description: Testing strategy in the OMS — what each test level proves (domain
 - [ ] `./gradlew test` result in the PR; manual verification steps written down if any.
 
 ## Known gaps
-- No integration tests (DB, Kafka, SQS, S3, DynamoDB); no Testcontainers; no MockMvc controller tests.
+- No integration tests (DB, Kafka, SQS, S3); no Testcontainers; no MockMvc controller tests.
 - No CI pipeline running tests or build on PRs.
 - No contract tests for `ProductCreated` between the two repos.

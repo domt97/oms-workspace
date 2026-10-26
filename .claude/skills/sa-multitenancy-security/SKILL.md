@@ -1,13 +1,13 @@
 ---
 name: sa-multitenancy-security
-description: Multi-tenancy and security in the OMS — merchant isolation in data, queries, APIs and events, merchant lifecycle (DynamoDB merchant_info), authentication/authorization (not built yet), internal endpoints, secrets and PII in logs. Use for any change that reads or writes merchant data, adds an endpoint or event, handles credentials, or logs request data.
+description: Multi-tenancy and security in the OMS — merchant isolation in data, queries, APIs and events, merchant lifecycle (`merchants` table in stores-service), authentication/authorization (not built yet), internal endpoints, secrets and PII in logs. Use for any change that reads or writes merchant data, adds an endpoint or event, handles credentials, or logs request data.
 ---
 # Multi-tenancy & security
 
 ## OMS today (verified in code)
 **Merchant model** (`vision.md`): the isolation unit is the **merchant** (seller company, often a chain, owning stores; formerly called *tenant* in code); one market (Vietnam, VND). Customers, carts and checkouts are platform level.
-- `MerchantId` (oms-core typed ID). Merchant metadata (`code`, `name`, `status`, `settings`) lives in DynamoDB `merchant_info`, read through `oms-core` `DynamoDbMerchantInfoRepository.findByMerchantId` and wrapped by each service's `MerchantRepository` port.
-- **Merchant `status` is never checked**: services only test that the merchant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`, `AdjustStockService`). A suspended merchant keeps working.
+- `MerchantId` (oms-core typed ID). Merchants (`code`, `name`, `status`) live in stores-service's Postgres table `merchants` (`Merchant` aggregate, `MerchantRepository` port); `stores.merchant_id` has a foreign key to it. Other services only carry `merchant_id` (inventory gets it from `ProductCreated`).
+- **Merchant `status` is never checked** (Q35): stores-service only tests that the merchant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`); inventory no longer looks merchants up at all. A suspended merchant keeps working.
 
 **Isolation in data — stores-service**
 - **Only the `stores` table has `merchant_id`** (column in `V1__init_store_tables.sql`; `UNIQUE (merchant_id, code)` added in `V4__add_unique_constraints.sql`).
@@ -43,7 +43,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
    - Load children by the checked parent: `WHERE store_id = :storeId AND id = :id`, and `WHERE store_id = :storeId AND id IN (:ids)` for lists of ids from the request (verify all were found).
    - Another merchant's or store's record → **404**, nothing written (don't leak existence with 403).
 3. **Merchant in every event** (`merchantId` in the payload). Consumers validate it against the data they touch (e.g. inventory checks the store belongs to the same merchant).
-4. **Merchant lifecycle**: decide what a non-active merchant can do (read-only? nothing?) and enforce it in one place. Until auth exists, that place is the use case that loads `MerchantInfo`.
+4. **Merchant lifecycle**: decide what a non-active merchant can do (read-only? nothing?) and enforce it in one place. Until auth exists, that place is the use case that loads the `Merchant`; other services need a `MerchantStatusChanged` event (open question 32).
 5. **Trust boundary (until auth is built)**: assume the caller is trusted, but design so it can be added without changing use cases:
    - `MerchantId` flows in the command object;
    - controllers take it from the path;
