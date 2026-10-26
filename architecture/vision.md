@@ -70,8 +70,15 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 | Discovery / search | planned (read model) | later (Q30) | search index of stores and products across merchants | — | catalog and store events |
 | Settlement | planned (mock payouts) | later (Q29) | per-merchant balance, commission, payouts | — | order and payment events |
 | Notification | planned | planned | templates, delivery log | — | all customer-facing events |
-| Merchant | `<profile>_merchant_info` (DynamoDB) = merchant profile today; `Merchant` aggregate inside `stores-service` later | partial: profile in DynamoDB, no merchant aggregate/API yet | `MerchantInfo` → `Merchant`, merchant users and roles | *proposed*: `MerchantStatusChanged` | — |
+| Merchant | inside `stores-service` (Postgres `merchants`) | built: self-registration API, status; members/roles planned with identity | `Merchant`; later `MerchantMember` (user, role OWNER/MANAGER/STAFF, stores) | *proposed*: `MerchantStatusChanged` | — |
 | Identity | IdP (to choose) | planned | customer and merchant accounts, tokens with `customerId` or `merchantId` + roles | — | — |
+
+**Growth path for market, merchant and people** (each step only adds; nothing is rebuilt):
+1. **Now — Merchant**: the seller company (code, name, status) owns stores, catalog, stock and orders; sellers register themselves.
+2. **With identity — MerchantMember**: users are linked to merchants with a role (OWNER, MANAGER, STAFF) and stores; the registering user becomes OWNER; members join by invitation (BR-MER-07).
+3. **With a second country — Market**: add a market (country, currency, rules) above merchants and customers (`market_id`); merchants and members stay as they are.
+
+Market = *where* we sell, merchant = *who* sells (the business), member/user = *which person* operates it.
 
 **Rule of thumb for new contexts:**
 - a context gets its own service when it has its own lifecycle, its own team concern, or a different scaling/consistency need;

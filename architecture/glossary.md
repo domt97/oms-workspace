@@ -2,7 +2,7 @@
 
 | Term | Meaning |
 |------|---------|
-| Merchant | A seller company on the platform, often a chain; owns one or more stores. Isolated from other merchants. Code: `merchant_id`, `MerchantId`, DynamoDB `<profile>_merchant_info`. |
+| Merchant | A seller company on the platform, often a chain; owns one or more stores. Isolated from other merchants. Registers itself (unique case-insensitive code of letters and digits, ACTIVE on registration). Owned by stores-service: table `merchants`, `MerchantId`; other services carry `merchant_id`. |
 | Tenant | Former name of **merchant** in code (renamed 2026-10). Do not use it in new designs. |
 | Store | A branch of a merchant; has config, address, business hours, availability windows, its own catalog and stock. |
 | Customer | A platform user; one account buys from every merchant. |

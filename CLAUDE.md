@@ -10,9 +10,9 @@ repo into `repos/` so Claude can reason about the whole system.
 
 | Repo | Path | Role | Port |
 |------|------|------|------|
-| `stores-service` | `repos/stores-service` | Store bounded context: stores, own products (SKU, images), collections, business hours, availability. Publishes `ProductCreated` via outbox. | 8048 |
+| `stores-service` | `repos/stores-service` | Store bounded context: merchants (seller self-registration), stores, own products (SKU, images), collections, business hours, availability. Publishes `ProductCreated` via outbox. | 8048 |
 | `inventory-service` | `repos/inventory-service` | Inventory bounded context: stock per (store, SKU), reservations, stock movement audit. | 8058 |
-| `oms-core` | `repos/oms-core` | Shared kernel (Gradle composite build): typed IDs, `AggregateRoot`, `Money`/`Address`, exceptions, `@UseCase`/`@WebAdapter`/`@PersistenceAdapter`, DynamoDB merchant info, S3, Excel import template. | – |
+| `oms-core` | `repos/oms-core` | Shared kernel (Gradle composite build): typed IDs, `AggregateRoot`, `Money`/`Address`, exceptions, `@UseCase`/`@WebAdapter`/`@PersistenceAdapter`, S3, Excel import template. | – |
 | `development` | `repos/development` | Local infra: docker-compose (Kafka, Kafka Connect + Debezium, Schema Registry, Postgres 16, Redis, LocalStack) and Terraform for LocalStack (S3, SQS, EventBridge). | – |
 
 Not built yet but referenced in code: **order-service** (`OrderCreated` producer), **promotion-service** (`PromotionServiceClient`).
@@ -39,7 +39,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 1. **Database per service.** stores → Postgres DB `store`, inventory → DB `inventory`. Never query or join across.
 2. **Cross-service writes go through events**, published with the **transactional outbox + Debezium CDC** (`outbox_events` table). Never publish to Kafka directly from a use case.
 3. **Hexagonal / DDD in every service**: `domain` (pure Java) ← `application` (use cases, ports) ← `infrastructure` (adapters). External event DTOs live in `infrastructure/message/dto` (anti-corruption layer) and are mapped to commands.
-4. **Merchant isolation**: every merchant-owned aggregate root (store, catalog, inventory, order) belongs to exactly one merchant — directly (`merchant_id`) or through an immutable parent (`store_id` → store → merchant). Customer-owned data (customer, cart, checkout, payment) belongs to the platform and is scoped by `customer_id`. Every query filters by merchant (or a merchant-checked parent) or by customer — never by id alone. Merchant metadata lives in DynamoDB (`<profile>_merchant_info`).
+4. **Merchant isolation**: every merchant-owned aggregate root (store, catalog, inventory, order) belongs to exactly one merchant — directly (`merchant_id`) or through an immutable parent (`store_id` → store → merchant). Customer-owned data (customer, cart, checkout, payment) belongs to the platform and is scoped by `customer_id`. Every query filters by merchant (or a merchant-checked parent) or by customer — never by id alone. Merchants live in stores-service (Postgres table `merchants`); other services only carry `merchant_id`.
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).

@@ -19,15 +19,13 @@ flowchart LR
     EB[EventBridge 1 min] --> Q[(SQS reservation-expire)] --> SQS
     ORD[order-service<br/>planned] -. OrderCreated .-> K
     SUC -. checkItemDetail .-> IAPI
-    DDB[(DynamoDB merchant_info)] --- SUC
-    DDB --- IUC
 ```
 
 ## Tech stack (all services)
 
 Java 17 · Spring Boot 3.2.3 · Spring Data JPA / Hibernate 6.4 · PostgreSQL 16 + Flyway ·
 MapStruct 1.6.3 · Lombok · SpringDoc OpenAPI · Kafka (spring-kafka) · Spring Cloud AWS SQS ·
-AWS SDK v2 (DynamoDB enhanced, S3) · Gradle with `oms-core` composite build · LocalStack for local AWS.
+AWS SDK v2 (S3) · Gradle with `oms-core` composite build · LocalStack for local AWS.
 
 ## Service layout convention
 
@@ -52,4 +50,4 @@ Merchant isolation (`CLAUDE.md` rule 4, `vision.md`): merchant → store; custom
 - Every inventory-service table has `merchant_id`.
 
 stores-service takes the merchant from the path (`/v1/store/merchants/{merchantId}/...`); inventory-service REST does not (open question 6).
-Merchant settings come from DynamoDB via `oms-core`.
+Merchants are owned by stores-service (table `merchants`, FK from `stores`); inventory only stores the `merchant_id` it receives with `ProductCreated`.

@@ -27,7 +27,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
   Its limits are open question 22: `markExpired` issues one statement per row, instances do not split the work, and there are no metrics.
 
 **Per-request remote calls**
-- Every stores use case that needs the merchant calls DynamoDB `GetItem` (`DynamoDbMerchantInfoRepository.findByMerchantId`). There is no cache.
+- Merchant checks are a primary-key lookup on `merchants` in the same Postgres database (no remote call).
 
 **Kafka**
 - `ProductCreatedConsumer` uses the default listener concurrency of 1. Throughput is bounded by the number of partitions × consumer instances.
@@ -52,7 +52,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
    - accept → return 202 + a job id;
    - process in chunks with a transaction per chunk;
    - report progress.
-9. **Cache only what is read far more than written**, and state its invalidation (e.g. merchant info with a short TTL). Never cache stock quantities.
+9. **Cache only what is read far more than written**, and state its invalidation (e.g. reference data with a short TTL). Never cache stock quantities.
 10. **Measure.** A design for volume names its metrics: throughput, latency p95/p99, backlog, oldest unprocessed age. It also names the alert threshold.
 
 ## Checklist
@@ -61,7 +61,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 - [ ] Every loop/job: page size, budget, what happens to the rest, behaviour after downtime (backlog).
 - [ ] N instances: split or duplicate work? What prevents duplicates?
 - [ ] Transactions: size per transaction, no remote calls inside, connection pool impact.
-- [ ] Remote calls per request (DynamoDB, S3, other services) — count them; cache or batch?
+- [ ] Remote calls per request (S3, other services) — count them; cache or batch?
 - [ ] Metrics and alert for backlog/latency; how a growing backlog becomes visible.
 
 ## Known gaps
@@ -69,4 +69,3 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 - Synchronous, single-transaction Excel import without a row limit.
 - Expiry throughput and lack of instance cooperation (open question 22).
 - No Micrometer/Actuator in either service, so no metrics exist yet (see `sa-resilience-observability`).
-- Merchant info read from DynamoDB on every call, no cache.

@@ -19,7 +19,13 @@ Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.
 The consumer double-decodes the value (JSON string inside JSON) because of the Connect JSON converter.
 
-## REST — stores-service (`:8048`, prefix `/v1/store/merchants/{merchantId}`)
+## REST — stores-service (`:8048`)
+
+Merchant (no merchant prefix): `POST /v1/store/merchants` (seller self-registration, 201 / 400 / 409 duplicate code), `GET /v1/store/merchants/{merchantId}` (200 / 404). Registration is not idempotent: a client that times out and retries gets 409 for its own code, and there is no lookup by code yet (follow-up: `GET /v1/store/merchants?code=`). The code must be 1–50 ASCII letters or digits (400 otherwise) and is stored trimmed and upper-case.
+
+> **BREAKING (2026-10, merchant in Postgres):** `CreateStoreRequest` no longer has `merchantId`; the merchant comes from the path. A store can only be created for an existing merchant (404 otherwise; FK in the database).
+
+Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 > **BREAKING (2026-10):** `tenant` renamed to `merchant` everywhere: paths `/v1/store/tenants/{tenantId}/…` → `/v1/store/merchants/{merchantId}/…`; body/response fields `tenantId` → `merchantId` in stores (`CreateStoreRequest`, `StoreDetailResponse`) and inventory (`CreateInventoryRequest`, `AdjustStockRequest`, `InventoryDetailResponse`, `StockMovementResponse`); event `ProductCreated.tenantId` → `merchantId` (no alias: old messages must not be replayed).
 

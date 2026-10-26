@@ -15,8 +15,12 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-MER-01 | The platform serves **one market** (Vietnam) with **one currency** (VND, 0 decimals); every store, price, checkout and payment uses it. More markets are out of scope. | 🟢 Q32, Q33 (2026-10-25) |
-| BR-MER-02 | **Merchant** (formerly called *tenant* in code): one seller company that owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ `stores.merchant_id` (`V1`), `MerchantId`; 🟢 Q32 (2026-10-25) |
+| BR-MER-02 | **Merchant** (formerly called *tenant* in code): one seller company that owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ table `merchants`, FK `stores.merchant_id → merchants.id` (stores-service `V1`), `MerchantId`; 🟢 Q32 (2026-10-25) |
 | BR-MER-03 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
+| BR-MER-04 | A merchant has a **code**: 1–50 ASCII letters and digits only (no spaces, symbols or Vietnamese diacritics), unique on the platform and case-insensitive (stored trimmed, upper-case: `m001` = `M001`). Invalid → 400, duplicate → 409. | ✅ `Merchant.register`, `uk_merchants_code`, `ck_merchants_code`; 🟢 (2026-10-25, characters 2026-10-26) |
+| BR-MER-05 | Merchant status is `ACTIVE` or `SUSPENDED`; a new merchant is **ACTIVE immediately**. What a suspended merchant may still do is not decided and not enforced. | ✅ `MerchantStatus`, `Merchant.register`; 🟢 (2026-10-25); ❓ Q35 |
+| BR-MER-06 | **Sellers register their merchant themselves** (`POST /v1/store/merchants`, public). The registering user becomes its **OWNER** once user accounts exist. The platform admin does not create merchants; it suspends/reactivates them and helps in special cases (e.g. ownership transfer). | ✅ API; 🟢 (2026-10-25); ❓ Q36, Q37 |
+| BR-MER-07 | **Merchant members** (when identity exists): a user joins a merchant only by accepting an invitation. OWNER invites/removes any member and assigns MANAGER/STAFF and their stores; MANAGER invites/removes STAFF of its stores; STAFF manages nobody. | 🟡 (2026-10-25) ❓ Q38–Q40 |
 
 ## Channels & users
 
@@ -123,7 +127,7 @@
 
 ---
 
-## Decided (2026-10-25)
+## Decided (2026-10-25, updated 2026-10-26)
 
 | Id | Decision |
 |----|----------|
@@ -160,9 +164,16 @@
 | Q31 | Platform vouchers and shop vouchers, phase 3. |
 | Q32 | The old *tenant* is the merchant; one market (Vietnam) only; customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
 | Q33 | One currency (VND) for the platform. |
+| — | Merchant code letters and digits only (2026-10-26), unique on the platform, case-insensitive; status ACTIVE/SUSPENDED, active on registration; sellers self-register (BR-MER-04..06). |
 
 ## Open business questions
 
 | Id | Question | Why it matters | Proposed default |
 |----|----------|----------------|------------------|
 | Q34 | A group with several brands (e.g. one company owning three restaurant brands): one merchant, or one merchant per brand? | Users/roles, settlement, reporting | One merchant per legal entity; brand is a store attribute (not blocking) |
+| Q35 | What may a **SUSPENDED** merchant still do (log in, see data, take orders, get paid)? | Status checks in every use case and in order/inventory (needs a `MerchantStatusChanged` event) | Read-only: no new stores/products/orders; existing orders finish; payouts held |
+| Q36 | Linking a merchant to the user who registered it (OWNER) — needs identity (user accounts, tokens). | Authorization of merchant APIs | Do it with the identity work: registration requires a logged-in user, who becomes OWNER |
+| Q37 | Should self-registered merchants be **reviewed** (KYC, fraud) before selling? | Adds a `PENDING` status and an approval step | Not in the MVP; add `PENDING` + admin approval later if needed |
+| Q38 | Can a merchant have **several OWNERs**? | Membership model, ownership transfer | Exactly one OWNER, transferable |
+| Q39 | May a **MANAGER** invite STAFF, or only the OWNER? | Who manages members | MANAGER invites STAFF for the stores it manages |
+| Q40 | Can one user be a member of **several merchants**? | Account and login model | Yes, one role per merchant |
