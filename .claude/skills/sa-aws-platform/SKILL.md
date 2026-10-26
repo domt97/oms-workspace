@@ -6,7 +6,7 @@ description: AWS and local platform in the OMS — S3, SQS, EventBridge via Loca
 
 ## OMS today (verified in code)
 **Local infrastructure** (`development/docker/docker-compose.yml`)
-- LocalStack 3.8.1 with `SERVICES=s3,sqs,events` (no DynamoDB since merchants moved to Postgres).
+- LocalStack 3.8.1 with `SERVICES=s3,dynamodb,sqs,events`. DynamoDB is still started but **no service uses it** since merchants moved to Postgres (ADR 0003); do not add a dependency on it without a decision.
 - Kafka 7.3.0 + ZooKeeper, Schema Registry, Kafka Connect (Debezium) on `:9084`, kafka-ui.
 - Postgres 16 with `wal_level=logical`.
 - Redis 7 — **no service uses it yet**.
