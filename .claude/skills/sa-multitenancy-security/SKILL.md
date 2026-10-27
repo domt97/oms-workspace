@@ -42,6 +42,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
    - Load the root by `(merchant_id, id)` (`findByMerchantIdAndStoreId`).
    - Load children by the checked parent: `WHERE store_id = :storeId AND id = :id`, and `WHERE store_id = :storeId AND id IN (:ids)` for lists of ids from the request (verify all were found).
    - Another merchant's or store's record → **404**, nothing written (don't leak existence with 403).
+   - **Fixing a scoping gap also means checking the data.** The bug may already have written cross-merchant or cross-store rows, and the fix does not remove them. Write a query that finds rows breaking the invariant (e.g. a link whose child belongs to another store than its parent), run it, and ask the user what to do with any hits (migration, one-off script, or accept). Put the query in the PR body.
 3. **Merchant in every event** (`merchantId` in the payload). Consumers validate it against the data they touch (e.g. inventory checks the store belongs to the same merchant).
 4. **Merchant lifecycle**: decide what a non-active merchant can do (read-only? nothing?) and enforce it in one place. Until auth exists, that place is the use case that loads the `Merchant`; other services need a `MerchantStatusChanged` event (open question 32).
 5. **Trust boundary (until auth is built)**: assume the caller is trusted, but design so it can be added without changing use cases:
@@ -65,6 +66,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 - [ ] Every query in the change scoped by merchant (directly or through a merchant-scoped root)? Show the line.
 - [ ] Cross-merchant test: an id that exists in another merchant → 404, nothing written.
 - [ ] Ids in the request body (lists) checked to belong to the same store/merchant.
+- [ ] Fixing a scoping gap: query for rows that already break the invariant, result shown, cleanup decided with the user.
 - [ ] New table: top-level → `merchant_id NOT NULL` (in unique constraints and indexes); child of a merchant-scoped parent → parent key, or `merchant_id` if rule 1 says so.
 - [ ] Event payload carries `merchantId`; consumer validates it.
 - [ ] Merchant status handled (or explicitly out of scope).
