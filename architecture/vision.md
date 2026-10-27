@@ -166,7 +166,7 @@ sequenceDiagram
 
 | Phase | Goal | Contents |
 |-------|------|----------|
-| 0. Harden | Safe base for orders | Open questions 24–27 (import outbox, S3 bucket, SKU uniqueness, collection scoping), 13 (idempotent reserve), 8 (release + entry points), inventory outbox, 17/18 (DLT/DLQ), CI tests |
+| 0. Harden | Safe base for orders | Open questions 24–26 (import outbox, S3 bucket, SKU uniqueness), 13 (idempotent reserve), 8 (release + entry points), inventory outbox, 17/18 (DLT/DLQ), CI tests |
 | 1. Cart + Order MVP | Take an order end to end | `cart-service` (one multi-store cart per customer, indicative prices, checkout → `PlaceCheckout`) and `order-service`: split per store, line snapshots, reserve on placement, store accept/reject, statuses to `COMPLETED`, cancel before acceptance; **COD** first, delivery fee from the partner quote. Delivery comes first and pickup later (Q25), so the MVP includes the **mock delivery partner** |
 | 2. Payment | Online payment | `payment-service` with a **mock** payment provider (one payment per checkout), reservation TTL aligned with the payment window, refunds on cancel |
 | 3. Promotion & settlement | Discounts, merchant payouts | Platform and shop vouchers (Q31), snapshot on the order; settlement: commission, merchant balances, mocked payouts (Q29) |

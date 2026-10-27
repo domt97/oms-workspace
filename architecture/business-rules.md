@@ -55,6 +55,7 @@
 | BR-CAT-04 | Shoppers see stock as a **status**, never an exact count: *In stock*, *Only N left* when N ≤ 5, *Sold out*. A SKU without an inventory record shows nothing and can be bought. Merchants see exact counts. | 🟢 (2026-10-27); oms-web only (inventory reads still return on-hand/reserved, open question 34) |
 | BR-CAT-04 | Price changes never affect placed orders (orders keep a snapshot, BR-ORD-03). | 🟡 |
 | BR-CAT-05 | Merchants sell both made-to-order items (food & beverage) and stocked retail goods. | 🟢 Q1 (2026-10-25) |
+| BR-CAT-06 | A collection belongs to one store and contains only that store's products (not other stores of the same merchant). A product id that is not in the store is rejected as not found. | ✅ `CreateStoreCollectionService`, `AddProductCollectionService` (2026-10-27) |
 
 ## Inventory
 
@@ -179,3 +180,4 @@
 | Q38 | Can a merchant have **several OWNERs**? | Membership model, ownership transfer | Exactly one OWNER, transferable |
 | Q39 | May a **MANAGER** invite STAFF, or only the OWNER? | Who manages members | MANAGER invites STAFF for the stores it manages |
 | Q40 | Can one user be a member of **several merchants**? | Account and login model | Yes, one role per merchant |
+| Q41 | May a collection be created or receive products when the store is **CLOSED**, or the product or collection is **INACTIVE**? | Collection use cases check no status today (BR-CAT-06 only checks the store) | Allow it: collections are merchandising, and shoppers see only ACTIVE products anyway (BR-CAT-01) |

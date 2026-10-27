@@ -13,7 +13,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 - **Only the `stores` table has `merchant_id`** (column in `V1__init_store_tables.sql`; `UNIQUE (merchant_id, code)` added in `V4__add_unique_constraints.sql`).
 - Every child table (products, SKUs, images, collections, availability, configs, business hours, addresses, `outbox_events`) is isolated **by `store_id` only**.
 - Isolation therefore depends on every use case first loading the store with `findByMerchantIdAndStoreId` (e.g. `GetStoreProductDetailService`) and then querying children by that store id.
-- This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check: the collection use cases do (open question 27).
+- This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check (the collection use cases did until open question 27 was fixed).
 
 **Isolation in data — inventory-service**
 - Every table (`inventories`, `stock_reservations`, `stock_movements`) has `merchant_id`.
@@ -73,7 +73,6 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 
 ## Known gaps
 - No authentication or authorization; the path merchant is trusted; internal endpoints unprotected.
-- Collection use cases load collections and products by id only (open question 27).
 - inventory public reads are not merchant-scoped (open question 6).
 - Merchant `status` ignored everywhere.
 - S3 import uses the request's `path` as the **bucket** and `fileName` as the key (`ProductExcelReader` → `S3ObjectStorageReader.read(bucket, key)`). The caller can read any object the service's credentials allow; there is no merchant prefix (open question 25).
