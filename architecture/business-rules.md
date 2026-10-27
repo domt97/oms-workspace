@@ -37,7 +37,7 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-STO-01 | A store belongs to one merchant (BR-MER-02). Store `code` is unique per merchant. | ✅ `UNIQUE (merchant_id, code)` (`V4`) |
-| BR-STO-02 | Store status is `ACTIVE`, `INACTIVE`, `SUSPENDED` or `CLOSED`; only `ACTIVE` stores take orders. | ✅ statuses (`StoreStatus`); 🟡 order rule |
+| BR-STO-02 | Store status is `ACTIVE`, `INACTIVE`, `SUSPENDED` or `CLOSED`; only `ACTIVE` stores take orders. Shoppers can still open a non-`ACTIVE` store's page (shown as "not taking orders"), but it is left out of feeds and search. | ✅ statuses (`StoreStatus`); 🟢 order rule + storefront display (2026-10-27); enforced in oms-web only, not yet in a backend use case |
 | BR-STO-03 | A store has its own time zone; its currency is the **platform currency** VND (BR-MER-01). Every SKU price is in that currency. | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). **Gap:** `StoreConfig.currency` and `ProductSku.currency` are free fields; nothing checks they equal VND |
 | BR-STO-04 | A store is open when the current local time is within that day's business hours **and** no active availability window (closure, holiday, maintenance, staff shortage, inventory) covers now. | ✅ hours check `Store.isOpen` (opening < closing, so no overnight hours); 🟡 combining with `StoreAvailability` (not done anywhere today) |
 | BR-STO-05 | `autoAcceptOrder`: orders are accepted without staff action; otherwise staff must accept or reject. | ✅ setting exists, unused; 🟡 behaviour, see BR-ORD-08 |
@@ -49,9 +49,10 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-CAT-01 | A product is `DRAFT`, `ACTIVE` or `INACTIVE`; only `ACTIVE` products with `ACTIVE` SKUs can be ordered. | ✅ statuses; 🟡 order rule |
+| BR-CAT-01 | A product is `DRAFT`, `ACTIVE` or `INACTIVE`; only `ACTIVE` products with `ACTIVE` SKUs can be ordered. Shoppers see only `ACTIVE` products (drafts are not shown, even by direct link). | ✅ statuses; 🟢 order rule + storefront display (2026-10-27); stores-service search has no status filter, oms-web filters |
 | BR-CAT-02 | A SKU is unique **within a store**. | 🟢 Q10 (2026-10-25). **Gap:** stores-service only enforces unique per product (open question 26). |
 | BR-CAT-03 | A product created in the catalog gets an inventory record per SKU with quantity 0. | ✅ `ProductCreated` → `CreateInventoryService` |
+| BR-CAT-04 | Shoppers see stock as a **status**, never an exact count: *In stock*, *Only N left* when N ≤ 5, *Sold out*. A SKU without an inventory record shows nothing and can be bought. Merchants see exact counts. | 🟢 (2026-10-27); oms-web only (inventory reads still return on-hand/reserved, open question 34) |
 | BR-CAT-04 | Price changes never affect placed orders (orders keep a snapshot, BR-ORD-03). | 🟡 |
 | BR-CAT-05 | Merchants sell both made-to-order items (food & beverage) and stocked retail goods. | 🟢 Q1 (2026-10-25) |
 
@@ -72,8 +73,8 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-CRT-01 | A cart belongs to one logged-in customer (platform level, no merchant). A customer has **one active cart**, which may hold items from **several stores of different merchants**; checkout splits it into one order per store. | 🟢 Q3, Q15, Q20, Q20b (2026-10-25) |
-| BR-CRT-02 | A cart line references store, product and SKU with a quantity (> 0, ≤ a per-line maximum). Adding the same SKU again increases the quantity. Lines are shown grouped by store. | 🟡 |
-| BR-CRT-03 | Adding to the cart **never holds stock** and never creates a payment. Prices and availability are **indicative**, refreshed when the cart is viewed; unavailable lines are flagged, not silently removed. | 🟢 no stock hold (Q18, 2026-10-25); 🟡 indicative prices / flagging |
+| BR-CRT-02 | A cart line references store, product and SKU with a quantity (> 0, ≤ **99** per line). Adding the same SKU again increases the quantity. Lines are shown grouped by store. | 🟢 max 99 per line (2026-10-27); oms-web enforces it in the cart; cart-service must too |
+| BR-CRT-03 | Adding to the cart **never holds stock** and never creates a payment. Prices and availability are **indicative**, refreshed when the cart is viewed; unavailable lines are flagged, not silently removed. | 🟢 no stock hold (Q18, 2026-10-25); 🟢 flagging (2026-10-27): issues are shown on the line and checkout is blocked until the shopper fixes them; 🟡 indicative prices |
 | BR-CRT-04 | Checkout sends **one** request to order-service with all lines grouped by store and idempotency key = cart id + cart version. Order-service creates **one order per store** (BR-ORD-01). The cart is locked (`CHECKING_OUT`) during the call. Retrying returns the same result. On success the cart becomes `CHECKED_OUT`; on rejection it returns to `ACTIVE` with reasons per line. | 🟢 split per store (Q3), all-or-nothing (Q21) (2026-10-25); 🟡 mechanics |
 | BR-CRT-05 | Carts are stored on the server (they follow the customer across devices) and become `ABANDONED` after **7 days** without activity. | 🟢 Q17 (2026-10-25) |
 | BR-CRT-06 | Cart data is stored in Postgres; Redis is added only if load requires it. | 🟢 Q19 (2026-10-25) |
@@ -127,7 +128,7 @@
 
 ---
 
-## Decided (2026-10-25, updated 2026-10-26)
+## Decided (2026-10-25, updated 2026-10-27)
 
 | Id | Decision |
 |----|----------|
@@ -165,6 +166,7 @@
 | Q32 | The old *tenant* is the merchant; one market (Vietnam) only; customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
 | Q33 | One currency (VND) for the platform. |
 | — | Merchant code letters and digits only (2026-10-26), unique on the platform, case-insensitive; status ACTIVE/SUSPENDED, active on registration; sellers self-register (BR-MER-04..06). |
+| — | Storefront (2026-10-27): only ACTIVE products shown and only ACTIVE stores take orders (BR-STO-02, BR-CAT-01); stock shown as a status (BR-CAT-04); cart problems flagged, not removed, checkout blocked until fixed (BR-CRT-03); max 99 per cart line (BR-CRT-02). |
 
 ## Open business questions
 
