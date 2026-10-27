@@ -34,6 +34,9 @@ Do not start step 2 until the branch exists.
 2. Ask the domain expert agent (`store-expert`, `inventory-expert`, …) to analyse the change.
 3. Draft the plan so that it passes `sa-analysis-checklist`:
    - root cause + real impact, with `file:line` evidence; runtime behaviour verified, not guessed;
+   - business rules the change enforces: each must be ✅/🟢 in `architecture/business-rules.md`. If the code
+     enforces (or the fix would enforce) a rule that is not written there, ask the user to confirm it, and
+     record it in `business-rules.md` in this same piece of work (oms-workspace docs branch);
    - race table (who runs concurrently, what makes it safe) and idempotency on redelivery;
    - edge cases and one test each, including negative assertions;
    - files to add/change in order (domain → application → infrastructure → tests), migrations,
