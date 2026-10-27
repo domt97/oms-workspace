@@ -21,7 +21,7 @@ What the feature does, in 2–3 sentences; list assumptions and open business qu
 | Context | Why | Size (S/M/L) |
 
 ### 3. Contract changes
-- REST: method, path, request/response — mark **BREAKING** where applicable
+- REST: method, path, request/response — mark **BREAKING** where applicable; check *Front-end consumers* in `integration.md` (oms-web)
 - Events: name, producer, consumers, payload (add JSON Schema to `architecture/contracts/events/`)
 
 ### 4. Data changes
@@ -50,7 +50,7 @@ Ordered list of files/classes to add or change, following hexagonal layout (doma
 Tests per level and edge case, and how what unit tests cannot prove (SQL, transactions, JSON/validation, event compatibility) is verified (`sa-testing-strategy`).
 
 ### 12. Rollout order
-Which repo ships first so nothing breaks (oms-core → producers of new events → consumers → API callers), feature flags if needed.
+Which repo ships first so nothing breaks (oms-core → producers of new events → consumers → API callers, including `oms-web`), feature flags if needed.
 
 ### 13. Risks & open questions
 Including any item from `open-questions.md` the feature depends on. Anything deliberately deferred goes into `open-questions.md`.

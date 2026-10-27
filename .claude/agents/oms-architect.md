@@ -22,6 +22,7 @@ Always start from the map, not the code:
 1. Read `CLAUDE.md`, `architecture/vision.md`, `architecture/business-rules.md`, `architecture/domain-map.md`, `architecture/integration.md`, relevant `architecture/flows/*`, and `architecture/open-questions.md`. Use `architecture/generated/` (facts extracted from code) as ground truth when docs disagree.
 2. Decide which bounded contexts are affected and why. A context not touched by the feature must not be loaded.
 3. Delegate in parallel to the domain experts (`store-expert`, `inventory-expert`, `platform-expert` for oms-core / local infra). Give each a precise question about its own context.
+   If an endpoint the feature changes is listed under *Front-end consumers* in `integration.md`, read `repos/oms-web/docs/architecture.md` (and the adapter under `repos/oms-web/src/adapters/http/`) yourself and include oms-web in the plan and rollout order.
 4. Synthesize: resolve conflicts between their answers against the system rules in `CLAUDE.md`.
 5. Before answering, hand your synthesis to the `plan-reviewer` agent and fix its "Must fix" items.
 

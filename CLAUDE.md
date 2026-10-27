@@ -14,6 +14,7 @@ repo into `repos/` so Claude can reason about the whole system.
 | `inventory-service` | `repos/inventory-service` | Inventory bounded context: stock per (store, SKU), reservations, stock movement audit. | 8058 |
 | `oms-core` | `repos/oms-core` | Shared kernel (Gradle composite build): typed IDs, `AggregateRoot`, `Money`/`Address`, exceptions, `@UseCase`/`@WebAdapter`/`@PersistenceAdapter`, S3, Excel import template. | – |
 | `development` | `repos/development` | Local infra: docker-compose (Kafka, Kafka Connect + Debezium, Schema Registry, Postgres 16, Redis, LocalStack) and Terraform for LocalStack (S3, SQS, EventBridge). | – |
+| `oms-web` | `repos/oms-web` | Front end (React 19 + TypeScript, Vite): shopper storefront at `/` and Seller Centre at `/seller`. Calls stores-service and inventory-service through a proxy on `/v1/store/` and `/v1/inventory/`; cart, orders and sign-in are browser-local stand-ins until those services exist. Architecture in `docs/architecture.md`. | 5173 (dev) |
 
 Not built yet but referenced in code: **order-service** (`OrderCreated` producer), **promotion-service** (`PromotionServiceClient`).
 
@@ -32,6 +33,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 | **Extracted facts (generated from code, ground truth)** | `architecture/generated/<service>.md`, `facts.json` |
 | Known gaps and doc/code drift | `architecture/open-questions.md` |
 | How to work inside one service (layout, checklist, invariants) | `repos/<service>/CLAUDE.md` |
+| Front-end layers, dependency rule, which backend endpoints the web uses and its temporary stand-ins | `repos/oms-web/docs/architecture.md`, `integration.md` → *Front-end consumers* |
 | Solution-architect knowledge (DDD, messaging, data, concurrency, performance/scale, API design, multi-tenancy/security, resilience/observability, testing, AWS platform, analysis checklist) | `.claude/skills/sa-*/SKILL.md` |
 
 ## System rules (do not violate when designing features)
@@ -61,10 +63,14 @@ Use the `/ship <service> <feature|fix> <slug>` skill for any implementation in a
 from `develop`, plans with the domain expert (user approves), implements, runs `./gradlew test`,
 reviews, updates docs, and — after asking — commits, pushes and opens a PR **into `develop`**.
 For changes spanning several services, run `/feature-impact` first, then one `/ship` per service.
+`/ship` targets the Gradle services; for `oms-web` follow the same steps by hand (branch from `develop`,
+keep the layer rule in `docs/architecture.md`, run `npm run check` instead of `./gradlew test`, PR into `develop`).
+A backend change to an endpoint listed under *Front-end consumers* in `integration.md` (path, auth, paging cap,
+response fields) is a breaking change for oms-web: include oms-web in the impact analysis and rollout order.
 
 ## Git workflow
 
-- Service repos (`stores-service`, `inventory-service`): `master` is the release branch; **`develop`** is the
+- Service repos (`stores-service`, `inventory-service`) and `oms-web`: `master` is the release branch; **`develop`** is the
   integration branch and the GitHub default branch (new PRs and clones target `develop`).
   Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
 - `oms-workspace`: `master` is protected. Every change (docs, agents, skills, scripts, workflows)
@@ -77,7 +83,7 @@ For changes spanning several services, run `/feature-impact` first, then one `/s
 
 - **Never commit, push, merge or open a PR unless the user asked for it in this conversation.** Finishing a task means leaving changes uncommitted for the user to review in IntelliJ.
 - When the user asks to commit: show `git status` / a short summary first, commit only the files of the task, one repo at a time.
-- Never push to `develop` or `master` of any repo (services **and** `oms-workspace`), never force-push, never `reset --hard` or delete branches. Push only the working branch, then open a PR: **into `develop`** for services, **into `master`** for `oms-workspace`.
+- Never push to `develop` or `master` of any repo (services, `oms-web` **and** `oms-workspace`), never force-push, never `reset --hard` or delete branches. Push only the working branch, then open a PR: **into `develop`** for services and `oms-web`, **into `master`** for `oms-workspace`.
 - Subagents (`*-expert`, `oms-architect`) are read-only analysts: they never run git write commands.
 - `.claude/settings.json` enforces these with `ask`/`deny` rules; do not try to work around a blocked command — report it instead.
 
@@ -86,6 +92,8 @@ For changes spanning several services, run `/feature-impact` first, then one `/s
 - Java 17, Spring Boot 3.2.3, Gradle. Each service `includeBuild('../oms-core')`, so **all repos must be siblings** — `repos/` keeps that layout.
 - Infra: `cd repos/development/docker && docker compose up -d`, then Terraform in `repos/development/docker/infra/local`.
 - Service: `./gradlew bootRun --args='--spring.profiles.active=localdev'`. Swagger at `/swagger-ui.html`.
+- Web: Node 20.19+ or 22.12+; in `repos/oms-web` run `npm install`, then `npm run dev` → http://localhost:5173
+  (Seller Centre `/seller`). It proxies to the services on 8048 / 8058. `npm run check` = typecheck + layer rule + tests.
 
 ## Keeping this map true
 
