@@ -50,6 +50,13 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 | GET | `/v1/inventory/inventories/{inventoryId}`, `/v1/inventory/inventories/products/{productId}` | Public |
 | GET | `/v1/inventory/inventories/stock-movements/{inventoryId}` | Public |
 
+## Front-end consumers
+
+| Consumer | Calls | Notes |
+|----------|-------|-------|
+| **oms-web** (React, repo `oms-web`, not yet on GitHub) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id` |
+| **oms-web** — storefront `/` | Temporarily the same merchant-scoped reads (store detail, product search/detail) and the inventory read by product | Until the public catalog (BR-USR-05) exists; see open question 34. Changing these paths, adding auth or capping `pageSize` breaks the storefront |
+
 ## Synchronous calls between services
 
 | From | To | Port | Status |
