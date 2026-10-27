@@ -16,4 +16,4 @@ claude                      # start Claude Code here
 - `.claude/skills/feature-impact/` — `/feature-impact <feature>` for a standard cross-service analysis
 - `.claude/skills/ship/` — `/ship <service> <feature|fix> <slug>` to implement a change and open a PR into `develop`
 - `architecture/generated/` — facts extracted from code by `scripts/extract_facts.py` (refreshed daily by `.github/workflows/refresh-facts.yml`)
-- `repos.txt` — list of repos to sync; add new services here
+- `repos.txt` — list of repos to sync (services, `oms-core`, `development`, `oms-web`); add new services here

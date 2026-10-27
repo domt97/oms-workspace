@@ -3,3 +3,4 @@ domt97/oms-core
 domt97/stores-service
 domt97/inventory-service
 domt97/development
+domt97/oms-web
