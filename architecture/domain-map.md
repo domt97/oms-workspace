@@ -16,7 +16,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 | `StoreCollection` | merchandising group, list of `ProductId` | `store_collections`, `product_collections` |
 | Outbox | pending integration events | `outbox_events` |
 
-**Publishes:** `ProductCreated` (on create and on Excel import).
+**Publishes:** `ProductCreated` (on create and on Excel import). **Planned:** `ProductUpdated` (update-product PUT; `store_products.version`, `product_skus.store_id` / `removed_at`, later `UNIQUE (store_id, sku)`).
 **Consumes:** nothing yet.
 **Outbound ports (not implemented yet):** `InventoryServiceClient.checkItemDetail`, `PromotionServiceClient`.
 **Other storage:** S3 (product import files / images).
@@ -29,9 +29,10 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 |-----------|-------|--------|
 | `Inventory` | `quantity`, `reservedQuantity`, `available = quantity − reserved`, status (`ACTIVE`, `INACTIVE`); unique (store_id, sku) | `inventories` |
 | `StockReservation` | hold for one order item, `expires_at`, status (`RESERVED`, `CONFIRMED`, `RELEASED`, `EXPIRED`, `CANCELLED`) | `stock_reservations` |
+| `ProductCatalogVersion` *(planned)* | last applied catalog event version per product (`product_id`, `merchant_id`, `store_id`, `version`); ordering gate for `ProductCreated`/`ProductUpdated` | `product_catalog_versions` |
 | `StockMovement` | append-only audit; type `RECEIVE`, `SALE`, `RETURN`, `ADJUSTMENT_IN/OUT`, `DAMAGE`, `TRANSFER_IN/OUT`; polymorphic `reference_type` + `reference_id` | `stock_movements` |
 
-**Consumes:** `ProductCreated` (Kafka) → creates inventory rows; reservation-expire tick (EventBridge → SQS) → expires overdue reservations; `OrderCreated` (consumer stub, disabled).
+**Consumes:** `ProductCreated` (Kafka) → creates inventory rows; **planned:** `ProductUpdated` → creates missing SKUs and sets inventory status, through a per-product version gate (`product_catalog_versions`); reservation-expire tick (EventBridge → SQS) → expires overdue reservations; `OrderCreated` (consumer stub, disabled).
 **Publishes:** nothing yet.
 **Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (interface only).
 

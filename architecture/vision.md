@@ -59,9 +59,9 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 
 | Context | Service | Status | Owns (aggregates) | Publishes | Consumes |
 |---------|---------|--------|-------------------|-----------|----------|
-| Store & Catalog | `stores-service` | built | `Store`, `StoreAvailability`, `StoreProduct`, `StoreCollection` | `ProductCreated`; *proposed*: `ProductUpdated`, `ProductStatusChanged`, `StoreStatusChanged` | — |
-| Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *proposed*: `StockReserved`, `StockReservationFailed`, `StockReservationExpired` | `ProductCreated`; *proposed*: order events |
-| **Cart** | `cart-service` (platform level, owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductStatusChanged`, `ProductUpdated` (to flag unavailable lines) |
+| Store & Catalog | `stores-service` | built | `Store`, `StoreAvailability`, `StoreProduct`, `StoreCollection` | `ProductCreated`; *planned*: `ProductUpdated` (catalog snapshot incl. status); *proposed*: `StoreStatusChanged` | — |
+| Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *proposed*: `StockReserved`, `StockReservationFailed`, `StockReservationExpired` | `ProductCreated`; *planned*: `ProductUpdated`; *proposed*: order events |
+| **Cart** | `cart-service` (platform level, owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductUpdated` (to flag unavailable lines) |
 | **Ordering** | `order-service` | planned (next) | `Checkout` (owned by the customer, one payment) groups N `Order`s (each owned by one merchant/store, + `OrderLine` snapshots) | `OrderPlaced`, `OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderCompleted` | inventory, payment, store events |
 | Payment | `payment-service` (mock provider) | planned | `Payment` (intent, attempts, refunds) | `PaymentSucceeded`, `PaymentFailed`, `RefundSucceeded` | order events |
 | Promotion | `promotion-service` | planned | `Promotion`, `Voucher`, redemption | `VoucherRedeemed` | order events |

@@ -12,11 +12,13 @@ Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` wi
 | Event | Producer | Transport | Consumer | Payload | Status |
 |-------|----------|-----------|----------|---------|--------|
 | `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, merchantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
+| `ProductUpdated` | stores-service (`OutboxEventHelper`, on update-product PUT) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductUpdatedConsumer` (group `inventory-product-updated`, topic `ProductUpdated`) | snapshot of catalog fields: `eventId, eventType, occurredAt, merchantId, storeId, productId, version, status, name, categoryId, skus[{id, sku, name, status, price, currency}]`; key = productId. Schema: `contracts/events/ProductUpdated.schema.json` | **Planned** ([flow](flows/product-updated.md)) |
 | `OrderCreated` | order-service (not built) | Kafka | inventory-service `OrderCreatedEventConsumer` (group `order-consumer`) | not defined | Listener commented out |
 | Reservation-expire tick | EventBridge rule `rate(1 minute)` | SQS `<profile>-reservation-expire-queue` | inventory-service `SqsReservationExpireConsumer` (1 in flight, visibility 90 s) | body ignored (trigger only); SQS `SentTimestamp` used to drop stale ticks | Live |
 
 Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/event/ProductCreatedEvent`
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.
+**Planned:** `ProductCreated` gains an optional `version` (always 0; consumers treat a missing value as 0). Schemas: `contracts/events/`.
 The consumer double-decodes the value (JSON string inside JSON) because of the Connect JSON converter.
 
 ## REST — stores-service (`:8048`)
@@ -27,6 +29,8 @@ Merchant (no merchant prefix): `POST /v1/store/merchants` (seller self-registrat
 
 Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
+> **Planned (update-product):** `PUT /stores/{storeId}/products/{productId}` — full replace with `version` (200 / 400 / 404 / 409 version conflict or SKU code used by another product of the store — a check before writing until `UNIQUE (store_id, sku)` ships / 422 status transition or ACTIVE without an ACTIVE SKU; unchanged content → 200 with the current version, nothing written, even with a stale version); `GET /stores/{storeId}/products/{productId}` gains `version` (additive). See [flows/product-updated.md](flows/product-updated.md).
+
 > **BREAKING (2026-10):** `tenant` renamed to `merchant` everywhere: paths `/v1/store/tenants/{tenantId}/…` → `/v1/store/merchants/{merchantId}/…`; body/response fields `tenantId` → `merchantId` in stores (`CreateStoreRequest`, `StoreDetailResponse`) and inventory (`CreateInventoryRequest`, `AdjustStockRequest`, `InventoryDetailResponse`, `StockMovementResponse`); event `ProductCreated.tenantId` → `merchantId` (no alias: old messages must not be replayed).
 
 | Method | Path |
@@ -36,7 +40,7 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 | PUT | `/stores/{id}/close`, `/stores/{id}/reopen` |
 | POST | `/stores/{id}/availability`, `/stores/{id}/availability/{availabilityId}/cancel` |
 | PUT | `/stores/{storeId}/business-hours`, `/stores/{storeId}/configs` |
-| POST | `/stores/{storeId}/products` (404 if the merchant does not exist or the store is not the merchant's; 400 if a SKU currency is not a 3-letter code, the price is negative, has more than 2 decimals or is a fractional VND amount, or price/dimensions exceed the column size or have more than 2 decimals; `images` optional), `/stores/{storeId}/products/import` |
+| POST | `/stores/{storeId}/products` (404 if the merchant does not exist or the store is not the merchant's; 400 if a SKU currency is not a 3-letter code, the price is negative, has more than 2 decimals or is a fractional VND amount, or price/dimensions exceed the column size or have more than 2 decimals; `images` optional; **planned** with update-product: 409 for a SKU code already used by another product of the store, including removed codes (BR-CAT-09), and the BR-CAT-11 caps — also on Excel import), `/stores/{storeId}/products/import` |
 | GET | `/stores/{storeId}/products/{productId}`, `/stores/{storeId}/products/search` (optional `notInCollectionId` leaves out that collection's products, 404 if it is not a collection of the store; order `sortBy` ∈ createdAt (default, DESC) / updatedAt / name / id, always `id` last; other `sortBy` or `direction` → 400; `direction` without `sortBy` applies to `createdAt`; `pageNumber` < 0 or `pageSize` < 1 → 400) |
 | POST | `/stores/{storeId}/collections`, `.../{collectionId}/add-products`, `.../{collectionId}/remove-products` |
 | GET | `/stores/{storeId}/collections`, `/stores/{storeId}/collections/{collectionId}`, `.../{collectionId}/products` (paged previews A→Z by name, `pageSize` 1–100) |
@@ -54,7 +58,7 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 | Consumer | Calls | Notes |
 |----------|-------|-------|
-| **oms-web** (React, repo [`oms-web`](https://github.com/domt97/oms-web)) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id` |
+| **oms-web** (React, repo [`oms-web`](https://github.com/domt97/oms-web)) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id`. **Planned:** product edit form calls the update-product PUT and sends the `version` from GET |
 | **oms-web** — storefront `/` | Temporarily the same merchant-scoped reads (store detail, product search/detail) and the inventory read by product | Until the public catalog (BR-USR-05) exists; see open question 34. Changing these paths, adding auth or capping `pageSize` breaks the storefront |
 
 ## Synchronous calls between services
