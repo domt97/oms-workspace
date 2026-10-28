@@ -22,10 +22,10 @@ description: REST API design in the OMS — resource paths and versioning, publi
   | anything else | 500 `Internal Server Error` (message hidden) |
 
   Services extend the handler: `StoreExceptionHandler`, `InventoryExceptionHandler`.
-- Bad paging input becomes **500, not 400**: an unknown `sortBy` or `direction` throws from Spring Data or `Sort.Direction.valueOf` in `PageUtils`, which the catch-all maps to 500.
+- Bad paging input becomes **500, not 400** on endpoints that use `PageUtils.toPageRequest` directly: an unknown `sortBy` or `direction` throws from Spring Data or `Sort.Direction.valueOf`, which the catch-all maps to 500. stores-service product search and collection products check paging in the controller (`RestPaging`) and allow-list `sortBy` (`StoreProductPersistenceAdapter.toSearchPageRequest`) → 400; follow that pattern.
 
 **Paging and responses**
-- Paging: `pageNumber`/`pageSize`/`sortBy`/`direction` query params mapped to `DomainPageRequest`. Response is `PagedResult<T>` (`oms-core/.../domain/page/PagedResult.java`). There is no max page size.
+- Paging: `pageNumber`/`pageSize`/`sortBy`/`direction` query params mapped to `DomainPageRequest`. Response is `PagedResult<T>` (`oms-core/.../domain/page/PagedResult.java`). Max page size only on collection products (100); product search has none because the storefront depends on it (`integration.md` → Front-end consumers).
 
 **Write semantics**
 - Store state changes use action sub-resources: `PUT .../stores/{id}/close`, `PUT .../reopen`, `POST .../availability/{id}/cancel`, `POST .../collections/{id}/add-products`.
@@ -92,6 +92,6 @@ description: REST API design in the OMS — resource paths and versioning, publi
 
 ## Known gaps
 - inventory public API has no merchant in the path (open question 6); reads are by id only.
-- Import request not validated; invalid `sortBy`/`direction` → 500; no max page size.
+- Import request not validated; invalid `sortBy`/`direction` → 500 outside product search; no max page size on product search.
 - No idempotency key on stock adjustment.
 - No HTTP client adapters, timeouts or retry policy defined for service-to-service calls.

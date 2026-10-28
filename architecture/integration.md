@@ -37,9 +37,9 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 | POST | `/stores/{id}/availability`, `/stores/{id}/availability/{availabilityId}/cancel` |
 | PUT | `/stores/{storeId}/business-hours`, `/stores/{storeId}/configs` |
 | POST | `/stores/{storeId}/products`, `/stores/{storeId}/products/import` |
-| GET | `/stores/{storeId}/products/{productId}`, `/stores/{storeId}/products/search` |
+| GET | `/stores/{storeId}/products/{productId}`, `/stores/{storeId}/products/search` (optional `notInCollectionId` leaves out that collection's products, 404 if it is not a collection of the store; order `sortBy` ∈ createdAt (default, DESC) / updatedAt / name / id, always `id` last; other `sortBy` or `direction` → 400; `direction` without `sortBy` applies to `createdAt`; `pageNumber` < 0 or `pageSize` < 1 → 400) |
 | POST | `/stores/{storeId}/collections`, `.../{collectionId}/add-products`, `.../{collectionId}/remove-products` |
-| GET | `/stores/{storeId}/collections`, `/stores/{storeId}/collections/{collectionId}` |
+| GET | `/stores/{storeId}/collections`, `/stores/{storeId}/collections/{collectionId}`, `.../{collectionId}/products` (paged previews A→Z by name, `pageSize` 1–100) |
 
 ## REST — inventory-service (`:8058`, prefix `/v1/inventory`, no merchant in path yet)
 
