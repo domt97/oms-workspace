@@ -15,6 +15,7 @@ description: Domain-Driven Design and hexagonal architecture as applied in the O
 
 ## Rules
 1. **Invariants live in the aggregate.** A rule that must always hold (`available = quantity − reserved ≥ 0`, "only RESERVED can be confirmed") is enforced by an aggregate method that throws a domain exception. Services orchestrate; they do not re-implement rules.
+   - A rule about one **child entity** (e.g. a SKU's currency and price inside `StoreProduct`) is a method on that child, and the aggregate calls it on **every path that creates or changes the child**: the factory/`init`, `addX`, and any replace/update method. A rule placed only in the creation step is bypassed by the other paths (stores-service: `ProductSku.normaliseForSale()` runs from `StoreProduct.initState()` and `addSku()`).
 2. **Aggregate = consistency boundary.** One transaction changes one aggregate instance. If a use case must change two aggregates atomically, question the boundary first; otherwise use a guarded DB statement or an event + eventual consistency.
 3. **Reference other aggregates by typed ID only** (`InventoryId`, `ProductId`), never by object reference — especially across contexts.
 4. **Ports belong to the application layer**; adapters implement them in infrastructure. The domain never imports Spring, JPA, Kafka or AWS.
@@ -25,6 +26,7 @@ description: Domain-Driven Design and hexagonal architecture as applied in the O
 
 ## Checklist
 - [ ] Which aggregate owns the rule? Is it enforced inside the aggregate (domain test proves it)?
+- [ ] Rule on a child entity: list every aggregate method that creates or changes that child, and show each one applies the rule (one test per path).
 - [ ] Does the change touch more than one aggregate in one transaction? Why is that acceptable?
 - [ ] Does any domain class gain a framework import? (must not)
 - [ ] Is a new cross-context dependency an event (preferred) or a sync client? Is there an ACL DTO?
