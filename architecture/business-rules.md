@@ -50,12 +50,17 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-CAT-01 | A product is `DRAFT`, `ACTIVE` or `INACTIVE`; only `ACTIVE` products with `ACTIVE` SKUs can be ordered. Shoppers see only `ACTIVE` products (drafts are not shown, even by direct link). | ✅ statuses; 🟢 order rule + storefront display (2026-10-27); stores-service search has no status filter, oms-web filters |
-| BR-CAT-02 | A SKU is unique **within a store**. | 🟢 Q10 (2026-10-25). **Gap:** stores-service only enforces unique per product (open question 26). |
+| BR-CAT-02 | A SKU is unique **within a store**. | 🟢 Q10 (2026-10-25). **Gap:** stores-service only enforces unique per product (open question 26). **Planned** (update-product): `product_skus.store_id` + index, then `UNIQUE (store_id, sku)` with removed codes included (BR-CAT-09). |
 | BR-CAT-03 | A product created in the catalog gets an inventory record per SKU with quantity 0. | ✅ `ProductCreated` → `CreateInventoryService` |
 | BR-CAT-04 | Shoppers see stock as a **status**, never an exact count: *In stock*, *Only N left* when N ≤ 5, *Sold out*. A SKU without an inventory record shows nothing and can be bought. Merchants see exact counts. | 🟢 (2026-10-27); oms-web only (inventory reads still return on-hand/reserved, open question 34) |
-| BR-CAT-04 | Price changes never affect placed orders (orders keep a snapshot, BR-ORD-03). | 🟡 |
+| BR-CAT-07 | Price changes never affect placed orders (orders keep a snapshot, BR-ORD-03). *(Was a second "BR-CAT-04"; renumbered 2026-10-28.)* | 🟡 |
 | BR-CAT-05 | Merchants sell both made-to-order items (food & beverage) and stocked retail goods. | 🟢 Q1 (2026-10-25) |
 | BR-CAT-06 | A collection belongs to one store and contains only that store's products (not other stores of the same merchant). A product id that is not in the store is rejected as not found. | ✅ `CreateStoreCollectionService`, `AddProductCollectionService` (2026-10-27) |
+| BR-CAT-08 | A SKU is identified by its **code**, which cannot change after creation; changing a code means removing the SKU and adding a new one. Codes are case-sensitive. | 🟢 U1, U5 (2026-10-28); planned with update-product |
+| BR-CAT-09 | Removing a SKU from a product is a **soft remove**: it disappears from the product, its code stays reserved in the store (another product may not use it → 409), and adding the same code back to the same product revives it with the same id. | 🟢 U2, U3 (2026-10-28); planned with update-product |
+| BR-CAT-10 | Product status moves DRAFT → ACTIVE or INACTIVE, and ACTIVE ↔ INACTIVE; never back to DRAFT. A product can be ACTIVE only with at least one ACTIVE SKU (422 otherwise). | 🟢 U4 (2026-10-28); planned with update-product. Today create sets ACTIVE and DRAFT is never assigned |
+| BR-CAT-11 | Per product: at most 100 SKUs and 20 images; description at most 5000 characters. | 🟢 U6 (2026-10-28); planned with update-product, enforced on create, Excel import and update (legacy data check: open question 42) |
+| BR-CAT-12 | A merchant may edit a product while its store is not ACTIVE (e.g. CLOSED); editing does not take orders. | 🟢 U7 (2026-10-28); planned (no edit path exists yet) |
 
 ## Inventory
 
@@ -68,6 +73,9 @@
 | BR-INV-05 | Every stock change is auditable: a stock movement with type, quantity and the business reference (order, adjustment…). | ✅ for manual adjustment only; 🟡 for all (open question 14) |
 | BR-INV-06 | A SKU has a `trackStock` flag. When it is off (made-to-order items), the SKU is always available and no reservation is made. | 🟢 Q11 (2026-10-25) — **nice to have**, not required for the MVP. Modifiers/toppings: later. |
 | BR-INV-07 | The same order line can never reserve twice (replays are no-ops). | 🟡 (open question 13) |
+| BR-INV-08 | An inventory's status means **orderable**: ACTIVE only when the product is ACTIVE, the SKU is ACTIVE and the SKU is not removed; otherwise INACTIVE. Once orders exist, reserving an INACTIVE inventory is rejected. Inventory rows are never deleted. | 🟢 U9 (2026-10-28); planned (`ProductUpdated` consumer); reserve check comes with order-service (open question 39) |
+| BR-INV-09 | Deactivating or removing a SKU or product keeps its open reservations until they are confirmed, released or expire. | 🟢 U10 (2026-10-28); planned (nothing deactivates inventory yet; release has no implementation) |
+| BR-INV-10 | Stock can still be adjusted on an INACTIVE inventory. | 🟢 U11 (2026-10-28); ✅ adjust does not check status today |
 
 ## Cart *(nothing built yet)*
 
@@ -129,7 +137,7 @@
 
 ---
 
-## Decided (2026-10-25, updated 2026-10-27)
+## Decided (2026-10-25, updated 2026-10-28)
 
 | Id | Decision |
 |----|----------|
@@ -167,6 +175,7 @@
 | Q32 | The old *tenant* is the merchant; one market (Vietnam) only; customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
 | Q33 | One currency (VND) for the platform. |
 | — | Merchant code letters and digits only (2026-10-26), unique on the platform, case-insensitive; status ACTIVE/SUSPENDED, active on registration; sellers self-register (BR-MER-04..06). |
+| — | Update product (2026-10-28): full-replace PUT with a version; SKU code is the identity and immutable, soft remove with the code reserved in the store, status transitions with ≥ 1 ACTIVE SKU, caps 100 SKUs / 20 images / 5000-char description, editable when the store is not ACTIVE (BR-CAT-08..12); inventory status = orderable, reservations kept, adjust allowed when INACTIVE (BR-INV-08..10). U8 (currency) revised the same day: SKUs are not forced to VND, VND prices whole (BR-STO-03). |
 | — | Storefront (2026-10-27): only ACTIVE products shown and only ACTIVE stores take orders (BR-STO-02, BR-CAT-01); stock shown as a status (BR-CAT-04); cart problems flagged, not removed, checkout blocked until fixed (BR-CRT-03); max 99 per cart line (BR-CRT-02). |
 
 ## Open business questions

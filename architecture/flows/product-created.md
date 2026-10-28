@@ -29,4 +29,4 @@ sequenceDiagram
 
 - Payload class exists in both services — keep them in sync.
 - Delivery is at-least-once; `inventories` has unique (store_id, sku), so duplicates must be handled gracefully.
-- Only `ProductCreated` exists — SKU added/removed, price change, product deactivated are **not** propagated yet.
+- Only `ProductCreated` exists today — SKU added/removed, price change, product deactivated are **not** propagated yet. **Planned:** `ProductUpdated` ([product-updated.md](product-updated.md)); `ProductCreated` gains an optional `version` (always 0) and goes through inventory's per-product version gate.

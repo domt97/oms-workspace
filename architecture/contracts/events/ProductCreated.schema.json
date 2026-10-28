@@ -11,12 +11,13 @@
     "merchantId": { "type": "string", "format": "uuid" },
     "storeId": { "type": "string", "format": "uuid" },
     "productId": { "type": "string", "format": "uuid" },
+    "version": { "type": "integer", "const": 0, "description": "PLANNED (update-product), optional: always 0. Consumers treat a missing version as 0. Lets inventory order ProductCreated against ProductUpdated (different topics)." },
     "skus": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["value"],
-        "properties": { "value": { "type": "string", "maxLength": 50 } }
+        "properties": { "value": { "type": "string", "maxLength": 100, "description": "stores-service accepts 100; inventory-service stores 50 today (open question 41, planned to widen to 100)." } }
       }
     }
   }

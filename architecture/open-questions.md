@@ -1,6 +1,6 @@
 # Open Questions & Doc/Code Drift
 
-Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-27. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service#28; its large-volume remainder is item 22. Item 28 (code called the merchant *tenant*) resolved by the tenant → merchant rename in oms-core, stores-service and inventory-service (2026-10), with migrations edited in place (local databases recreated). Item 29 (create-store took the merchant from the body) resolved with the move of merchants to Postgres (merchant from the path, FK). Open-questions item 34 (allowed characters in a merchant code) decided: ASCII letters and digits, enforced in `Merchant.register` and `ck_merchants_code` (BR-MER-04). Item 27 (collection use cases not merchant/store-scoped) resolved: stores-service#45 — store checked against the merchant, collection loaded by `(storeId, id)`, products by `(storeId, ids)`. Item 23 decided: stores-service keeps store-scoped child tables (hierarchical tenancy, `sa-multitenancy-security` rule 1); add `merchant_id` only for row-level security or merchant-wide queries.
+Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-28. Items 1–3 (README drift, topic naming) resolved: stores-service#35, inventory-service#17, ADR 0002. Items 15, 16 (reservation status race, expiry run abort) resolved: inventory-service#27. Item 21 (overlapping reservation-expire ticks) resolved by bounding each sweep and dropping stale ticks: inventory-service#28; its large-volume remainder is item 22. Item 28 (code called the merchant *tenant*) resolved by the tenant → merchant rename in oms-core, stores-service and inventory-service (2026-10), with migrations edited in place (local databases recreated). Item 29 (create-store took the merchant from the body) resolved with the move of merchants to Postgres (merchant from the path, FK). Open-questions item 34 (allowed characters in a merchant code) decided: ASCII letters and digits, enforced in `Merchant.register` and `ck_merchants_code` (BR-MER-04). Item 27 (collection use cases not merchant/store-scoped) resolved: stores-service#45 — store checked against the merchant, collection loaded by `(storeId, id)`, products by `(storeId, ids)`. Item 23 decided: stores-service keeps store-scoped child tables (hierarchical tenancy, `sa-multitenancy-security` rule 1); add `merchant_id` only for row-level security or merchant-wide queries.
 
 ## Local infrastructure
 
@@ -15,6 +15,8 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 
 13. `ReserveStockService` is **not idempotent per order item** — replay reserves twice. Needs a uniqueness rule on (order_item_id, inventory_id) or a check.
 14. Reserve / confirm / expire do **not write `StockMovement`** — audit trail incomplete.
+39. **Reserve does not check inventory status** (BR-INV-08): `reserve` SQL and `Inventory.reserve` accept an INACTIVE inventory. Harmless until order-service calls reserve; add `AND status = 'ACTIVE'` and a domain check then.
+41. **SKU code length differs between the services.** stores-service accepts codes up to 100 characters (`CreateProductSkuRequest`, `product_skus.sku VARCHAR(100)`), inventory-service stores 50 (`inventories.sku VARCHAR(50)`, V1). A 51–100 character code fails the inventory insert today (10 retries, then skipped, item 17). Planned: widen `inventories.sku` to `VARCHAR(100)` in the same migration as `product_catalog_versions`, before the `ProductUpdated` consumer ships (a failed snapshot would also lose the other SKUs' deactivations).
 
 ## Correctness (stores-service)
 
@@ -27,6 +29,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
     - stores-service enforces `UNIQUE (product_id, sku)` only (`V3`), so two products in the same store may share a SKU.
     - inventory-service is unique on `(store_id, sku)`. `CreateInventoryService` logs "Inventory exists … with different productId … skipping", so the second product silently gets **no inventory**.
     - Decide whether a SKU is unique per store (then enforce it in stores-service), or key inventory by (store, product, sku).
+    - **Decided (BR-CAT-02, BR-CAT-09):** unique per store, removed codes included. Planned with update-product in two releases: `product_skus.store_id` + index first, then `UNIQUE (store_id, sku)` after checking for duplicates.
 35. **Two concurrent add-products for the same product return 500, not 409.** The second insert hits `uk_product_collections_collection_product` (V6) and the `DataIntegrityViolationException` falls into the catch-all handler. Map it to 409 for this endpoint (a global mapping would change other paths).
 36. **No cap on `productIds`** in create-collection (body) and add/remove-products (query string). Cost grows with the list: the query string length on add/remove, the size of the `IN` list in the product check (pgjdbc rejects more than 65,535 bind parameters), and one `nextval` per link row (`product_collection_seq`, `allocationSize = 1`). Decide a maximum (new API rule) and enforce it with `@Size`.
 37. **Product search and collection products sort in memory.** Both filter by `store_id` (`idx_store_products_store`, V3) and order by `created_at, id` or `name, id`, so every page reads and sorts all of the store's products (collection membership is checked through `uk_product_collections_collection_product`, V6). Fine at the assumed hundreds to a few thousand products per store; add `(store_id, created_at, id)` / `(store_id, name, id)` indexes if EXPLAIN shows large sorts. Name order follows the database collation (local image `en_US.utf8`): confirm Vietnamese names sort as expected on the real database.
@@ -36,13 +39,15 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 
 33. **Merchant self-registration is public with no authentication or rate limit.** `POST /v1/store/merchants` lets anyone create merchants and reserve codes. Business side: Q36 (owner link through identity), Q37 (KYC / PENDING). Until identity exists, do not expose the endpoint outside the local network.
 34. **The storefront (oms-web) uses seller endpoints because there is no public catalog yet.** oms-web aggregates merchant-scoped stores-service calls over a bounded list of shops and reads `GET /v1/inventory/inventories/products/{productId}`, which is unscoped (item 6) and returns on-hand, reserved and `merchantId` to the shopper's browser (oms-web shows only a status, BR-CAT-04). Consequences: **the public catalog/search read model (BR-USR-05) must ship before stores-service requires seller authentication**, or the storefront breaks; and a page-size cap or auth on these endpoints is a breaking change for oms-web (oms-web `docs/architecture.md` §4).
+42. **Products over the BR-CAT-11 caps** (100 SKUs, 20 images, 5000-character description) can exist today: create and import do not cap them. Once update-product enforces the caps, every PUT on such a product returns 400. Before it ships, count products over the caps and decide (raise the cap, trim, or allow editing them).
 
 ## Reliability (messaging)
 
-17. Kafka consumers have **no dead-letter topic / custom error handler**: spring-kafka default retries 10 times with no backoff, then skips the record — a failing message is silently lost.
+17. Kafka consumers have **no dead-letter topic / custom error handler** (more severe once `ProductUpdated` carries deactivations — planned to add the DLT with the inventory consumer): spring-kafka default retries 10 times with no backoff, then skips the record — a failing message is silently lost.
 18. SQS `reservation-expire` queue has **no DLQ / redrive policy** (`development/docker/infra/local/main.tf`).
 19. **`outbox_events` is never cleaned up**: rows stay `PENDING` forever; no job deletes published rows.
 30. **Kafka topics are auto-created** with broker defaults (1 partition): `ProductCreated` exists only because the broker auto-creates it. Create topics explicitly (partitions, retention) in `development` before consumers need to scale.
+40. **No way to resync a product to inventory.** If a `ProductCreated`/`ProductUpdated` is skipped (open question 17) or lost (open question 24), inventory stays stale until the next update of that product. Add a republish (stores) or resync (inventory) tool.
 
 ## Scale (inventory-service)
 
@@ -62,7 +67,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 6. inventory-service REST has **no `merchantId`** in path or header, unlike stores-service.
 7. `InventoryServiceClient` (stores → inventory) and `PromotionServiceClient` have no adapter.
 8. `ReleaseStockReservationUseCase` has no implementation; reserve/confirm have no entry points.
-9. Only `ProductCreated` is published — no event for product/SKU update, deactivation, or store close.
+9. Only `ProductCreated` is published — no event for product/SKU update, deactivation, or store close. **Planned:** `ProductUpdated` (update-product, [flow](flows/product-updated.md)) covers product/SKU changes and deactivation; store close is still open.
 10. `ProductCreatedEvent` is duplicated in both services; no shared schema / schema-registry subject.
-11. Consumer group `product-consumer` is a generic name; may collide when more services consume products.
+11. Consumer group `product-consumer` is a generic name; may collide when more services consume products. Do not rename it (with `earliest` a new group replays all `ProductCreated` history); new consumers use specific names (planned: `inventory-product-updated`).
 32. **Merchant status is not enforced outside stores-service.** Inventory (and later order) only know `merchant_id`. When Q35 decides what a suspended merchant may do, publish `MerchantStatusChanged` from stores-service and keep a local copy in the consumers.

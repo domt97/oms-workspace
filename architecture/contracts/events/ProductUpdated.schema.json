@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProductUpdated",
+  "description": "PLANNED (update-product). Published by stores-service via outbox (aggregateType=Product, key=productId) after every PUT that changes the product. A snapshot of the catalog fields consumers need (not description, images or dimensions), not a diff. Consumed by inventory-service ProductUpdatedConsumer (group inventory-product-updated). Consumers apply an event only if its version is greater than the last one applied for the product; ProductCreated counts as version 0.",
+  "type": "object",
+  "required": ["eventId", "eventType", "occurredAt", "merchantId", "storeId", "productId", "version", "status", "name", "skus"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "const": "ProductUpdated" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "merchantId": { "type": "string", "format": "uuid", "description": "Owner of the store, taken from the loaded store (never from the request path)." },
+    "storeId": { "type": "string", "format": "uuid" },
+    "productId": { "type": "string", "format": "uuid" },
+    "version": { "type": "integer", "minimum": 1, "description": "Strictly increasing per product; ProductCreated is version 0." },
+    "status": { "enum": ["DRAFT", "ACTIVE", "INACTIVE"], "description": "DRAFT is allowed for the future; today create sets ACTIVE and a product never returns to DRAFT (BR-CAT-10)." },
+    "name": { "type": "string", "maxLength": 255 },
+    "categoryId": { "type": ["string", "null"], "format": "uuid" },
+    "skus": {
+      "type": "array",
+      "description": "All SKUs of the product that are not removed. A SKU the consumer knows for this product but that is missing here has been removed (soft remove; its code stays reserved in the store).",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["id", "sku", "status", "price", "currency"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "description": "Stable SKU id; never changes for a given code." },
+          "sku": { "type": "string", "maxLength": 100, "description": "SKU code as a plain string (ProductCreated uses {\"value\": ...}). Immutable after creation." },
+          "name": { "type": ["string", "null"], "maxLength": 255 },
+          "status": { "enum": ["ACTIVE", "INACTIVE"] },
+          "price": { "type": "number", "minimum": 0, "exclusiveMaximum": 1e16, "description": "At most 2 decimals; a whole number when currency is VND." },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+        }
+      }
+    }
+  }
+}
