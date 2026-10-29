@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "ProductUpdated",
-  "description": "PLANNED (update-product). Published by stores-service via outbox (aggregateType=Product, key=productId) after every PUT that changes the product. A snapshot of the catalog fields consumers need (not description, images or dimensions), not a diff. Consumed by inventory-service ProductUpdatedConsumer (group inventory-product-updated). Consumers apply an event only if its version is greater than the last one applied for the product; ProductCreated counts as version 0.",
+  "description": "Built in stores-service#48 / inventory-service#32. Published by stores-service via outbox (aggregateType=Product, key=productId) after every PUT that changes the product. A snapshot of the catalog fields consumers need (not description, images or dimensions), not a diff. Consumed by inventory-service ProductUpdatedConsumer (group inventory-product-updated). Consumers apply an event only if its version is greater than the last one applied for the product; ProductCreated counts as version 0.",
   "type": "object",
   "required": ["eventId", "eventType", "occurredAt", "merchantId", "storeId", "productId", "version", "status", "name", "skus"],
   "properties": {

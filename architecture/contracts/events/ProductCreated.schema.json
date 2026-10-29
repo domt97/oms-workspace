@@ -11,7 +11,7 @@
     "merchantId": { "type": "string", "format": "uuid" },
     "storeId": { "type": "string", "format": "uuid" },
     "productId": { "type": "string", "format": "uuid" },
-    "version": { "type": "integer", "const": 0, "description": "PLANNED (update-product), optional: always 0. Consumers treat a missing version as 0. Lets inventory order ProductCreated against ProductUpdated (different topics)." },
+    "version": { "type": "integer", "const": 0, "description": "Optional, always 0 (stores-service#48).  Consumers treat a missing version as 0. Lets inventory order ProductCreated against ProductUpdated (different topics)." },
     "skus": {
       "type": "array",
       "items": {
