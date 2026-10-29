@@ -17,16 +17,16 @@ sequenceDiagram
     PG-->>D: WAL change on outbox_events
     D->>K: EventRouter, route by event_type, key = productId
     K->>I: ProductCreatedConsumer (group product-consumer)
-    I->>IPG: CreateInventoryService: one inventory row per SKU (quantity 0)
+    I->>IPG: SyncProductInventoryService: version gate (0), one inventory row per SKU (quantity 0)
 ```
 
 ## Code entry points
 
 - `stores-service`: `CreateStoreProductUseCaseService`, `ImportProductService`, `OutboxEventHelper`, `OutboxEventPersistenceAdapter`
-- `inventory-service`: `ProductCreatedConsumer` → `CreateInventoryService`
+- `inventory-service`: `ProductCreatedConsumer` → `SyncProductInventoryService`
 
 ## Things to watch when changing this flow
 
 - Payload class exists in both services — keep them in sync.
 - Delivery is at-least-once; `inventories` has unique (store_id, sku), so duplicates must be handled gracefully.
-- Only `ProductCreated` exists today — SKU added/removed, price change, product deactivated are **not** propagated yet. **Planned:** `ProductUpdated` ([product-updated.md](product-updated.md)); `ProductCreated` gains an optional `version` (always 0) and goes through inventory's per-product version gate.
+- Later changes (SKU added/removed, price, deactivation) travel as `ProductUpdated` ([product-updated.md](product-updated.md)). `ProductCreated` carries `version` 0 and goes through inventory's per-product version gate (`SyncProductInventoryService`), so a late `ProductCreated` is a no-op; failures go to `ProductCreated.DLT`.
