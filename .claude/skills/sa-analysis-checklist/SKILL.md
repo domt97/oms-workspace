@@ -30,6 +30,7 @@ If an item does not apply, say so in one line — do not silently skip it.
 - [ ] empty input · duplicates inside the input · all items already exist · some exist · none exist
 - [ ] data that exists but belongs to another merchant / product / store (mismatch) → 404, nothing written
 - [ ] null / missing optional fields · very large batch
+- [ ] a limit or rule taken from a (new) contract: does **every producer** of that input already enforce it, in deploy order? If not, the consumer rejects valid data during rollout — apply it only where the producer enforces it, and widen later
 - [ ] invalid state transition (e.g. confirming an expired reservation)
 
 ## 5. Scale and operations
