@@ -295,6 +295,14 @@
       },
       {
         "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
+        "handler": "StoreCollectionController#getProducts",
+        "hidden": false,
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/products",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreCollectionController.java",
         "handler": "StoreCollectionController#removeProducts",
         "hidden": false,
         "method": "POST",
@@ -351,6 +359,7 @@
       "CreateStoreCollectionUseCase",
       "CreateStoreProductUseCase",
       "CreateStoreUseCase",
+      "GetCollectionProductsUseCase",
       "GetListStoreCollectionUseCase",
       "GetMerchantUseCase",
       "GetStoreCollectionUseCase",
