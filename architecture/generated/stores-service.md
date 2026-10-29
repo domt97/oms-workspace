@@ -19,6 +19,7 @@
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections` | `StoreCollectionController#create` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}` | `StoreCollectionController#getDetails` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/add-products` | `StoreCollectionController#addProducts` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/products` | `StoreCollectionController#getProducts` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}/remove-products` | `StoreCollectionController#removeProducts` |
 | public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/configs` | `StoreConfigController#updateBaseConfig` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products` | `StoreProductController#create` |
@@ -72,6 +73,7 @@
 - `CreateStoreCollectionUseCase`
 - `CreateStoreProductUseCase`
 - `CreateStoreUseCase`
+- `GetCollectionProductsUseCase`
 - `GetListStoreCollectionUseCase`
 - `GetMerchantUseCase`
 - `GetStoreCollectionUseCase`
