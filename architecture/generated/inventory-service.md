@@ -17,6 +17,7 @@
 | Transport | Topic / queue | Group | Class | Active |
 |---|---|---|---|---|
 | kafka | `ProductCreated` | product-consumer | `ProductCreatedConsumer` | yes |
+| kafka | `ProductUpdated` | inventory-product-updated | `ProductUpdatedConsumer` | yes |
 | kafka | `OrderCreated` | order-consumer | `OrderCreatedEventConsumer` | no (commented out) |
 | sqs | `${aws.sqs.queues.reservation-expire}` | – | `SqsReservationExpireConsumer` | yes |
 
@@ -24,9 +25,10 @@
 
 - none
 
-## Database tables (latest migration: `V2__add_stock_reservation_expiry_index.sql`)
+## Database tables (latest migration: `V3__product_catalog_versions_and_wider_sku.sql`)
 
 - `inventories` (created in V1__init_inventory_tables.sql)
+- `product_catalog_versions` (created in V3__product_catalog_versions_and_wider_sku.sql)
 - `stock_movements` (created in V1__init_inventory_tables.sql)
 - `stock_reservations` (created in V1__init_inventory_tables.sql)
 
@@ -46,6 +48,7 @@
 - `LoadInventoryUseCase`
 - `ReleaseStockReservationUseCase`
 - `ReserveStockUseCase`
+- `SyncProductInventoryUseCase`
 
 ## Outbound clients (ports to other services)
 

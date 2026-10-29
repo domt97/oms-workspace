@@ -26,6 +26,7 @@
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import` | `StoreProductController#importProducts` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/search` | `StoreProductController#getStoreProducts` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#getProductDetails` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#update` |
 
 ## Consumed (listeners)
 
@@ -36,6 +37,7 @@
 ## Published events (outbox `eventType`)
 
 - `ProductCreated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
+- `ProductUpdated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
 
 ## Database tables (latest migration: `V8__alter_product_fk.sql`)
 
@@ -56,8 +58,11 @@
 
 - `BusinessHour`
 - `Merchant`
+- `ProductChangeSet`
 - `ProductImage`
+- `ProductReplacement`
 - `ProductSku`
+- `ProductSkuSpec`
 - `Store`
 - `StoreAvailability`
 - `StoreCollection`
@@ -85,6 +90,7 @@
 - `SearchProductUseCase`
 - `SettingStoreBusinessHourUseCase`
 - `SettingStoreConfigUseCase`
+- `UpdateStoreProductUseCase`
 
 ## Outbound clients (ports to other services)
 
