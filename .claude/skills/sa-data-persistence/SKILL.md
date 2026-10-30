@@ -29,6 +29,9 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
    `UPDATE … SET x = x - :q WHERE id = :id AND <guard>` → `0 rows` means "rule violated or already done". Same for state machines: `… SET status = 'CONFIRMED' WHERE id = :id AND status = 'RESERVED'`.
 5. **In PostgreSQL a failed statement aborts the whole transaction.** You cannot `catch` a duplicate-key exception and keep writing in the same transaction. Avoid the error (check first / `ON CONFLICT DO NOTHING`) or let it propagate and retry in a new transaction.
 6. **Transaction boundary = the `@UseCase` service method.** Keep it short; no remote calls (HTTP, AWS) inside it. Isolation is the default `READ COMMITTED` — do not assume repeatable reads.
+   - **Self-invocation:** `@Transactional` only applies to a call that goes through the Spring proxy. A method the class (or an oms-core template such as `AbstractImportTemplate.execute`) calls on `this` — `process`, `postImport` — never gets a transaction, whatever its annotation. Put the boundary on the public entry point the other bean calls (stores-service: `StoreProductImportHandler.execute` overrides the template as `@Transactional`). Without any transaction, each Spring Data call commits on its own.
+   - **A catch-all that turns errors into a result stays outside the transaction.** Inside it, an exception thrown outside a repository proxy leaves the transaction committable, and the catch commits the partial work (e.g. products without their outbox rows); one already marked rollback-only ends in `UnexpectedRollbackException` (500). Guard the boundary with a test (entry point annotated, not final; the catching service not annotated).
+   - Remote reads (S3, HTTP) go before the transaction. Before claiming what the client sees for their errors, trace each exception to its HTTP status (handler mapping) — they are rarely all 4xx.
 7. **JPA pitfalls**: N+1 on lazy collections; `saveAll` on detached entities issues a SELECT per row; `IN (:list)` with very large lists — chunk; `IN (:list)` with an **empty** list in a **native** query renders `IN ()`, a Postgres syntax error (derived `findByXIn` handles it, hand-written SQL does not) — branch on empty before the query and test that branch; native queries bypass the persistence context (flush/clear when mixing). Declared `@Query` methods do **not** inherit `SimpleJpaRepository`'s class-level `readOnly = true`, and a read-only flag is ignored anyway when joining the caller's read-write transaction — don't cite it as a reason; a `@Modifying` query outside any transaction throws `TransactionRequiredException`.
 8. **Queries need indexes** matching their `WHERE`/`ORDER BY`; say which index serves a new query.
 
@@ -37,6 +40,7 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
 - [ ] New/changed constraints and what existing data could violate them.
 - [ ] Every concurrent write path: conditional UPDATE or constraint? What does `0 rows` mean?
 - [ ] Transaction boundary and what is inside it (no remote calls).
+- [ ] The `@Transactional` method is reached through the proxy (not via `this`), and no catch-all converting errors to a result runs inside the transaction.
 - [ ] Index for each new query.
 - [ ] Every native `IN (:list)`: what happens when the list is empty?
 - [ ] How the SQL is verified, given unit tests do not run it (manual check against local Postgres, or a Testcontainers test).
