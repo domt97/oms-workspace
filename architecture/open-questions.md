@@ -19,7 +19,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 
 ## Correctness (stores-service)
 
-24. **Excel import writes products and outbox events in separate transactions.**
+24. **Excel import is synchronous and unbounded.** Products and their `ProductCreated` outbox rows are now written in one transaction (stores-service fix/import-transaction, 2026-10-30), so a FAILED import writes nothing. Still open: no row cap, the whole workbook is loaded into memory and one transaction holds a Hikari connection (pool 10) for the whole import, inside the request thread (→ async import, 202 + job); database error text leaks into `errorMessage`; merchant/store not found answers 200 FAILED although the OpenAPI declares 404; a client retry after a timeout gets FAILED "SKU code in use" for an import that actually succeeded; SKU/image rows whose product reference has no product row are not imported (logged as WARN, decided 2026-10-30) but their SKU codes are still validated.
     - `StoreProductImportHandler.process` is `@Transactional`, but it is called via `this.process(...)` from `AbstractImportTemplate.execute`, and `ImportProductService.execute` has no `@Transactional`. So the annotation is never applied.
     - `saveAllAndFlush` (products) and `outboxEventRepository.saveAll` (in `postImport`) each commit on their own. A failure between them leaves products with no `ProductCreated`, so inventory is never created. This breaks workspace rule 2.
     - The service catches every exception and returns `ImportResult{FAILED}` with HTTP 200, even after products were committed.
@@ -43,7 +43,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-10-
 18. SQS `reservation-expire` queue has **no DLQ / redrive policy** (`development/docker/infra/local/main.tf`).
 19. **`outbox_events` is never cleaned up**: rows stay `PENDING` forever; no job deletes published rows.
 30. **Kafka topics are auto-created** with broker defaults (1 partition): `ProductCreated` exists only because the broker auto-creates it. Create topics explicitly (partitions, retention) in `development` before consumers need to scale.
-40. **No way to resync a product to inventory.** If a `ProductCreated`/`ProductUpdated` is skipped (open question 17) or lost (open question 24), inventory stays stale until the next update of that product. Add a republish (stores) or resync (inventory) tool.
+40. **No way to resync a product to inventory.** If a `ProductCreated`/`ProductUpdated` is skipped (open question 17) or lost (before stores-service fix/import-transaction, an Excel import could commit products without their event), inventory stays stale until the next update of that product. Add a republish (stores) or resync (inventory) tool.
 
 ## Scale (inventory-service)
 
