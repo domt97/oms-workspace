@@ -17,7 +17,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 - `GET /v1/inventory/inventories/stock-movements/{inventoryId}` returns **every** movement of an inventory, with no paging. `stock_movements` is append-only, so this response grows forever.
 
 **Bulk paths**
-- Excel import (`stores-service/.../impex/product/StoreProductImportHandler.java`) reads the whole file from S3 into memory. It saves all products with one `saveAllAndFlush`, then all outbox rows, synchronously inside the HTTP request. There is no row limit.
+- Excel import (`stores-service/.../impex/product/StoreProductImportHandler.java`) reads the whole file from S3 into memory. It validates, saves all products and all outbox rows in one transaction (one Hikari connection held throughout), synchronously inside the HTTP request. There is no row limit (open question 24).
 - Reservation expiry (inventory-service#28) is the reference pattern for bounded work:
   - keyset pages `(expires_at, id)` of 500;
   - a 40 s time budget per tick;

@@ -15,7 +15,7 @@ description: Resilience and observability in the OMS — failure modes of depend
 - **S3** (`S3Config`): SDK defaults as well.
 - **Excel import**:
   - `ImportProductService` catches any exception and returns `ImportResult{status: FAILED}` with HTTP 200;
-  - products and outbox rows are written in **separate transactions** (open question 24), so a failure in between leaves products without a `ProductCreated` event.
+  - validate, products and outbox rows run in **one transaction** on `StoreProductImportHandler.execute` (the S3 read stays outside), so FAILED means nothing was written. The catch stays outside the transaction: a catch-all inside it would commit products without their events.
 
 **Observability**
 - **No Spring Boot Actuator, no Micrometer, no tracing** in either service (`build.gradle`). So there are no health/readiness endpoints, no metrics and no trace ids.
@@ -70,5 +70,5 @@ description: Resilience and observability in the OMS — failure modes of depend
 ## Known gaps
 - No Actuator/metrics/tracing/correlation id; ERROR logging for 4xx; `show_sql` on.
 - No Kafka DLT (open question 17), no SQS DLQ (open question 18).
-- Import outbox written outside the products transaction (open question 24); import failures returned as 200.
+- Import failures returned as 200 FAILED, with database error text in the message (open question 24).
 - No timeouts configured for AWS SDK clients; no graceful shutdown.
