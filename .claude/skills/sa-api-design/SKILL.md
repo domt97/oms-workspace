@@ -74,7 +74,20 @@ description: REST API design in the OMS — resource paths and versioning, publi
    - removing or renaming fields, changing types or semantics, making a field required, or changing status codes is **BREAKING**. A breaking change needs a new version (`/v2/...`) running alongside v1 until callers move.
    - Clients must ignore unknown fields.
 9. **Errors**: always the `ErrorResponse` shape. Never return stack traces or SQL messages. Messages live in each service's `Constants`.
-10. **Service-to-service calls** are written behind an application port, with an adapter in `infrastructure` that sets:
+   - When one status has **several causes the client must handle differently**, give each a machine-readable `code` in
+     the error body; clients must never parse the message. Example: update-product answers 409 for a stale version
+     (client offers "reload") and for a SKU code used by another product (client keeps the edits). oms-core's
+     `ErrorResponse` has no `code` yet, so oms-web re-reads the product and compares versions (known gap below).
+10. **Full-replace `PUT` of an aggregate with child items** (e.g. update-product: product + SKUs + images):
+    - Document the semantics: omitted optional fields are **cleared**; child items are matched by a natural key
+      (SKU code) or id; items left out are removed (say whether soft or hard); the response carries the new `version`.
+    - Make "nothing changed" cheap and safe: an identical body returns 200 with the current version without writing, so
+      a client retry after a timeout is harmless.
+    - **Clients** must send back every field they do not edit (or it is wiped) and keep untouched values exactly as
+      loaded (no trimming, same order), and must map a re-entered key back to the stored item: "remove and add the same
+      code again" in one edit is the same item, not a new one with blank fields. Test the round trip "loaded → untouched
+      form → request" and expect the server's no-change answer.
+11. **Service-to-service calls** are written behind an application port, with an adapter in `infrastructure` that sets:
     - a connect timeout and a read timeout;
     - retries **only** for idempotent calls;
     - a mapping of remote errors to domain exceptions.
@@ -83,7 +96,8 @@ description: REST API design in the OMS — resource paths and versioning, publi
 
 ## Checklist
 - [ ] Path, method, visibility (public/internal), merchant scoping.
-- [ ] Request validation for every field and query param; what returns 400 vs 422 vs 409.
+- [ ] Request validation for every field and query param; what returns 400 vs 422 vs 409. Several causes behind one status → a machine-readable `code` per cause.
+- [ ] Full-replace `PUT`: cleared fields, child matching key, removal semantics and no-change answer documented; client round-trip test planned.
 - [ ] Idempotency on retry (same request twice → same result?).
 - [ ] Paging/sorting bounds for lists.
 - [ ] BREAKING? Who calls it today (`architecture/integration.md`, `generated/`)?
@@ -95,3 +109,4 @@ description: REST API design in the OMS — resource paths and versioning, publi
 - Import request not validated; invalid `sortBy`/`direction` → 500 outside product search; no max page size on product search.
 - No idempotency key on stock adjustment.
 - No HTTP client adapters, timeouts or retry policy defined for service-to-service calls.
+- `ErrorResponse` (oms-core) has no machine-readable `code`; stores-service update-product's two kinds of 409 differ only by message.
