@@ -14,9 +14,9 @@
 
 | Id | Rule | Status |
 |----|------|--------|
-| BR-MER-01 | The platform serves **one market** (Vietnam) with **one currency** (VND, 0 decimals); every store, price, checkout and payment uses it. More markets are out of scope. | 🟢 Q32, Q33 (2026-10-25) |
-| BR-MER-02 | **Merchant** (formerly called *tenant* in code): one seller company that owns one or more **stores** (branches). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ table `merchants`, FK `stores.merchant_id → merchants.id` (stores-service `V1`), `MerchantId`; 🟢 Q32 (2026-10-25) |
-| BR-MER-03 | A group with several brands is one merchant per legal entity (contract), with the brand as a store attribute. | 🟡 ❓ Q34 |
+| BR-MER-01 | The platform is **not limited to one market or currency**. It launches in Vietnam (VND, 0 decimals) and has no market level yet. No design may assume a single market or currency: every amount carries its ISO-4217 currency, and currency-dependent rules (minor unit, rounding) are per currency. Markets (country, currency, rules) are enabled per store (BR-STO-09) and can be added later without rebuilding. | 🟢 2026-10-31 (replaces the one-market / one-currency part of Q32, Q33). ✅ amounts carry a currency (`ProductSku.currency`, `StoreConfig.currency`); VND whole đồng is a per-currency rule (`ProductSku.normaliseForSale`). **Gap:** oms-web assumes VND (`domain/money.ts`: `type Currency = 'VND'`, non-VND cart lines flagged) |
+| BR-MER-02 | **Merchant** (formerly called *tenant* in code): one seller **business account** (a company or brand group) that owns one or more **stores** (branches), possibly in several markets. It is not the legal entity: legal details are per market (BR-MER-03). Merchants are isolated from each other. A store belongs to exactly one merchant and never moves. | ✅ table `merchants`, FK `stores.merchant_id → merchants.id` (stores-service `V1`), `MerchantId`; 🟢 Q32 (2026-10-25); business account, not legal entity: 🟢 2026-10-31 |
+| BR-MER-03 | One merchant per business (brand group); a brand is a store attribute. The **legal entity is per market**: each market a merchant sells in has a **merchant market profile** (legal entity, tax id, payout account and currency, verification). A store can be enabled in a market only if its merchant has a profile there (BR-STO-09). | 🟢 2026-10-31 (closes Q34). Not built: no market profile yet; every merchant implicitly has one Vietnam profile |
 | BR-MER-04 | A merchant has a **code**: 1–50 ASCII letters and digits only (no spaces, symbols or Vietnamese diacritics), unique on the platform and case-insensitive (stored trimmed, upper-case: `m001` = `M001`). Invalid → 400, duplicate → 409. | ✅ `Merchant.register`, `uk_merchants_code`, `ck_merchants_code`; 🟢 (2026-10-25, characters 2026-10-26) |
 | BR-MER-05 | Merchant status is `ACTIVE` or `SUSPENDED`; a new merchant is **ACTIVE immediately**. What a suspended merchant may still do is not decided and not enforced. | ✅ `MerchantStatus`, `Merchant.register`; 🟢 (2026-10-25); ❓ Q35 |
 | BR-MER-06 | **Sellers register their merchant themselves** (`POST /v1/store/merchants`, public). The registering user becomes its **OWNER** once user accounts exist. The platform admin does not create merchants; it suspends/reactivates them and helps in special cases (e.g. ownership transfer). | ✅ API; 🟢 (2026-10-25); ❓ Q36, Q37 |
@@ -38,12 +38,13 @@
 |----|------|--------|
 | BR-STO-01 | A store belongs to one merchant (BR-MER-02). Store `code` is unique per merchant. | ✅ `UNIQUE (merchant_id, code)` (`V4`) |
 | BR-STO-02 | Store status is `ACTIVE`, `INACTIVE`, `SUSPENDED` or `CLOSED`; only `ACTIVE` stores take orders. Shoppers can still open a non-`ACTIVE` store's page (shown as "not taking orders"), but it is left out of feeds and search. | ✅ statuses (`StoreStatus`); 🟢 order rule + storefront display (2026-10-27); enforced in oms-web only, not yet in a backend use case |
-| BR-STO-03 | A store has its own time zone; its currency is the **platform currency** VND (BR-MER-01). Every SKU price is meant to be in that currency (not enforced, open question 38). | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). ✅ SKU price checks (`ProductSku.normaliseForSale`: create, Excel import, `addSku`): currency is a 3-letter code stored upper-case, price ≥ 0 with ≤ 2 decimals, and a VND price is whole đồng → 400 (2026-10-28). **Gap (decided 2026-10-28):** SKUs are **not** forced to VND, so a SKU may carry another currency although the market is VND-only; `StoreConfig.currency` is also unchecked (open question 38) |
+| BR-STO-03 | A store has its own time zone; and its own currency (`StoreConfig.currency`; VND today, BR-MER-01). Prices are in the currency of the market they are sold in (BR-STO-09). | ✅ fields `StoreConfig.timeZone`/`currency`; 🟢 Q9, Q33 (2026-10-25). ✅ SKU price checks (`ProductSku.normaliseForSale`: create, Excel import, `addSku`): currency is a 3-letter code stored upper-case, price ≥ 0 with ≤ 2 decimals, and a VND price is whole đồng → 400 (2026-10-28). **Decided 2026-10-28:** SKUs are **not** forced to VND; `StoreConfig.currency` is unchecked (open question 38) |
 | BR-STO-04 | A store is open when the current local time is within that day's business hours **and** no active availability window (closure, holiday, maintenance, staff shortage, inventory) covers now. | ✅ hours check `Store.isOpen` (opening < closing, so no overnight hours); 🟡 combining with `StoreAvailability` (not done anywhere today) |
 | BR-STO-05 | `autoAcceptOrder`: orders are accepted without staff action; otherwise staff must accept or reject. | ✅ setting exists, unused; 🟡 behaviour, see BR-ORD-08 |
 | BR-STO-06 | `allowPreOrder`: when on, customers may order for a later time (e.g. tonight for tomorrow 7:00, or while the store is closed), choosing a time slot inside future opening hours. Stock is held at placement (BR-INV-02). | ✅ setting exists, unused; 🟢 pre-order supported, at most until the next day (Q7, Q27, 2026-10-25); 🟡 15-min slots |
 | BR-STO-07 | `maxOrdersPerDay`: the store stops taking orders when the day's count (store local day) is reached. | ✅ setting exists, unused; 🟡 counted at placement, cancelled orders free a slot |
 | BR-STO-08 | `preparationTimeMinutes`: default promised ready time = accepted time + preparation time. | ✅ setting exists, unused; 🟡 |
+| BR-STO-09 | **Markets are enabled per store**, not per merchant or platform. A market = country + currency + its rules. A store has one **home market** (its country) and may be enabled in **several markets**; stores of one merchant can sell in different markets, each needing the merchant's market profile there (BR-MER-03). In each enabled market the merchant **sets the price per SKU** (no automatic conversion), in **that market's currency**: the market fixes the currency, so a store's currency comes from its home market and no product mixes currencies within one market. | 🟢 2026-10-31. Not built: no market model yet; every store's home market is the launch market (Vietnam, VND), and `StoreConfig.currency` / SKU currency are still free 3-letter codes (open question 38) |
 
 ## Catalog
 
@@ -148,7 +149,7 @@
 | Q5 | Both COD and online payment. |
 | Q6 | Orchestration by order-service. |
 | Q8 | Third-party delivery. |
-| Q9 | One currency per store — refined by Q33: one currency (VND) for the whole platform. |
+| Q9 | One currency per store — refined by Q33: one currency (VND) for the whole platform. Revised 2026-10-31: not limited to one currency (BR-MER-01). |
 | Q10 | SKU unique within a store. |
 | Q11 | `trackStock` flag per SKU — nice to have. |
 | Q13 | Customer cancels until accepted; then store only; full refund; stock returned only if reusable. |
@@ -172,17 +173,18 @@
 | Q29 | Settlement (commission, merchant balances, mocked payouts) is in scope, later. |
 | Q30 | Search across all stores, later. |
 | Q31 | Platform vouchers and shop vouchers, phase 3. |
-| Q32 | The old *tenant* is the merchant; one market (Vietnam) only; customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
-| Q33 | One currency (VND) for the platform. |
+| Q32 | The old *tenant* is the merchant; one market (Vietnam) only — revised 2026-10-31: not limited to one market (BR-MER-01); customers are platform users. Code renamed tenant → merchant (open question 28, resolved). |
+| Q33 | One currency (VND) for the platform. Revised 2026-10-31: VND is the launch currency, not the only one (BR-MER-01). |
 | — | Merchant code letters and digits only (2026-10-26), unique on the platform, case-insensitive; status ACTIVE/SUSPENDED, active on registration; sellers self-register (BR-MER-04..06). |
 | — | Update product (2026-10-28): full-replace PUT with a version; SKU code is the identity and immutable, soft remove with the code reserved in the store, status transitions with ≥ 1 ACTIVE SKU, caps 100 SKUs / 20 images / 5000-char description, editable when the store is not ACTIVE (BR-CAT-08..12); inventory status = orderable, reservations kept, adjust allowed when INACTIVE (BR-INV-08..10). U8 (currency) revised the same day: SKUs are not forced to VND, VND prices whole (BR-STO-03). |
+| — | Market (2026-10-31): the platform is not limited to one market or currency; launch in Vietnam (VND), no market level yet; designs must not assume a single market or currency (BR-MER-01; revises Q9, Q32, Q33). Markets are enabled per store, not per merchant; a store has a home market and may sell in several; price set per market in the market currency (BR-STO-09). |
+| — | Merchant with markets (2026-10-31): the merchant is the business account (brand group), not the legal entity; legal entity, tax id, payout and verification are per market in a merchant market profile; a store is enabled in a market only if its merchant has a profile there (BR-MER-02, BR-MER-03, BR-STO-09; closes Q34). |
 | — | Storefront (2026-10-27): only ACTIVE products shown and only ACTIVE stores take orders (BR-STO-02, BR-CAT-01); stock shown as a status (BR-CAT-04); cart problems flagged, not removed, checkout blocked until fixed (BR-CRT-03); max 99 per cart line (BR-CRT-02). |
 
 ## Open business questions
 
 | Id | Question | Why it matters | Proposed default |
 |----|----------|----------------|------------------|
-| Q34 | A group with several brands (e.g. one company owning three restaurant brands): one merchant, or one merchant per brand? | Users/roles, settlement, reporting | One merchant per legal entity; brand is a store attribute (not blocking) |
 | Q35 | What may a **SUSPENDED** merchant still do (log in, see data, take orders, get paid)? | Status checks in every use case and in order/inventory (needs a `MerchantStatusChanged` event) | Read-only: no new stores/products/orders; existing orders finish; payouts held |
 | Q36 | Linking a merchant to the user who registered it (OWNER) — needs identity (user accounts, tokens). | Authorization of merchant APIs | Do it with the identity work: registration requires a logged-in user, who becomes OWNER |
 | Q37 | Should self-registered merchants be **reviewed** (KYC, fraud) before selling? | Adds a `PENDING` status and an approval step | Not in the MVP; add `PENDING` + admin approval later if needed |

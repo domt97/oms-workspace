@@ -5,7 +5,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 # Multi-tenancy & security
 
 ## OMS today (verified in code)
-**Merchant model** (`vision.md`): the isolation unit is the **merchant** (seller company, often a chain, owning stores; formerly called *tenant* in code); one market (Vietnam, VND). Customers, carts and checkouts are platform level.
+**Merchant model** (`vision.md`): the isolation unit is the **merchant** (seller company, often a chain, owning stores; formerly called *tenant* in code); launching in Vietnam (VND), not limited to one market or currency (BR-MER-01). Customers, carts and checkouts are platform level.
 - `MerchantId` (oms-core typed ID). Merchants (`code`, `name`, `status`) live in stores-service's Postgres table `merchants` (`Merchant` aggregate, `MerchantRepository` port); `stores.merchant_id` has a foreign key to it. Other services only carry `merchant_id` (inventory gets it from `ProductCreated`).
 - **Merchant `status` is never checked** (Q35): stores-service only tests that the merchant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`); inventory no longer looks merchants up at all. A suspended merchant keeps working.
 
