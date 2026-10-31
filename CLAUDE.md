@@ -1,6 +1,6 @@
 # OMS Workspace — System Map
 
-Multi-merchant marketplace **Order Management System** for one market (Vietnam, VND): **merchants** (sellers, often chains) run **stores**; customers are platform users who buy across merchants. Each bounded context lives in its own GitHub repo;
+Multi-merchant marketplace **Order Management System** launching in Vietnam (VND) and not limited to one market or currency (BR-MER-01): **merchants** (sellers, often chains) run **stores**; customers are platform users who buy across merchants. Each bounded context lives in its own GitHub repo;
 this workspace holds the cross-repo knowledge (architecture, contracts, flows) and clones every
 repo into `repos/` so Claude can reason about the whole system.
 

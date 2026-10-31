@@ -6,10 +6,10 @@
 
 ## 1. Domain vision statement *(Q1, Q2, Q3, Q8, Q20b, Q32 decided 2026-10-25)*
 
-A **multi-merchant marketplace** for **one market** (Vietnam, VND), operated by us.
+A **multi-merchant marketplace** launching in **Vietnam (VND)** and not limited to one market, operated by us.
 
 ```
-Platform (one market: Vietnam, VND)
+Platform (launch market: Vietnam, VND)
  ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)   ← isolated from each other
  │   └─ Store = branch with its own hours, catalog and stock
  └─ Customer = platform user (one account for all merchants)
@@ -19,7 +19,7 @@ Platform (one market: Vietnam, VND)
 - **Merchant** (formerly *tenant* in code). Merchants are isolated from each other: a merchant sees only its own stores, catalog, stock and orders.
 - **Merchants** sell both made-to-order items (food & beverage) and stocked retail goods. One merchant = one seller company; it has one or more stores.
 - **Customers** belong to the platform and use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
-- **One market** for now: one currency (VND) and one set of rules for the whole platform. Adding a second country later means adding a "market" level above merchants.
+- **Not limited to one market** (decided 2026-10-31). We launch in Vietnam (VND) and build no market level yet, but no design may assume a single market or currency: every amount carries its ISO-4217 currency, and currency-dependent rules (minor unit, rounding) are per currency. Adding a country later means adding markets and enabling them per store (BR-STO-09), without rebuilding.
 
 **Two scopes of data:**
 - **merchant-owned**: merchant, stores, catalog, inventory, and each order (an order belongs to one store, hence one merchant);
@@ -76,7 +76,7 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 **Growth path for market, merchant and people** (each step only adds; nothing is rebuilt):
 1. **Now — Merchant**: the seller company (code, name, status) owns stores, catalog, stock and orders; sellers register themselves.
 2. **With identity — MerchantMember**: users are linked to merchants with a role (OWNER, MANAGER, STAFF) and stores; the registering user becomes OWNER; members join by invitation (BR-MER-07).
-3. **With a second country — Market**: add a market (country, currency, rules) above merchants and customers (`market_id`); merchants and members stay as they are.
+3. **With a second country — Market**: add markets (country, currency, rules) and enable them **per store** (BR-STO-09); a merchant's stores may sell in different markets. Merchants, customers and members stay as they are.
 
 Market = *where* we sell, merchant = *who* sells (the business), member/user = *which person* operates it.
 
@@ -174,4 +174,4 @@ sequenceDiagram
 | Later | Returns, reporting, pickup, search | Return/refund flow, analytics read models, pickup (Q25), search across stores (Q30). Pre-order (Q7, up to the next day) fits in phase 1–2 |
 
 ## 8. Out of scope (until decided otherwise)
-More than one market (countries, currencies), cross-border checkout, real payment gateways, real delivery partners, POS orders, guest orders, multi-currency, split shipments, B2B invoicing, loyalty points.
+Building a second market or multi-currency checkout (not built now; the design must not prevent them, BR-MER-01), cross-border checkout, real payment gateways, real delivery partners, POS orders, guest orders, split shipments, B2B invoicing, loyalty points.
