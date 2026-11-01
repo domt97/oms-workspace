@@ -14,7 +14,7 @@ description: Resilience and observability in the OMS — failure modes of depend
 - **Expiry** isolates failures per inventory (`REQUIRES_NEW`); a failing inventory is logged and retried next tick.
 - **S3** (`S3Config`): SDK defaults as well.
 - **Excel import**:
-  - `ImportProductService` catches any exception and returns `ImportResult{status: FAILED}` with HTTP 200;
+  - `ImportProductService` checks merchant/store (404), one import per store (409) and a server slot (waits, 503 + Retry-After); the handler's exceptions become `ImportResult{status: FAILED}` with HTTP 200 — rule messages kept, anything else a generic message (details only in the log, WARN for rule failures, ERROR + stack for internal ones);
   - products and outbox rows are written in **one transaction** (`TransactionTemplate` in `StoreProductImportHandler.process`; the S3 read and validation run before it), so FAILED means nothing was written. The catch stays outside the transaction: a catch-all inside it would commit products without their events.
 
 **Observability**
@@ -70,5 +70,5 @@ description: Resilience and observability in the OMS — failure modes of depend
 ## Known gaps
 - No Actuator/metrics/tracing/correlation id; ERROR logging for 4xx; `show_sql` on.
 - No Kafka DLT (open question 17), no SQS DLQ (open question 18).
-- Import failures returned as 200 FAILED, with database error text in the message (open question 24).
+- Import failures are 200 FAILED (by design, BR-CAT-13); a client must read `status`, not the HTTP code.
 - No timeouts configured for AWS SDK clients; no graceful shutdown.

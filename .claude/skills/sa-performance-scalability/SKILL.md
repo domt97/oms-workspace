@@ -17,7 +17,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 - `GET /v1/inventory/inventories/stock-movements/{inventoryId}` returns **every** movement of an inventory, with no paging. `stock_movements` is append-only, so this response grows forever.
 
 **Bulk paths**
-- Excel import (`stores-service/.../impex/product/StoreProductImportHandler.java`) reads the whole file from S3 into memory. It validates first, then saves all products and all outbox rows in one transaction (one Hikari connection held throughout), synchronously inside the HTTP request. There is no row limit (open question 24).
+- Excel import (BR-CAT-13) is bounded: `ProductExcelReader` copies the S3 object (≤ 5 MB) to a temp file and streams only the three import sheets with SAX (row caps 1,000 / 10,000 / 20,000, text and styles budgets); never `XSSFWorkbook`, which loads every cell. The write is one transaction (one Hikari connection), synchronously in the request: measured 6.5 s for a file at the limits, ~15 s for three at once (512 MB heap, ≤ 220 MB used). One import per store; server slots = heap / 128 MB − 1, at most 4 (database pool 10), waiting up to 40 s with at most 20 waiters. Crafted files at every budget: 3 at once ≤ 367 MB of a 512 MB heap.
 - Reservation expiry (inventory-service#28) is the reference pattern for bounded work:
   - keyset pages `(expires_at, id)` of 500;
   - a 40 s time budget per tick;
@@ -66,6 +66,6 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 
 ## Known gaps
 - Unbounded `pageSize` on product search; unpaged stock-movement listing.
-- Synchronous, single-transaction Excel import without a row limit.
+- Excel import is synchronous (bounded, but long at the limits): move to async (202 + job) if 503s or slow imports show up.
 - Expiry throughput and lack of instance cooperation (open question 22).
 - No Micrometer/Actuator in either service, so no metrics exist yet (see `sa-resilience-observability`).
