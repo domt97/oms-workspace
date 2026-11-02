@@ -28,7 +28,7 @@ description: REST API design in the OMS — resource paths and versioning, publi
 - Paging: `pageNumber`/`pageSize`/`sortBy`/`direction` query params mapped to `DomainPageRequest`. Response is `PagedResult<T>` (`oms-core/.../domain/page/PagedResult.java`). Max page size only on collection products (100); product search has none because the storefront depends on it (`integration.md` → Front-end consumers).
 
 **Write semantics**
-- Store state changes use action sub-resources: `PUT .../stores/{id}/close`, `PUT .../reopen`, `POST .../availability/{id}/cancel`, `POST .../collections/{id}/add-products`.
+- Store state changes use action sub-resources: `PUT .../stores/{storeId}/close`, `PUT .../reopen`, `POST .../availability/{storeAvailabilityId}/cancel`, `POST .../collections/{collectionId}/add-products`. Name path variables `<thing>Id` (not `{id}`): oms-core puts every `...Id` UUID path variable in the MDC.
 - Stock adjustment is `POST /v1/inventory/inventories/{inventoryId}`. It is not idempotent and has no idempotency key; a retried request adjusts twice.
 
 **Documentation and clients**

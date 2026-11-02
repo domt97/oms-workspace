@@ -32,6 +32,17 @@ AWS SDK v2 (S3) · Gradle with `oms-core` composite build · LocalStack for loca
 Front end (`oms-web`): React 19 · TypeScript (strict) · Vite · no runtime dependencies besides React;
 layered `domain → ports → adapters / features → app` with the layer rule enforced by a test (`oms-web/docs/architecture.md`).
 
+## Logging (MDC)
+
+Text logs; every line starts with the MDC (`logging.pattern.correlation: "[%X] "`, both services). Keys (`oms-core` `MdcKeys`):
+`requestId` (one per HTTP request, Kafka record or SQS message), every `...Id` UUID path variable (`merchantId`, `storeId`,
+`productId`, `collectionId`, `inventoryId`, ...), and for messages `eventId`, `kafkaTopic`/`kafkaPartition`/`kafkaOffset`,
+`sqsMessageId`. Search by `requestId` within a service. Across services, join stores' "Outbox event queued … eventId=" line with
+inventory's consumer lines on `eventId` (the payload `eventId`, not `outbox_events.id`, open question 45); that line is DEBUG, so turn on
+`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG` first. A Kafka record keeps one
+`requestId` (`topic-partition-offset`) across retries and on the DLT line (the recoverer reopens the scope); the error handler's own
+retry lines have no MDC. `show_sql` lines bypass Logback.
+
 ## Service layout convention
 
 ```

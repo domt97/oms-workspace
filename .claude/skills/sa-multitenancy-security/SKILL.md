@@ -30,6 +30,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 **Secrets and logs**
 - Defaults in `application.yaml` contain LocalStack credentials (`AWS_ACCESS_KEY:test`), and inventory-service hard-codes the DB user and password `postgres`.
 - `oms-core` `RequestResponseLoggingFilter` logs method, URI and **all headers** at INFO. It redacts `authorization`, `cookie`, `x-api-key` and similar headers, and token-like query params. It does not log bodies.
+- Log values that come from the caller are escaped (`LogSanitizer.escape`: control characters and U+2028/2029) so they cannot forge log lines. An inbound `X-Request-Id` is kept only if it matches `^[A-Za-z0-9._-]{1,64}$`, but it is still trusted as given: a caller can reuse another request's id. Acceptable until authentication exists. Only UUID path variables named `...Id` reach the MDC; no PII goes into it.
 
 ## Rules
 1. **Where the merchant lives** (hierarchical tenancy):
