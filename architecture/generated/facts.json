@@ -242,7 +242,7 @@
         "handler": "StoreController#getStore",
         "hidden": false,
         "method": "GET",
-        "path": "/v1/store/merchants/{merchantId}/stores/{id}",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}",
         "visibility": "public"
       },
       {
@@ -250,7 +250,7 @@
         "handler": "StoreController#addStoreAvailability",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/merchants/{merchantId}/stores/{id}/availability",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/availability",
         "visibility": "public"
       },
       {
@@ -258,23 +258,7 @@
         "handler": "StoreController#cancelStoreAvailability",
         "hidden": false,
         "method": "POST",
-        "path": "/v1/store/merchants/{merchantId}/stores/{id}/availability/{storeAvailabilityId}/cancel",
-        "visibility": "public"
-      },
-      {
-        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
-        "handler": "StoreController#closeStore",
-        "hidden": false,
-        "method": "PUT",
-        "path": "/v1/store/merchants/{merchantId}/stores/{id}/close",
-        "visibility": "public"
-      },
-      {
-        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
-        "handler": "StoreController#reopenStore",
-        "hidden": false,
-        "method": "PUT",
-        "path": "/v1/store/merchants/{merchantId}/stores/{id}/reopen",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/availability/{storeAvailabilityId}/cancel",
         "visibility": "public"
       },
       {
@@ -283,6 +267,14 @@
         "hidden": false,
         "method": "PUT",
         "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/business-hours",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#closeStore",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/close",
         "visibility": "public"
       },
       {
@@ -379,6 +371,14 @@
         "hidden": false,
         "method": "PUT",
         "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}",
+        "visibility": "public"
+      },
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/StoreController.java",
+        "handler": "StoreController#reopenStore",
+        "hidden": false,
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/reopen",
         "visibility": "public"
       }
     ],

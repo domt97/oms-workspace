@@ -9,12 +9,11 @@
 | public | POST | `/v1/store/merchants` | `MerchantController#registerMerchant` |
 | public | GET | `/v1/store/merchants/{merchantId}` | `MerchantController#getMerchant` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores` | `StoreController#createStore` |
-| public | GET | `/v1/store/merchants/{merchantId}/stores/{id}` | `StoreController#getStore` |
-| public | POST | `/v1/store/merchants/{merchantId}/stores/{id}/availability` | `StoreController#addStoreAvailability` |
-| public | POST | `/v1/store/merchants/{merchantId}/stores/{id}/availability/{storeAvailabilityId}/cancel` | `StoreController#cancelStoreAvailability` |
-| public | PUT | `/v1/store/merchants/{merchantId}/stores/{id}/close` | `StoreController#closeStore` |
-| public | PUT | `/v1/store/merchants/{merchantId}/stores/{id}/reopen` | `StoreController#reopenStore` |
+| public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}` | `StoreController#getStore` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/availability` | `StoreController#addStoreAvailability` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/availability/{storeAvailabilityId}/cancel` | `StoreController#cancelStoreAvailability` |
 | public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/business-hours` | `StoreConfigController#updateBusinessHour` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/close` | `StoreController#closeStore` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections` | `StoreCollectionController#getAll` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections` | `StoreCollectionController#create` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{collectionId}` | `StoreCollectionController#getDetails` |
@@ -27,6 +26,7 @@
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/search` | `StoreProductController#getStoreProducts` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#getProductDetails` |
 | public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#update` |
+| public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/reopen` | `StoreController#reopenStore` |
 
 ## Consumed (listeners)
 
