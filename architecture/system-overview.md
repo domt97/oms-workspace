@@ -32,6 +32,25 @@ AWS SDK v2 (S3) · Gradle with `oms-core` composite build · LocalStack for loca
 Front end (`oms-web`): React 19 · TypeScript (strict) · Vite · no runtime dependencies besides React;
 layered `domain → ports → adapters / features → app` with the layer rule enforced by a test (`oms-web/docs/architecture.md`).
 
+## Logging (MDC)
+
+Text logs; every line starts with the MDC (`logging.pattern.correlation: "[%X] "`, both services). Keys (`oms-core` `MdcKeys`):
+`requestId` (one per HTTP request, Kafka record or SQS message), the request values configured in `app.logging.mdc.fields`
+(defaults: `merchantId`, `storeId`, `productId`, `collectionId`, `inventoryId`, `storeAvailabilityId` as UUID path variables), and for messages `eventId`, `kafkaTopic`/`kafkaPartition`/`kafkaOffset`,
+`sqsMessageId`. Search by `requestId` within a service. Across services, join stores' "Outbox event queued … eventId=" line with
+inventory's consumer lines on `eventId` (the payload `eventId`, not `outbox_events.id`, open question 45); that line is DEBUG, so turn on
+`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG` first. A Kafka record keeps one
+`requestId` (`topic-partition-offset`) across retries and on the DLT line (the recoverer reopens the scope); the error handler's own
+retry lines have no MDC. `show_sql` lines bypass Logback.
+
+`app.logging.mdc.fields` (oms-core `MdcProperties`): one entry per MDC key, merged into oms-core's defaults by each service.
+Each entry has a `format` (`uuid`, `code` = `^[A-Za-z0-9._-]{1,64}$`, or `pattern` + a linear regex, values capped at 64), `sources`
+(`path`, `query` = raw query string, caller-chosen, never for tenant ids) and `propagate`. A value that fails its format or has control
+characters is not logged; a broken entry, a key differing only by case (environment variables lowercase map keys: use YAML or
+`SPRING_APPLICATION_JSON`) or a request source on a reserved key (`requestId`, `eventId`, `kafka*`, `sqsMessageId`) fails startup. `propagate: true`
+only marks keys that may cross services (default: `requestId`); the transport is open question 46. Propagate correlation keys only,
+never entity ids an event payload already carries. Never configure personal data. Body and payload values go through `MdcScope` in code.
+
 ## Service layout convention
 
 ```

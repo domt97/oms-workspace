@@ -36,9 +36,9 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 | Method | Path |
 |--------|------|
 | POST | `/stores` |
-| GET | `/stores/{id}` |
-| PUT | `/stores/{id}/close`, `/stores/{id}/reopen` |
-| POST | `/stores/{id}/availability`, `/stores/{id}/availability/{availabilityId}/cancel` |
+| GET | `/stores/{storeId}` |
+| PUT | `/stores/{storeId}/close`, `/stores/{storeId}/reopen` |
+| POST | `/stores/{storeId}/availability`, `/stores/{storeId}/availability/{storeAvailabilityId}/cancel` |
 | PUT | `/stores/{storeId}/business-hours`, `/stores/{storeId}/configs` |
 | POST | `/stores/{storeId}/products` (404 if the merchant does not exist or the store is not the merchant's; 400 if a SKU currency is not a 3-letter code, the price is negative, has more than 2 decimals or is a fractional VND amount, or price/dimensions exceed the column size or have more than 2 decimals; `images` optional; 409 for a SKU code already used in the store, removed codes included (BR-CAT-09); 400 over the BR-CAT-11 limits or for a null list element — also on Excel import, which reports FAILED; stores-service#48), `/stores/{storeId}/products/import` (BR-CAT-13: 200 SUCCESS, or 200 FAILED = the file broke a business rule and nothing was written (generic message for an internal error); 400 = the file can't be read as an import file — over 5 MB / 1,000 product / 10,000 SKU / 20,000 image rows, text or formatting budget, missing sheet, bad header, a cell that is not a valid number or id (sheet + row named), blank path/fileName; 404 = merchant, or store not the merchant's; 409 = an import for this store is already running; 422 = not an Excel file; 503 + Retry-After = the server stayed busy with other imports for 40 s; 500 = bucket/key missing. Synchronous: allow ~60 s (oms-web does). A retry after a timeout may say "SKU code in use" for an import that succeeded) |
 | GET | `/stores/{storeId}/products/{productId}`, `/stores/{storeId}/products/search` (optional `notInCollectionId` leaves out that collection's products, 404 if it is not a collection of the store; order `sortBy` ∈ createdAt (default, DESC) / updatedAt / name / id, always `id` last; other `sortBy` or `direction` → 400; `direction` without `sortBy` applies to `createdAt`; `pageNumber` < 0 or `pageSize` < 1 → 400) |
@@ -58,7 +58,7 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 | Consumer | Calls | Notes |
 |----------|-------|-------|
-| **oms-web** (React, repo [`oms-web`](https://github.com/domt97/oms-web)) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id`. The product edit form (oms-web#6) calls the update-product PUT with the `version` from GET and sends back every field it does not edit (full replace); on 409 it re-reads the product to tell a stale version from a SKU code clash. The create form applies the same limits (100 SKUs, 20 images, 5000-character description) |
+| **oms-web** (React, repo [`oms-web`](https://github.com/domt97/oms-web)) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id`; both services keep it when it matches `^[A-Za-z0-9._-]{1,64}$` (else a new UUID), echo it in the response and log it as MDC `requestId`. The product edit form (oms-web#6) calls the update-product PUT with the `version` from GET and sends back every field it does not edit (full replace); on 409 it re-reads the product to tell a stale version from a SKU code clash. The create form applies the same limits (100 SKUs, 20 images, 5000-character description) |
 | **oms-web** — storefront `/` | Temporarily the same merchant-scoped reads (store detail, product search/detail) and the inventory read by product | Until the public catalog (BR-USR-05) exists; see open question 34. Changing these paths, adding auth or capping `pageSize` breaks the storefront |
 
 ## Synchronous calls between services
