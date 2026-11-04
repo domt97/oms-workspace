@@ -10,10 +10,12 @@ red. A downstream job in oms-core's CI tested the services against each oms-core
 `com.dotran.oms:oms-core:1.0.0` was never published and was always substituted.
 
 ## Decision
-- oms-core is a versioned library: a tag `vX.Y.Z` on `master` runs `release.yml`, which tests and publishes
-  `com.dotran.oms:oms-core:X.Y.Z` (jar, sources, POM and Gradle module metadata with resolved versions) to
-  **GitHub Packages**. `vX.Y.Z-rc.N` tags may come from a branch, for CI feedback only. Versions are immutable; only the
-  repository owner creates tags; `publish` refuses to run anywhere else.
+- oms-core is a versioned library with **continuous delivery**: the `version` in its `gradle.properties` is what `master`
+  releases. On every push to `master`, `publish.yml` publishes that version to **GitHub Packages** if it has no tag yet
+  (tests first; jar, sources, POM and Gradle module metadata with resolved versions) and tags `vX.Y.Z` with a GitHub
+  Release. Releasing = bumping `version` in the PR; a merge without a bump releases nothing. A PR check reports what
+  merging will release. `vX.Y.Z-rc.N` tags, created by the repository owner on a branch, publish pre-releases for CI
+  feedback only (`release.yml`). Versions are immutable; `publish` refuses to run outside these workflows.
 - Services pin `coreVersion` in `gradle.properties`. CI and releases resolve it from GitHub Packages (`exclusiveContent`:
   `com.dotran.oms` only from there, nothing else from there), reading with `GITHUB_TOKEN`. A `core-pin` check rejects
   `-rc` pins, so a pre-release is never merged.
@@ -32,7 +34,9 @@ red. A downstream job in oms-core's CI tested the services against each oms-core
 
 ## Consequences
 - Service builds are reproducible; oms-core can change without breaking services that have not bumped.
-- A cross-repo change takes more steps: local composite build → (optional rc) → merge oms-core → release tag → bump.
+- A cross-repo change takes more steps: local composite build → (optional rc) → merge oms-core with a version bump
+  (auto-published) → `coreVersion` bump in the service.
+- Publishing on merge is safe because services pin: a new oms-core version changes nothing until a service bumps.
 - Locally a service can pass against newer oms-core source than the one CI pins (accepted for speed; the build log shows
   it). To test exactly what CI tests, build without the sibling (needs a `read:packages` token).
 - Breaking oms-core changes are found when a service bumps, not when oms-core merges; semver discipline and an optional

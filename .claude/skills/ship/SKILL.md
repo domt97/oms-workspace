@@ -57,9 +57,9 @@ Keep the change limited to the approved plan. Write the tests the plan lists.
 If tests fail, fix them. If you cannot make them pass, stop and report — do not commit.
 If `./gradlew test` cannot run here (no network to Maven Central or Gradle), say so plainly; CI on the PR is then
 the first real test run (step 8).
-For a change that also needs an oms-core change: change both locally (composite build), ship oms-core first and ask the
-user to tag a release (or an `-rc.N` for CI feedback), then bump `coreVersion` in the service PR (see CLAUDE.md → CI).
-Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
+For a change that also needs an oms-core change: change both locally (composite build), ship oms-core first with its `version`
+bumped (merging it publishes that version; the user may tag an `-rc.N` for CI feedback before), then bump `coreVersion`
+in the service PR (see CLAUDE.md → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
 
 ## 5. Review
 Ask the **`plan-reviewer`** agent to review the uncommitted diff of `repos/<service>` against the approved

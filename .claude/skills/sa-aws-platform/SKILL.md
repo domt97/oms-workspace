@@ -60,7 +60,7 @@ description: AWS and local platform in the OMS — S3, SQS, EventBridge via Loca
    | Change | Repo | Branch |
    |--------|------|--------|
    | Terraform / compose | `development` | `master` only, per workspace CLAUDE.md |
-   | Client config | `oms-core` | `master`, then a release tag and a `coreVersion` bump in the service |
+   | Client config | `oms-core` | `master` with a `version` bump (auto-published), then a `coreVersion` bump in the service |
    | Service config | the service | `develop` |
    | Docs | `oms-workspace` (`integration.md`, `system-overview.md`) | — |
 
