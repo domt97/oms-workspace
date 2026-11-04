@@ -4,7 +4,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 
 ## Local infrastructure
 
-4. Debezium connector registration is not scripted in `development` (only documented in the stores README).
+4. ~~Debezium connector registration is not scripted~~ — scripted in `development` (`docker/kafka-connect/connectors/postgres-cdc.json`, `register-connectors.sh`, credentials via `FileConfigProvider` from a git-ignored file; `docs/connectors.md`). Remaining: the connector still connects as `postgres` locally; a dedicated replication user must own (or be allowed to create) the publication.
 5. `development/docker/docker-compose.yml` mounts `./postgres/init` for Postgres, but the folder is not in the repo (DB/schema creation).
 25. **Local AWS resources drifted, and the import bucket comes from the request.**
     - The LocalStack scripts in `oms-core/localstack/` and `stores-service/localstack/` create unused queues and an EventBridge bus (DynamoDB is gone since merchants moved to Postgres).
@@ -65,6 +65,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 10. `ProductCreatedEvent` is duplicated in both services; no shared schema / schema-registry subject.
 11. Consumer group `product-consumer` is a generic name; may collide when more services consume products. Do not rename it (with `earliest` a new group replays all `ProductCreated` history); new consumers use specific names (planned: `inventory-product-updated`).
 32. **Merchant status is not enforced outside stores-service.** Inventory (and later order) only know `merchant_id`. When Q35 decides what a suspended merchant may do, publish `MerchantStatusChanged` from stores-service and keep a local copy in the consumers.
-46. **`requestId` is not carried across services.** The keys allowed to cross are marked `propagate: true` in `app.logging.mdc.fields` (default: `requestId` only); nothing transports them yet. stores-service's request and inventory's consumer log different ids; join them on `eventId`. To propagate it: an outbox `request_id` column (stores V-next), Debezium `table.fields.additional.placement=request_id:header:X-Request-Id`, and the consumers read the header into `requestId`. Needs an application port so `OutboxEventHelper` does not read the MDC directly.
+46. ~~`requestId` is not carried across services~~ — resolved by ADR 0004: outbox `correlation_context` → Kafka header `correlationContext` → `KafkaMdc` (oms-core `MdcPropagation`, stores-service V9, inventory-service `KafkaMdc`, development connector config). Still open: outbound HTTP between services (no client adapter yet; send `X-Request-Id` from `MdcPropagation.capture()` when one is added).
 47. **4xx are logged at ERROR with a stack trace** (`oms-core` `GlobalExceptionHandler.logError`): client mistakes (404, 400) drown real errors. Log 4xx at WARN without the stack.
 48. **Dead code in oms-core:** `CoreConfiguration` (`@EnableAutoConfiguration` on a class that is never registered), `application-core.yaml` (never loaded) and unused `RequestLoggingProperties` fields (`logRequestMetadata`, `logResponseMetadata`, payload limits, `skipContentTypes`).

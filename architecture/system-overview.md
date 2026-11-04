@@ -35,21 +35,23 @@ layered `domain → ports → adapters / features → app` with the layer rule e
 ## Logging (MDC)
 
 Text logs; every line starts with the MDC (`logging.pattern.correlation: "[%X] "`, both services). Keys (`oms-core` `MdcKeys`):
-`requestId` (one per HTTP request, Kafka record or SQS message), the request values configured in `app.logging.mdc.fields`
+`requestId` (one per flow: the HTTP request's id, carried to Kafka consumers in the `correlationContext` header, ADR 0004;
+`topic-partition-offset` for a record without it; the message id for SQS), the request values configured in `app.logging.mdc.fields`
 (defaults: `merchantId`, `storeId`, `productId`, `collectionId`, `inventoryId`, `storeAvailabilityId` as UUID path variables), and for messages `eventId`, `kafkaTopic`/`kafkaPartition`/`kafkaOffset`,
-`sqsMessageId`. Search by `requestId` within a service. Across services, join stores' "Outbox event queued … eventId=" line with
-inventory's consumer lines on `eventId` (the payload `eventId`, not `outbox_events.id`, open question 45); that line is DEBUG, so turn on
-`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG` first. A Kafka record keeps one
-`requestId` (`topic-partition-offset`) across retries and on the DLT line (the recoverer reopens the scope); the error handler's own
-retry lines have no MDC. `show_sql` lines bypass Logback.
+`sqsMessageId`. Search by `requestId` across services: stores-service's request and inventory's consumer and DLT lines share it
+(the browser's `X-Request-Id` when valid). All records of one Excel import share the import's id; to isolate one record use `eventId` or
+`kafkaOffset`. `eventId` (the payload `eventId`, not `outbox_events.id`, open question 45) still joins stores' DEBUG "Outbox event queued"
+line (`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG`). A Kafka record keeps its
+`requestId` across retries and on the DLT line (the recoverer reopens the scope); the error handler's own retry lines have no MDC.
+`show_sql` lines bypass Logback.
 
 `app.logging.mdc.fields` (oms-core `MdcProperties`): one entry per MDC key, merged into oms-core's defaults by each service.
 Each entry has a `format` (`uuid`, `code` = `^[A-Za-z0-9._-]{1,64}$`, or `pattern` + a linear regex, values capped at 64), `sources`
 (`path`, `query` = raw query string, caller-chosen, never for tenant ids) and `propagate`. A value that fails its format or has control
 characters is not logged; a broken entry, a key differing only by case (environment variables lowercase map keys: use YAML or
 `SPRING_APPLICATION_JSON`) or a request source on a reserved key (`requestId`, `eventId`, `kafka*`, `sqsMessageId`) fails startup. `propagate: true`
-only marks keys that may cross services (default: `requestId`); the transport is open question 46. Propagate correlation keys only,
-never entity ids an event payload already carries. Never configure personal data. Body and payload values go through `MdcScope` in code.
+carries a key across services through the outbox header (ADR 0004; default: `requestId`). Only correlation keys may propagate: a key with a
+request source (entity or tenant ids) or a message key fails startup. Never configure personal data. Body and payload values go through `MdcScope` in code.
 
 ## Service layout convention
 

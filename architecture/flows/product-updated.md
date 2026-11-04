@@ -19,10 +19,10 @@ sequenceDiagram
     S->>PG: empty change set → re-read the stored version (mixed read → 409), else 200 with the current version, nothing written, no event
     S->>PG: UPDATE store_products SET version = v+1, updated_at WHERE id, store_id, version = v (0 rows → 409; row lock until commit)
     S->>PG: SKU codes of other products of the store (→ 409), apply SKU/image changes in place, flush (uk_product_skus_store_sku → 409)
-    S->>PG: INSERT outbox_events(ProductUpdated, version v+1, merchant of the store) — same transaction
+    S->>PG: INSERT outbox_events(ProductUpdated, version v+1, merchant of the store, correlation_context = requestId) — same transaction
     S-->>M: 200 {version v+1}
     PG-->>D: WAL change on outbox_events
-    D->>K: topic ProductUpdated, key = productId
+    D->>K: topic ProductUpdated, key = productId, header correlationContext (ADR 0004)
     K->>I: ProductUpdatedConsumer (group inventory-product-updated)
     I->>IPG: tx: version gate FIRST: upsert product_catalog_versions WHERE version < v+1 AND same merchant/store (0 rows → stale/duplicate: skip; other merchant/store: exception → DLT); its row lock serialises all work on this product
     I->>IPG: load the product's inventory rows by store_product_id; a row of another merchant or store → exception → DLT, nothing written (gate rolled back)

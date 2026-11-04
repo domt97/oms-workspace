@@ -6,7 +6,7 @@ description: Resilience and observability in the OMS — failure modes of depend
 
 ## OMS today (verified in code)
 **Failure handling**
-- **Kafka** (`ProductCreatedConsumer`): no custom error handler. The spring-kafka default `DefaultErrorHandler` retries 10 times with no backoff, then logs and skips the record. There is no DLT (open question 17). The consumer is idempotent (inventory-service#24), so retries are safe.
+- **Kafka** (`ProductCreatedConsumer`, `ProductUpdatedConsumer`): `KafkaErrorHandlingConfig` sends contract errors to `<topic>.DLT` at once, retries database connection failures without limit and other failures 6 times before the DLT. DLT records keep their headers (incl. `correlationContext`); there is no alerting or replay tool (open questions 17, 40). The consumers are idempotent (version gate), so retries are safe.
 - **SQS** (`SqsReservationExpireConsumer`):
   - acknowledges on success; a throw makes the message reappear after the 90 s visibility timeout (listener and Terraform);
   - there is no DLQ or redrive policy (open question 18);
@@ -22,8 +22,8 @@ description: Resilience and observability in the OMS — failure modes of depend
 - Logging:
   - plain-text Logback defaults;
   - `oms-core` `RequestResponseLoggingFilter` logs each request and response line (method, URI, status, duration, headers redacted);
-  - **MDC** (oms-core `logging`): every line is prefixed with `[%X]` (`logging.pattern.correlation`). REST: `RequestIdFilter` keeps a valid `X-Request-Id` (`^[A-Za-z0-9._-]{1,64}$`) or generates a UUID, echoes it, puts `requestId`; `MdcRequestFieldsInterceptor` adds the path/query values configured in `app.logging.mdc.fields` (`MdcProperties`: format `uuid`/`code`/`pattern` (linear regex, values ≤ 64), sources `path`/`query` (raw query string only; caller-chosen, never for tenant ids), `propagate`; oms-core defaults for the common ids, services merge their own; a value failing its format or containing control characters is skipped; a broken entry, a case-only duplicate (env-var override) or a request source on a reserved key (`requestId`, `eventId`, `kafka*`, `sqsMessageId`) fails startup). Kafka listeners open `KafkaMdc.open(record)` (`requestId` = `topic-partition-offset`, plus `eventId`, `merchantId`, `storeId`, `productId`); the SQS tick uses its message id; expiry adds `inventoryId` per inventory. In application code only `MdcScope` writes MDC (snapshot/restore); the oms-core filter and interceptor manage their own keys; there is no executor/`@Async`, so no `TaskDecorator` yet;
-  - the `requestId` is **not** carried across services yet (outbox → Debezium → consumer); join on `eventId` instead (open question 46);
+  - **MDC** (oms-core `logging`): every line is prefixed with `[%X]` (`logging.pattern.correlation`). REST: `RequestIdFilter` keeps a valid `X-Request-Id` (`^[A-Za-z0-9._-]{1,64}$`) or generates a UUID, echoes it, puts `requestId`; `MdcRequestFieldsInterceptor` adds the path/query values configured in `app.logging.mdc.fields` (`MdcProperties`: format `uuid`/`code`/`pattern` (linear regex, values ≤ 64), sources `path`/`query` (raw query string only; caller-chosen, never for tenant ids), `propagate`; oms-core defaults for the common ids, services merge their own; a value failing its format or containing control characters is skipped; a broken entry, a case-only duplicate (env-var override) or a request source on a reserved key (`requestId`, `eventId`, `kafka*`, `sqsMessageId`) fails startup). Kafka listeners open `KafkaMdc.open(record, mdcPropagation)` (`requestId` from the producer's `correlationContext` header — ADR 0004, validated by `MdcPropagation.restore` — else `topic-partition-offset`; plus `eventId`, `merchantId`, `storeId`, `productId` from the payload); the SQS tick uses its message id; expiry adds `inventoryId` per inventory. In application code only `MdcScope` writes MDC (snapshot/restore); the oms-core filter and interceptor manage their own keys; there is no executor/`@Async`, so no `TaskDecorator` yet;
+  - the `requestId` crosses services in the outbox → Kafka header `correlationContext` (ADR 0004); only correlation keys (`propagate: true`, no request source) travel; outbound HTTP between services does not carry it yet (no client adapter);
   - user-controlled text in log lines (query names/values, header values, the `logError` message argument, the Kafka DLT line) goes through `LogSanitizer.escape`; stack traces still print raw exception messages (logging 4xx without a stack trace, open question 47, would remove most of them).
 - `GlobalExceptionHandler.logError` logs **every** handled exception at ERROR with a stack trace, including 404 and 400. Real errors drown in client mistakes.
 - `hibernate.show_sql: true` prints all SQL to stdout.
@@ -70,7 +70,7 @@ description: Resilience and observability in the OMS — failure modes of depend
 - [ ] Shutdown/redeploy mid-run: what happens?
 
 ## Known gaps
-- No Actuator/metrics/tracing; requestId not propagated across services; ERROR logging for 4xx; `show_sql` on (prints SQL to stdout without MDC).
+- No Actuator/metrics/tracing; requestId not propagated over outbound HTTP (no client adapter yet); ERROR logging for 4xx; `show_sql` on (prints SQL to stdout without MDC).
 - No Kafka DLT (open question 17), no SQS DLQ (open question 18).
 - Import failures are 200 FAILED (by design, BR-CAT-13); a client must read `status`, not the HTTP code.
 - No timeouts configured for AWS SDK clients; no graceful shutdown.

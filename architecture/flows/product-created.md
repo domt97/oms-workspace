@@ -13,10 +13,10 @@ sequenceDiagram
     participant IPG as Postgres (inventory)
 
     M->>S: POST /v1/store/merchants/{merchantId}/stores/{storeId}/products (or /products/import)
-    S->>PG: tx: insert store_products + product_skus + outbox_events(ProductCreated)
+    S->>PG: tx: insert store_products + product_skus + outbox_events(ProductCreated, correlation_context = request's requestId)
     PG-->>D: WAL change on outbox_events
-    D->>K: EventRouter, route by event_type, key = productId
-    K->>I: ProductCreatedConsumer (group product-consumer)
+    D->>K: EventRouter, route by event_type, key = productId, header correlationContext (ADR 0004)
+    K->>I: ProductCreatedConsumer (group product-consumer), requestId from the header
     I->>IPG: SyncProductInventoryService: version gate (0), one inventory row per SKU (quantity 0)
 ```
 
