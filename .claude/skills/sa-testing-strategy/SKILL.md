@@ -13,9 +13,10 @@ description: Testing strategy in the OMS — what each test level proves (domain
 - Persistence adapter tests mock the Spring Data repository. **Native SQL, JPQL, constraints, indexes, Flyway migrations and `@Transactional` boundaries are not exercised by any test.**
 - `@ConfigurationProperties` validation is tested with a plain `jakarta.validation.Validator` (`ReservationExpiryPropertiesTest`).
 
-**No Testcontainers and no CI**
+**CI runs unit tests only; no Testcontainers**
 - No Testcontainers dependency.
-- **No CI runs the tests.** Service workflows are only `architecture-reminder.yml` and `delete-merged-branches.yml`, so `./gradlew test` runs only locally (the `/ship` gate).
+- `.github/workflows/ci.yml` runs `./gradlew test` on every PR and push to `develop`/`master` (services, oms-core sibling checked out), oms-core's own tests plus both services against the PR's oms-core, and `npm run build` for oms-web (workspace CLAUDE.md → CI).
+- **Still not exercised by anything:** native SQL, JPQL, constraints, indexes, Flyway migrations, `@Transactional` boundaries, Kafka/SQS delivery, Debezium routing, URL mapping and JSON (de)serialisation. These stay manual checks written in the PR.
 
 **Runtime checks done instead**
 - Changes to SQL have been checked by hand against local Postgres (EXPLAIN, run against seeded data), as in inventory-service#27 and #28.
@@ -57,5 +58,5 @@ description: Testing strategy in the OMS — what each test level proves (domain
 
 ## Known gaps
 - No integration tests (DB, Kafka, SQS, S3); no Testcontainers; no MockMvc controller tests.
-- No CI pipeline running tests or build on PRs.
+- CI covers unit tests only (no database, broker or HTTP layer).
 - No contract tests for `ProductCreated` between the two repos.

@@ -95,6 +95,23 @@ response fields) is a breaking change for oms-web: include oms-web in the impact
 - Web: Node 20.19+ or 22.12+; in `repos/oms-web` run `npm install`, then `npm run dev` → http://localhost:5173
   (Seller Centre `/seller`). It proxies to the services on 8048 / 8058. `npm run check` = typecheck + layer rule + tests.
 
+## CI (GitHub Actions, `.github/workflows/ci.yml` in each code repo)
+
+- **stores-service, inventory-service:** `./gradlew test` on every PR and push to `develop`/`master`, with oms-core checked
+  out as the composite-build sibling. oms-core ref = the branch **with the same name as the PR's branch** if oms-core has
+  one, else `master` (manual run: any ref). Test reports are uploaded as an artifact on failure.
+- **oms-core:** its own tests (a service's `./gradlew test` does not run them) **plus** stores-service and inventory-service
+  tested against the PR's oms-core (same-named branch, else `develop`), so a breaking shared-kernel change fails before merge.
+- **oms-web:** `npm run build` (typecheck, layer rule, tests, Vite build) on Node 22.
+- **Cross-repo changes:** give the branches in oms-core and the services **the same name**, so each CI builds against the
+  other's branch. **Always merge oms-core first** (even with matching names): push builds on a service's `develop` use oms-core
+  `master`, so merging the service first turns `develop` red. For a breaking change, oms-core's `master` run stays red for the
+  downstream service until the service PR is merged. Without matching names, re-run the service CI after oms-core is merged
+  (or run it manually with `oms-core-ref`).
+- Unit tests only (no Docker); SQL, Debezium and Kafka behaviour stay manual checks.
+- Works anonymously because the repos are **public**; a private repo would need a token for the cross-repo checkout and
+  `git ls-remote`.
+
 ## Keeping this map true
 
 Two layers keep the docs aligned with code:
