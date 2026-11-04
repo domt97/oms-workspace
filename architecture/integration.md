@@ -7,7 +7,12 @@ Every way services talk to each other. Generated contracts (OpenAPI, event schem
 
 Topic naming (ADR 0002): **topic = `event_type`** (e.g. `ProductCreated`), key = `aggregate_id`.
 Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` with
-`EventRouter` + `route.topic.replacement=${routedByValue}`.
+`EventRouter` + `route.topic.replacement=${routedByValue}`; config in the `development` repo
+(`docker/kafka-connect/connectors/postgres-cdc.json`, applied by `register-connectors.sh`, see its `docs/connectors.md`).
+Every outbox-routed record carries the optional header **`correlationContext`** (ADR 0004): UTF-8 JSON object of the
+producer's propagated MDC keys, e.g. `{"requestId":"abc"}`, from the outbox column `correlation_context`
+(`table.fields.additional.placement`, `SimpleHeaderConverter`). Consumers must accept it absent, empty or invalid and
+validate it (oms-core `MdcPropagation.restore`). It is not part of the payload schemas.
 
 | Event | Producer | Transport | Consumer | Payload | Status |
 |-------|----------|-----------|----------|---------|--------|

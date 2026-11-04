@@ -8,13 +8,13 @@ description: Event-driven integration in the OMS — transactional outbox with D
 **Publishing — transactional outbox + CDC (ADR 0001, 0002)**
 - Use case writes the business rows and an `outbox_events` row in the **same transaction** (`stores-service/.../CreateStoreProductUseCaseService.java`, built by `OutboxEventHelper`).
 - `outbox_events` (`stores-service/.../db/migration/V7__add_outbox_events_table.sql`): `aggregate_type`, `aggregate_id`, `event_type`, `payload JSONB`, `status`.
-- Debezium `EventRouter` reads the WAL: **topic = `event_type`**, **key = `aggregate_id`** (`route.topic.replacement=${routedByValue}`).
+- Debezium `EventRouter` reads the WAL: **topic = `event_type`**, **key = `aggregate_id`** (`route.topic.replacement=${routedByValue}`). Connector config: `development/docker/kafka-connect/connectors/postgres-cdc.json` + `register-connectors.sh` (secrets via `FileConfigProvider`).
+- Every record carries the optional header `correlationContext` (JSON of the producer's propagated MDC keys, from `outbox_events.correlation_context`, ADR 0004). Consumers restore it with oms-core `MdcPropagation.restore` (validated, never throws) inside `KafkaMdc`. A new outbox column placed by the connector needs the ordered rollout in `development/docs/connectors.md` (migration → slot past it → connector), or the task fails and all events stop.
 - Rows are inserted with `status = PENDING` and **never updated or deleted** — the table grows forever (gap).
 
 **Consuming — Kafka (inventory-service)**
-- `ProductCreatedConsumer`: `@KafkaListener(topics = "ProductCreated", groupId = "product-consumer")`; value is a JSON string inside JSON (Connect JsonConverter), decoded twice.
-- `application.yaml` sets only bootstrap servers, group id, `auto-offset-reset: earliest`, String deserializers. **No `CommonErrorHandler` / `DefaultErrorHandler` bean, no dead-letter topic** (searched all `src/main`).
-- Therefore the spring-kafka default applies (Spring Boot 3.2.3 → spring-kafka 3.1): `DefaultErrorHandler` with `FixedBackOff(0, 9)` = **10 attempts with no delay, then the record is logged and skipped** (offset committed). It does **not** block the partition forever; a failing record is effectively lost.
+- `ProductCreatedConsumer` (`ProductCreated`, group `product-consumer`) and `ProductUpdatedConsumer` (`ProductUpdated`, group `inventory-product-updated`); value is a JSON string inside JSON (Connect JsonConverter), decoded twice (`OutboxPayloadDecoder`).
+- `KafkaErrorHandlingConfig` (`DefaultErrorHandler` bean): contract errors (JSON, `InvalidCatalogEventException`, ownership mismatch, `DataIntegrityViolationException`) go to `<topic>.DLT` at once; database connection failures are retried without limit (backoff up to 1 min); other failures are retried 6 times, then sent to the DLT. The recoverer logs the DLT line inside `KafkaMdc`.
 - Delivery is **at-least-once** (Debezium + Kafka): every consumer must be idempotent (workspace rule 7).
 
 **Consuming — SQS (inventory-service)**
@@ -57,7 +57,7 @@ description: Event-driven integration in the OMS — transactional outbox with D
 - [ ] Contract files updated (JSON Schema, `integration.md`).
 
 ## Known gaps
-- No DLT / custom error handler on Kafka consumers; no DLQ on SQS.
+- Kafka DLT topics have no alerting and no replay tool (open questions 17, 40); no DLQ on SQS.
 - `outbox_events` is never cleaned up.
 - `OrderCreatedEventConsumer` exists but its listener is commented out.
 - `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
