@@ -15,7 +15,7 @@ description: Testing strategy in the OMS — what each test level proves (domain
 
 **CI runs unit tests only; no Testcontainers**
 - No Testcontainers dependency.
-- `.github/workflows/ci.yml` runs `./gradlew test` on every PR and push to `develop`/`master` (services, oms-core sibling checked out), oms-core's own tests plus both services against the PR's oms-core, and `npm run build` for oms-web (workspace CLAUDE.md → CI).
+- `.github/workflows/ci.yml` runs `./gradlew test` on every PR and push to `develop`/`master` (services, against the pinned `coreVersion` from GitHub Packages; `core-pin` rejects `-rc` pins), oms-core's own tests plus a publication dry run, and `npm run build` for oms-web (workspace CLAUDE.md → CI).
 - **Still not exercised by anything:** native SQL, JPQL, constraints, indexes, Flyway migrations, `@Transactional` boundaries, Kafka/SQS delivery, Debezium routing, URL mapping and JSON (de)serialisation. These stay manual checks written in the PR.
 
 **Runtime checks done instead**

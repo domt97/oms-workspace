@@ -15,7 +15,7 @@ skills:
 Scope: `repos/oms-core` and `repos/development`.
 
 For each request return:
-- Whether something belongs in oms-core (needed by ≥2 contexts) and the exact type to add; note that every service must rebuild against it
+- Whether something belongs in oms-core (needed by ≥2 contexts) and the exact type to add; note that it reaches a service only after an oms-core release and a `coreVersion` bump (breaking = MAJOR, ADR 0005)
 - New Kafka topics / Debezium connector config (EventRouter routes by `event_type`, key `aggregate_id`)
 - New SQS queues, EventBridge rules, S3 buckets in `docker/infra/local/main.tf`
 - docker-compose changes

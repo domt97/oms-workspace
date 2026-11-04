@@ -7,6 +7,7 @@
       "Bash(git rebase *)",
       "Bash(git reset *)",
       "Bash(git tag *)",
+      "Bash(gh release *)",
       "Bash(gh pr create *)",
       "Bash(gh pr merge *)",
       "Bash(gh api *)"

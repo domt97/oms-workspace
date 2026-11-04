@@ -21,7 +21,7 @@ description: Domain-Driven Design and hexagonal architecture as applied in the O
 4. **Ports belong to the application layer**; adapters implement them in infrastructure. The domain never imports Spring, JPA, Kafka or AWS.
 5. **Cross-context data is a copy, not a join.** If inventory needs product data, it keeps what it needs from events (`ProductCreated`) or asks via a client port — never reads the store DB.
 6. **ACL for every inbound integration.** External DTO → command at the edge; domain types never depend on another context's schema.
-7. **Shared kernel is small.** Put something in `oms-core` only if ≥2 contexts need *the same meaning*. A type that merely looks similar stays in each context. Changes to `oms-core` force every service to rebuild — treat them as contract changes.
+7. **Shared kernel is small.** Put something in `oms-core` only if ≥2 contexts need *the same meaning*. A type that merely looks similar stays in each context. Changes to `oms-core` are contract changes: they reach a service only when it bumps `coreVersion` (ADR 0005), and a breaking change is a MAJOR release.
 8. **Use cases are verbs of the business** (`ReserveStock`, `CloseStore`), not CRUD on tables.
 
 ## Checklist

@@ -27,7 +27,7 @@ flowchart LR
 
 Java 17 · Spring Boot 3.2.3 · Spring Data JPA / Hibernate 6.4 · PostgreSQL 16 + Flyway ·
 MapStruct 1.6.3 · Lombok · SpringDoc OpenAPI · Kafka (spring-kafka) · Spring Cloud AWS SQS ·
-AWS SDK v2 (S3) · Gradle with `oms-core` composite build · LocalStack for local AWS.
+AWS SDK v2 (S3) · Gradle; `oms-core` pinned by version from GitHub Packages (composite build locally, ADR 0005) · LocalStack for local AWS.
 
 Front end (`oms-web`): React 19 · TypeScript (strict) · Vite · no runtime dependencies besides React;
 layered `domain → ports → adapters / features → app` with the layer rule enforced by a test (`oms-web/docs/architecture.md`).
