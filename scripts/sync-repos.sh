@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sync oms-workspace and every repo in repos.txt into ./repos (kept as siblings so the
-# Gradle composite build `includeBuild('../oms-core')` keeps working).
+# Gradle composite build `includeBuild('../oms-core')` keeps working locally; CI uses the pinned coreVersion).
 #
 # For each repo:
 #   - clone it if missing

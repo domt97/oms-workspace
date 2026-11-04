@@ -55,6 +55,11 @@ Keep the change limited to the approved plan. Write the tests the plan lists.
 ./gradlew test
 ```
 If tests fail, fix them. If you cannot make them pass, stop and report — do not commit.
+If `./gradlew test` cannot run here (no network to Maven Central or Gradle), say so plainly; CI on the PR is then
+the first real test run (step 8).
+For a change that also needs an oms-core change: change both locally (composite build), ship oms-core first with its `version`
+bumped (merging it publishes that version; the user may tag an `-rc.N` for CI feedback before), then bump `coreVersion`
+in the service PR (see CLAUDE.md → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
 
 ## 5. Review
 Ask the **`plan-reviewer`** agent to review the uncommitted diff of `repos/<service>` against the approved
@@ -78,6 +83,8 @@ If it is `master` or `develop`, **stop**: do not commit there. Create the workin
 Same gate for oms-workspace: never commit on its `master`.
 
 Show the user: `git status`, a one-paragraph summary, test result. **Ask before committing.**
+If the tests did not run locally, say so in the question ("tests did not run here; CI on the PR will be their first run —
+commit and push?").
 Never commit IDE files (`.idea/`, `*.iml`) or `memory/`.
 Then:
 ```bash
@@ -113,15 +120,20 @@ PR body template:
 - DB: <none | migration V<n>__...>
 
 ## Tests
-- `./gradlew test`: passed
+- `./gradlew test`: passed (locally, or CI only — say which)
 - <new tests>
 
 ## Docs
 - <service CLAUDE.md / oms-workspace PR link / none>
 ```
 
+After opening the PR, check its CI: `gh pr checks <pr-number> --repo domt97/<repo> --watch`
+(or `gh api 'repos/domt97/<repo>/actions/runs?branch=<branch>'`). A failing run: read the log (`gh run view <id> --log-failed`),
+fix on the same branch, re-run step 4 (tests) and step 5 (review), then go back to step 7: show the diff and **ask before
+committing and pushing** the fix.
+
 ## 9. Finish
-Report the PR link(s) and anything left for the user. Do not merge, do not delete branches.
+Report the PR link(s), the CI result, and anything left for the user. Do not merge, do not delete branches.
 Leave the service repo on the new branch (`./scripts/sync-repos.sh` returns it to `develop` after the merge).
 
 ## 10. Lessons learned
