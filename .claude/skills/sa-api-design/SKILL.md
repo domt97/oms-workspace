@@ -43,7 +43,7 @@ description: REST API design in the OMS — resource paths and versioning, publi
    - Name non-CRUD state changes as action sub-resources (`/close`), and back each with a guarded domain transition.
 2. **Public vs internal**:
    - Anything only another service calls goes under `/internal/v1/<service>/...`, `@Hidden`, and is never exposed by a future gateway.
-   - Prefer events over synchronous calls for cross-service writes (workspace rule 2). A synchronous call is for reads that need a fresh answer, or for commands that need an immediate yes/no, e.g. reserve stock at checkout.
+   - Prefer events over synchronous calls for cross-service writes (workspace rule 2). A synchronous call is for reads that need a fresh answer. Commands between services (e.g. reserve stock at checkout) go through the sender's outbox as Kafka messages, with replies from the executor's outbox (ADR 0006), not through REST.
 3. **Merchant in every public path** (or a verified token claim later). Every lookup is scoped by merchant, not by id alone (see `sa-multitenancy-security`).
 4. **Validate at the edge**:
    - `@Valid` on every body, with constraints on every field;

@@ -10,7 +10,7 @@ A **multi-merchant marketplace** launching in **Vietnam (VND)** and not limited 
 
 ```
 Platform (launch market: Vietnam, VND)
- ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)   ← isolated from each other
+ ├─ Merchant = seller, often a chain (e.g. a mini-mart chain, a cosmetics brand, a phone-accessories shop)   ← isolated from each other
  │   └─ Store = branch with its own hours, catalog and stock
  └─ Customer = platform user (one account for all merchants)
      └─ Cart → Checkout → one Order per store, one payment
@@ -38,7 +38,7 @@ The order then moves to completion with one reliable status that every party see
 
 Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` has `autoAcceptOrder`, `allowPreOrder`,
 `preparationTimeMinutes`, `maxOrdersPerDay`; business hours and availability windows (`STAFF_SHORTAGE`,
-`INVENTORY`, `HOLIDAY`); stock is per store; reservations expire after 30 minutes.
+`INVENTORY`, `HOLIDAY`); stock is per store; reservations expired after 30 minutes in the code of that time (decided since: 15 minutes, configurable, BR-INV-02).
 
 ## 2. Subdomains
 
@@ -103,7 +103,7 @@ flowchart LR
     Cart -- "PlaceCheckout (command, idempotent per cart) → 1 order per store" --> Ord
     Store -- "authoritative price & availability at placement (customer/supplier, sync)" --> Ord
     Ord -- "reserve / confirm / release (commands)" --> Inv
-    Inv -- "StockReserved / Rejected / Confirmed / Released / Expired (events)" --> Ord
+    Inv -- "StockReserved / Rejected / Confirmed / ConfirmationFailed / Released / Expired (events)" --> Ord
     Ord -- "quote / redeem (customer/supplier)" --> Promo
     Ord -- "create payment (command)" --> Pay
     Pay -- "PaymentSucceeded / Failed (events)" --> Ord
@@ -120,7 +120,7 @@ flowchart LR
   - Order-service re-validates and re-prices everything (BR-ORD-02/03), so a stale cart can never produce a wrong order.
 - **Ordering owns the order saga** (orchestration, decided Q6). It decides what happens next; inventory and payment execute and report back.
 - **Payment hides the gateway** and **delivery hides the partner** behind ACLs, so changing provider changes nothing outside them.
-- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout and for "can I?" commands. State changes travel as events through the outbox.
+- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout. State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, mechanics 🟡); since stock replies arrive asynchronously, it accepts the checkout and the outcome follows from the saga (exact contract decided with order-service).
 
 ## 5. Ubiquitous language — terms that change meaning across contexts
 
@@ -128,9 +128,9 @@ flowchart LR
 |------|-----------------|-----------|----------|
 | Product / SKU | live catalog item, price can change | stock key (store, SKU) | in Cart: a reference + indicative price, refreshed on view; in Ordering: **snapshot** on an `OrderLine` (name, SKU, unit price at placement) — never re-read later |
 | Available | product `ACTIVE` and store open | `quantity − reserved` | can be ordered now = all of these |
-| Reservation | — | hold of stock with TTL | the order's claim on stock until paid/accepted |
+| Reservation | — | hold of stock with TTL; confirmed (sold) when the order is `PLACED`, returned to stock on a later cancel with `restock` | the order's claim on stock until the order is `PLACED` |
 | Cart vs order vs checkout | — | — | a cart is a wish list that can change freely; a checkout is one customer action that creates one order per store; an order is the commitment of one store |
-| Cancel | — | release a hold | order state change with a reason and an actor (customer, store, system) |
+| Cancel | — | release a hold, and return confirmed goods to stock when `restock` (BR-ORD-09) | order state change with a reason and an actor (customer, store, system) |
 | Store open | business hours + availability windows | — | checked at placement (and for pre-order, at the slot) |
 
 ## 6. Core flow: place an order *(proposed, see BR-ORD, Q4–Q8)*

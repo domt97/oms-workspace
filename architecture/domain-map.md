@@ -29,7 +29,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 |-----------|-------|--------|
 | `Inventory` | `quantity`, `reservedQuantity`, `available = quantity − reserved`, status (`ACTIVE`, `INACTIVE`); unique (store_id, sku) | `inventories` |
 | `StockReservation` | hold for one order item, `expires_at`, status (`RESERVED`, `CONFIRMED`, `RELEASED`, `EXPIRED`; designed: `RETURNED`; `CANCELLED` unused, BR-INV-03) | `stock_reservations` |
-| `OrderReservation` *(designed, ADR 0006)* | one header per order: `merchant_id`, `store_id`, status (`RESERVED`, `REJECTED`, `CONFIRMED`, `CANCELLED` = closed), `restock`; idempotency and out-of-order commands | `stock_reservation_orders` |
+| Order header *(designed, ADR 0006)* | one row per order: `merchant_id`, `store_id`, status (`RESERVED`, `REJECTED` with the stored reasons, `CONFIRMED`, `CANCELLED` = closed), `restock`; idempotency and out-of-order commands. Also designed: `UNIQUE (order_id, order_item_id)` on `stock_reservations`, `stock_movements.reservation_id`, inventory `outbox_events` (with `correlation_context`) | `stock_reservation_orders` |
 | `ProductCatalogVersion` *(inventory-service#32)* | last applied catalog event version per product (`product_id`, `merchant_id`, `store_id`, `version`); ordering gate for `ProductCreated`/`ProductUpdated` | `product_catalog_versions` |
 | `StockMovement` | append-only audit; type `RECEIVE`, `SALE`, `RETURN`, `ADJUSTMENT_IN/OUT`, `DAMAGE`, `TRANSFER_IN/OUT` (designed: `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE`, BR-INV-05); polymorphic `reference_type` + `reference_id` | `stock_movements` |
 

@@ -27,16 +27,22 @@ and every step is durable on both sides.
   `orderId` owned by another merchant/store, the same order with different lines) go to `<topic>.DLT`.
 - **Idempotency and order** (BR-INV-07): inventory keeps one header row per order (`stock_reservation_orders`) and
   decides every command from the header and line states under a row lock. A duplicate command changes no stock and
-  publishes a reply describing the current state (`replayed: true`). Commands of one order sit on different topics, so
-  they can arrive out of order; the header absorbs it: a `ReleaseStockReservation` before any `ReserveStock` leaves a
-  closed header (tombstone), and a later `ReserveStock` is rejected `ORDER_CLOSED`.
+  publishes its reply again (`replayed: true`, a new `eventId`); what each duplicate answers is the table *Duplicate
+  commands* in `flows/order-stock-reservation.md`. Commands of one order sit on different topics, so they can arrive
+  out of order; the header absorbs it: a `ReleaseStockReservation` or a `ConfirmStockReservation` that finds no header
+  creates a closed one (tombstone, `restock` unset), so a later `ReserveStock` is rejected `ORDER_CLOSED`, a repeated
+  confirm answers `ORDER_CLOSED`, and the first real release still sets `restock`.
 - **Obligations of order-service** (the saga owner), part of the contract:
-  1. A saga that sent `ReserveStock` always ends by sending `ReleaseStockReservation` unless the order was confirmed and
-     completed; giving up (timeout, rejection elsewhere) means sending a release, never just stopping.
+  1. A saga that sent `ReserveStock` and did not get `StockReservationRejected` ends with a confirmed order or with
+     `ReleaseStockReservation`, **including when no reply arrives** (command in a DLT, timeout); giving up means sending
+     a release, never just stopping. A confirmed order that is cancelled
+     later is released too (with `restock`, BR-ORD-09). After `StockReservationRejected` nothing is held and no release
+     is needed (one is harmless).
   2. A `StockReserved` arriving for a saga that is already closed is compensated with a release, not ignored.
   3. No release is sent while a sent `ConfirmStockReservation` has no reply yet.
-  4. Replies are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a replayed
-     reply has a new `eventId`). An order may get several `StockReservationExpired`, each covering some of its lines.
+  4. Replies to commands are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a
+     replayed reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is never
+     replayed: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
   5. `restock` on a release follows BR-ORD-09.
 - inventory rejects a `ReserveStock` whose `occurredAt` is older than the hold TTL (`STALE_COMMAND`, BR-INV-11), with a
   small clock-skew tolerance; the check never applies to confirm or release.
@@ -56,3 +62,6 @@ and every step is durable on both sides.
 - Each producing service runs its own connector and replication slot; a stopped connector keeps WAL on that database.
 - System rule 8 now covers commands too: topic = message type, unique across services, key = aggregate id.
 - Kafka has no ACLs locally; in production only order-service may write the command topics.
+- inventory's outbox grows by about three rows per order (≈ 55M a year at the estimated volume): pick its cleanup when
+  it is built (insert and delete in the same transaction, which Debezium still reads from the WAL, or a cleanup job);
+  see open question 19.

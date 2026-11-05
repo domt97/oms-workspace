@@ -16,7 +16,7 @@ repo into `repos/` so Claude can reason about the whole system.
 | `development` | `repos/development` | Local infra: docker-compose (Kafka, Kafka Connect + Debezium, Schema Registry, Postgres 16, Redis, LocalStack) and Terraform for LocalStack (S3, SQS, EventBridge). | – |
 | `oms-web` | `repos/oms-web` | Front end (React 19 + TypeScript, Vite): shopper storefront at `/` and Seller Centre at `/seller`. Calls stores-service and inventory-service through a proxy on `/v1/store/` and `/v1/inventory/`; cart, orders and sign-in are browser-local stand-ins until those services exist. Architecture in `docs/architecture.md`. | 5173 (dev) |
 
-Not built yet but referenced in code: **order-service** (`OrderCreated` producer), **promotion-service** (`PromotionServiceClient`).
+Not built yet but referenced in code: **order-service** (will send the stock commands of ADR 0006; inventory still has a commented-out `OrderCreated` stub), **promotion-service** (`PromotionServiceClient`).
 
 ## Where to look
 

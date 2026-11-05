@@ -42,12 +42,9 @@
       "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
     },
     "causationId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": "string",
       "format": "uuid",
-      "description": "eventId of the command this replies to; null for StockReservationExpired."
+      "description": "eventId of the command this replies to (for a replayed reply: the duplicate command's eventId)."
     },
     "replayed": {
       "type": "boolean",
@@ -59,7 +56,7 @@
         "ORDER_CLOSED",
         "NOT_RESERVED"
       ],
-      "description": "UNKNOWN_ORDER: no reservation for this order; ORDER_CLOSED: released or rejected; NOT_RESERVED: at least one line expired or was released."
+      "description": "UNKNOWN_ORDER: no reservation for this order (inventory then closes the order: a later reserve is rejected ORDER_CLOSED, a repeated confirm answers ORDER_CLOSED); ORDER_CLOSED: released or rejected; NOT_RESERVED: at least one line expired or was released."
     },
     "lines": {
       "type": "array",
@@ -84,7 +81,8 @@
             ]
           }
         }
-      }
+      },
+      "maxItems": 100
     }
   }
 }

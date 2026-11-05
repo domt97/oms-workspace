@@ -41,30 +41,53 @@ sequenceDiagram
 ## Order header (`stock_reservation_orders`)
 
 One row per order: `merchant_id`, `store_id`, status `RESERVED | REJECTED | CONFIRMED | CANCELLED` (closed), `restock`
-(set by the first release). Every command first takes this row under `FOR UPDATE`, scoped by `(order, merchant, store)`;
+(set by the first release), and for `REJECTED` the rejection (`orderReason`, reason per rejected line) so a duplicate
+reserve gets the same answer. Every command first takes this row under `FOR UPDATE`, scoped by `(order, merchant, store)`;
 a row owned by another merchant/store is a contract error (DLT). A duplicate command changes nothing and re-publishes a
 reply for the current state (`replayed: true`, BR-INV-07).
 
 | Arrives out of order | Result |
 |----------------------|--------|
 | Release before Reserve (order timed out) | header created `CANCELLED` (tombstone); the late Reserve gets `Rejected{ORDER_CLOSED}`, nothing held |
-| Confirm before Reserve | `ConfirmationFailed{UNKNOWN_ORDER}` and a tombstone |
+| Confirm before Reserve | `ConfirmationFailed{UNKNOWN_ORDER}` and a tombstone (`restock` unset); a repeated confirm answers `ORDER_CLOSED`, a later Reserve is rejected `ORDER_CLOSED`, the first release still sets `restock` |
 | Release before Confirm | RESERVED lines released, header `CANCELLED`; the late Confirm gets `ConfirmationFailed{ORDER_CLOSED}` |
 | Old command replayed from a DLT | decided by the header and line states; an old `ReserveStock` is also `STALE_COMMAND` |
 
-order-service's obligations (ADR 0006): a saga that sent `ReserveStock` always ends with a release; a `StockReserved`
-for a closed saga is compensated; no release while a confirm has no reply; replies deduplicated by
-`(orderId, causationId, eventType)`.
+order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives; a `StockReserved`
+for a closed saga is compensated; no release while a confirm has no reply; replies to commands deduplicated by
+`(orderId, causationId, eventType)`, `StockReservationExpired` by `eventId`.
+
+## Duplicate commands (BR-INV-07)
+
+A duplicate changes no stock and publishes a reply again (`replayed: true`, new `eventId`, `causationId` = the duplicate
+command's `eventId`). A **first** command that meets a closed order (e.g. the first `ReserveStock` after a release left a
+tombstone) is not a duplicate: its reply has `replayed: false` (see the out-of-order table).
+
+| Command | Header / lines found | Reply |
+|---------|----------------------|-------|
+| `ReserveStock`, same lines | header `RESERVED`, `CONFIRMED` or `CANCELLED` after a successful reserve | `StockReserved` with the lines and `expiresAt` of that reserve (the reserve step's outcome; later changes were reported by their own replies) |
+| `ReserveStock`, different lines | header with reservations (compared with `stock_reservations`) | contract error → `ReserveStock.DLT`, nothing published |
+| `ReserveStock` (lines not compared: nothing to compare with) | header `REJECTED` | `StockReservationRejected` with the stored reasons (the header keeps the rejection: `orderReason` and the reason per line) |
+| `ReserveStock` (lines not compared) | header `CANCELLED` without any reservation (tombstone) | `StockReservationRejected{ORDER_CLOSED}`; `replayed: true` only from the second reserve on |
+| `ConfirmStockReservation` | all lines `CONFIRMED` | `StockReservationConfirmed` |
+| `ConfirmStockReservation` | header `REJECTED` / `CANCELLED`, or a line no longer `RESERVED` | `StockReservationConfirmationFailed` (`ORDER_CLOSED` / `NOT_RESERVED`) with the current line statuses |
+| `ReleaseStockReservation` | header `CANCELLED` | `StockReservationReleased` with the current line statuses and the `restock` fixed by the first release (a different `restock` is logged at WARN and ignored) |
+| `ReleaseStockReservation` | header `REJECTED` | `StockReservationReleased` with no lines |
 
 ## Reserve (one transaction, all-or-nothing per order, ≤ 100 lines)
 
-1. `SET LOCAL lock_timeout` / `statement_timeout`; insert the header (`ON CONFLICT DO NOTHING`), then lock it.
-2. Load inventories by `(merchant, store, sku IN …)`; a missing SKU or another product's SKU → `UNKNOWN_SKU`.
-3. Domain pre-check per line in Java UUID order (INACTIVE → `NOT_ORDERABLE`, not enough → `INSUFFICIENT_STOCK`);
-   any failure → header `REJECTED` + reply, no update run.
-4. Guarded `reserve … AND status = 'ACTIVE'` per line; at the first 0-row update, release the lines already held in
-   this transaction, read the reasons with a scalar projection, header `REJECTED` + reply.
-5. Otherwise insert reservations (TTL from configuration, default 15 min), `RESERVE` movements, header `RESERVED`,
+1. `SET LOCAL lock_timeout` / `statement_timeout`; insert the header (`ON CONFLICT DO NOTHING`), then lock it by
+   `(order, merchant, store)`; not found → owned by another merchant/store → contract error (DLT).
+2. Header existed before this command → duplicate: compare the lines and answer from the table above. **This check
+   comes before the stale check**, so a successful reserve redelivered after the TTL is not turned into a rejection.
+3. Header just created and `occurredAt` older than the TTL (with a clock-skew tolerance) → header `REJECTED`,
+   `Rejected{STALE_COMMAND}`.
+4. Load inventories by `(merchant, store, sku IN …)`; a missing SKU or another product's SKU → `UNKNOWN_SKU`.
+5. Domain pre-check per line in Java UUID order (INACTIVE → `NOT_ORDERABLE`, not enough → `INSUFFICIENT_STOCK`);
+   any failure → header `REJECTED` (reasons stored) + reply, no update run.
+6. Guarded `reserve … AND status = 'ACTIVE'` per line; at the first 0-row update, release the lines already held in
+   this transaction, read the reasons with a scalar projection, header `REJECTED` (reasons stored) + reply.
+7. Otherwise insert reservations (TTL from configuration, default 15 min), `RESERVE` movements, header `RESERVED`,
    outbox `StockReserved`.
 
 ## Locks

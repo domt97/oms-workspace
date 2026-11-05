@@ -41,12 +41,9 @@
       "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
     },
     "causationId": {
-      "type": [
-        "string",
-        "null"
-      ],
+      "type": "string",
       "format": "uuid",
-      "description": "eventId of the command this replies to; null for StockReservationExpired."
+      "description": "eventId of the command this replies to (for a replayed reply: the duplicate command's eventId)."
     },
     "replayed": {
       "type": "boolean",
@@ -66,16 +63,12 @@
             "format": "uuid"
           },
           "status": {
-            "enum": [
-              "RESERVED",
-              "CONFIRMED",
-              "RELEASED",
-              "EXPIRED",
-              "RETURNED"
-            ]
+            "const": "CONFIRMED"
           }
         }
-      }
+      },
+      "maxItems": 100,
+      "minItems": 1
     }
   }
 }

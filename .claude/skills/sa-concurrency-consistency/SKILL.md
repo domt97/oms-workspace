@@ -43,5 +43,5 @@ description: Concurrency control and cross-service consistency in the OMS — ra
 - [ ] Failure halfway: which steps are done, which are compensated, how the system converges.
 - [ ] Audit: does every quantity change write a `StockMovement`?
 
-## Pattern for the order ↔ inventory flow (to apply when order-service is built)
-`OrderCreated` → inventory reserves (idempotent on order item) → publishes `StockReserved` / `StockReservationFailed` via its own outbox → order confirms or cancels → inventory confirms / releases with guarded transitions; expiry is the timeout compensation. Inventory has **no outbox yet** — publishing results requires adding one (see `sa-messaging-events`).
+## Pattern for the order ↔ inventory flow (ADR 0006, `flows/order-stock-reservation.md`)
+order-service (saga owner) sends `ReserveStock` / `ConfirmStockReservation` / `ReleaseStockReservation` from its outbox (key `orderId`) → inventory decides each command under the lock of a per-order header (idempotency, tombstone for out-of-order commands), changes stock with guarded updates and replies from **its own outbox** (`StockReserved`, `StockReservationRejected`, …); expiry is the timeout compensation and publishes `StockReservationExpired`. Business outcomes are replies, contract errors go to the DLT. Inventory's outbox and connector are designed, not built yet.
