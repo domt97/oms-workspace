@@ -39,7 +39,7 @@
 - `ProductCreated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
 - `ProductUpdated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
 
-## Database tables (latest migration: `V8__alter_product_fk.sql`)
+## Database tables (latest migration: `V9__add_outbox_correlation_context.sql`)
 
 - `merchants` (created in V1__init_store_tables.sql)
 - `outbox_events` (created in V7__add_outbox_events_table.sql)
