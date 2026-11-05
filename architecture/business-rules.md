@@ -53,9 +53,9 @@
 | BR-CAT-01 | A product is `DRAFT`, `ACTIVE` or `INACTIVE`; only `ACTIVE` products with `ACTIVE` SKUs can be ordered. Shoppers see only `ACTIVE` products (drafts are not shown, even by direct link). | ✅ statuses; 🟢 order rule + storefront display (2026-10-27); stores-service search has no status filter, oms-web filters |
 | BR-CAT-02 | A SKU is unique **within a store**. | 🟢 Q10 (2026-10-25); ✅ `UNIQUE (store_id, sku)` on `product_skus`, removed codes included (stores-service#48) |
 | BR-CAT-03 | A product created in the catalog gets an inventory record per SKU with quantity 0. | ✅ `ProductCreated` → `CreateInventoryService`; via `SyncProductInventoryService` once inventory-service#32 merges (also creates SKUs added later by `ProductUpdated`) |
-| BR-CAT-04 | Shoppers see stock as a **status**, never an exact count: *In stock*, *Only N left* when N ≤ 5, *Sold out*. A SKU without an inventory record shows nothing and can be bought. Merchants see exact counts. | 🟢 (2026-10-27); oms-web only (inventory reads still return on-hand/reserved, open question 34) |
+| BR-CAT-04 | Shoppers see stock as a **status**, never an exact count: *In stock*, *Only N left* when N ≤ 5, *Sold out*. A SKU without an inventory record **cannot be ordered** (reserve rejects it with `UNKNOWN_SKU`, BR-INV-11) and is shown as not available. Merchants see exact counts. | 🟢 (2026-10-27); SKU without a record: 🟢 2026-11-05 (was "shows nothing and can be bought"). oms-web only (inventory reads still return on-hand/reserved, open question 34); **gap:** oms-web still treats a missing record as buyable |
 | BR-CAT-07 | Price changes never affect placed orders (orders keep a snapshot, BR-ORD-03). *(Was a second "BR-CAT-04"; renumbered 2026-10-28.)* | 🟡 |
-| BR-CAT-05 | Merchants sell both made-to-order items (food & beverage) and stocked retail goods. | 🟢 Q1 (2026-10-25) |
+| BR-CAT-05 | Merchants sell **stocked goods only**: every SKU has stock that is counted and reserved. Made-to-order items (food & beverage cooked per order) are not part of the product. | 🟢 2026-11-05 (replaces Q1 "both made-to-order and stocked") |
 | BR-CAT-06 | A collection belongs to one store and contains only that store's products (not other stores of the same merchant). A product id that is not in the store is rejected as not found. | ✅ `CreateStoreCollectionService`, `AddProductCollectionService` (2026-10-27) |
 | BR-CAT-08 | A SKU is identified by its **code**, which cannot change after creation; changing a code means removing the SKU and adding a new one. Codes are case-sensitive. | 🟢 U1, U5 (2026-10-28); ✅ `StoreProduct.replace` (stores-service#48) |
 | BR-CAT-09 | Removing a SKU from a product is a **soft remove**: it disappears from the product, its code stays reserved in the store (another product may not use it → 409), and adding the same code back to the same product revives it with the same id. | 🟢 U2, U3 (2026-10-28); ✅ `removed_at` + `UNIQUE (store_id, sku)` (stores-service#48) |
@@ -71,15 +71,16 @@
 | Id | Rule | Status |
 |----|------|--------|
 | BR-INV-01 | Stock is tracked per (store, SKU): `available = quantity − reserved`; neither may go negative. | ✅ guarded SQL (`SpringDataInventoryRepository`) |
-| BR-INV-02 | Stock is held **at order placement** (before payment), one reservation per order line; the hold expires after a TTL if the order is not confirmed. | 🟢 hold at placement (Q4, 2026-10-25); ✅ TTL is 30 min in code (`StockReservation.reserve`); 🟡 TTL 15 min with a 10-min payment window (BR-ORD-07) |
-| BR-INV-03 | A reservation moves only from `RESERVED` to `CONFIRMED`, `RELEASED`, `EXPIRED` (or `CANCELLED`). Confirm and expire are mutually exclusive. | ✅ guarded transitions (inventory-service#27) |
-| BR-INV-04 | Confirming a reservation reduces `quantity` (sale); releasing/expiring only frees the hold. | ✅ `confirm` / `release` SQL; 🟡 must write a `SALE` stock movement (open question 14) |
-| BR-INV-05 | Every stock change is auditable: a stock movement with type, quantity and the business reference (order, adjustment…). | ✅ for manual adjustment only; 🟡 for all (open question 14) |
-| BR-INV-06 | A SKU has a `trackStock` flag. When it is off (made-to-order items), the SKU is always available and no reservation is made. | 🟢 Q11 (2026-10-25) — **nice to have**, not required for the MVP. Modifiers/toppings: later. |
-| BR-INV-07 | The same order line can never reserve twice (replays are no-ops). | 🟡 (open question 13) |
-| BR-INV-08 | An inventory's status means **orderable**: ACTIVE only when the product is ACTIVE, the SKU is ACTIVE and the SKU is not removed; otherwise INACTIVE. Once orders exist, reserving an INACTIVE inventory is rejected. Inventory rows are never deleted. | 🟢 U9 (2026-10-28); ✅ status sync in `SyncProductInventoryService` (inventory-service#32); reserve check comes with order-service (open question 39) |
+| BR-INV-02 | Stock is held **at order placement** (before payment), one reservation per order line; the hold expires after a TTL if the order is not confirmed. The TTL is configurable, **15 minutes** by default. | 🟢 hold at placement (Q4, 2026-10-25); 🟢 TTL 15 min, configurable (2026-11-05); ✅ TTL is still 30 min hard-coded (`StockReservation.reserve`) until the reservation hardening ships |
+| BR-INV-03 | A reservation moves only from `RESERVED` to `CONFIRMED`, `RELEASED` or `EXPIRED`, and from `CONFIRMED` to `RETURNED` (goods put back after a cancellation, BR-INV-04). Confirm and expire are mutually exclusive. *Cancelled* is an order status: a cancelled order **releases** its holds; reservations have no `CANCELLED` status. | ✅ guarded `RESERVED` transitions (inventory-service#27); 🟢 `RETURNED`, no `CANCELLED` (2026-11-05; the unused enum value stays for compatibility) |
+| BR-INV-04 | Stock is confirmed when the order is **`PLACED`**: confirming reduces `quantity` (sale). Releasing or expiring only frees the hold. Releasing a confirmed line with `restock` (BR-ORD-09) returns its quantity to stock (`RETURNED`); without `restock` the goods stay sold. | ✅ `confirm` / `release` SQL; 🟢 confirm at PLACED, return on restock (2026-11-05) |
+| BR-INV-05 | Every change of `quantity` **or** `reserved_quantity` writes a stock movement with type, positive quantity and the business reference (order line, adjustment…): `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE`, `SALE`, `RETURN` for orders, plus the manual types. The hold types cannot be used for a manual adjustment; a manual `SALE` stays allowed. | ✅ for manual adjustment only; 🟢 for all, including holds (2026-11-05; open question 14) |
+| BR-INV-06 | ~~A SKU has a `trackStock` flag; when off (made-to-order items) the SKU is always available and not reserved.~~ | Withdrawn 2026-11-05: every SKU is stock-tracked (BR-CAT-05) |
+| BR-INV-07 | A stock command is applied **once per order**: a duplicate (same order, same command) changes no stock, and the reply describing the order's current state is published again (`replayed: true`). An order line has at most one reservation. | 🟢 2026-11-05 (open question 13) |
+| BR-INV-08 | An inventory's status means **orderable**: ACTIVE only when the product is ACTIVE, the SKU is ACTIVE and the SKU is not removed; otherwise INACTIVE. Once orders exist, reserving an INACTIVE inventory is rejected. Inventory rows are never deleted. | 🟢 U9 (2026-10-28); ✅ status sync in `SyncProductInventoryService` (inventory-service#32); reserve check ships with the reservation hardening (open question 39) |
 | BR-INV-09 | Deactivating or removing a SKU or product keeps its open reservations until they are confirmed, released or expire. | 🟢 U10 (2026-10-28); ✅ status sync never touches reservations (inventory-service#32); release has no implementation yet |
 | BR-INV-10 | Stock can still be adjusted on an INACTIVE inventory. | 🟢 U11 (2026-10-28); ✅ adjust does not check status today |
+| BR-INV-11 | Reserving is **all-or-nothing per order** (one store): at most **100 lines**; if any line is rejected (`INSUFFICIENT_STOCK`, `NOT_ORDERABLE`, `UNKNOWN_SKU`) nothing is held and the reply gives the reason per line, never a stock count. A reserve command older than the TTL is rejected (`STALE_COMMAND`). | 🟢 2026-11-05 |
 
 ## Cart *(nothing built yet)*
 
@@ -102,13 +103,13 @@
 | BR-ORD-04 | Money = amount + ISO-4217 currency; amounts are rounded to the currency's minor unit with HALF_UP, at line level then summed. | 🟡 (currency per store is 🟢, BR-STO-03) |
 | BR-ORD-05 | Placing a checkout is idempotent: the caller (cart-service, BR-CRT-04) sends an idempotency key; the same key returns the same orders. | 🟡 |
 | BR-ORD-06 | Order statuses (with third-party delivery, BR-FUL-01):<br/>`PENDING` (validating/reserving) → `AWAITING_PAYMENT` (online payment only) → `PLACED` → `ACCEPTED` → `PREPARING` → `READY` → `DELIVERING` (handed to the driver) → `DELIVERED` → `COMPLETED`.<br/>Terminal: `REJECTED`, `CANCELLED`, `EXPIRED`, `DELIVERY_FAILED`.<br/>Each transition is guarded and records actor + reason + time. | 🟡 (payment Q5 and delivery Q8 are 🟢; the state list itself needs your review) |
-| BR-ORD-07 | Unpaid online orders expire when the stock reservation expires; expiry releases stock and cancels the order. The payment window (10 min) is shorter than the reservation TTL (15 min). | 🟡 |
+| BR-ORD-07 | Unpaid online orders expire when the stock reservation expires; expiry releases stock and cancels the order. The payment window (10 min) is shorter than the reservation TTL (15 min). | 🟢 TTL 15 min (BR-INV-02, 2026-11-05); 🟡 the rest |
 | BR-ORD-14 | A multi-store checkout is **all-or-nothing at placement**: every order is validated and reserved; if any order fails, all reservations are released, no order is placed, and the customer sees the reasons per store/line. | 🟢 Q21 (2026-10-25) |
 | BR-ORD-08 | With `autoAcceptOrder` the order goes `PLACED → ACCEPTED` immediately. Otherwise staff must accept within **5 minutes** or the order is rejected automatically (stock released, payment refunded). | 🟢 Q12 (2026-10-25) |
-| BR-ORD-09 | Cancellation:<br/>- the customer may cancel until the order is `ACCEPTED`;<br/>- after that, only the store can cancel (with a reason);<br/>- cancelling releases unconfirmed stock and refunds a captured payment in full;<br/>- confirmed stock is returned only if the store marks the goods reusable. | 🟢 Q13 (2026-10-25) |
+| BR-ORD-09 | Cancellation:<br/>- the customer may cancel until the order is `ACCEPTED`;<br/>- after that, only the store can cancel (with a reason);<br/>- cancelling releases unconfirmed stock and refunds a captured payment in full;<br/>- confirmed stock is returned only if the store marks the goods reusable; the release sent to inventory carries this as `restock`. When the store never touched the goods (auto-reject, BR-ORD-08, or a customer cancel before `ACCEPTED`), order-service sets `restock` itself. | 🟢 Q13 (2026-10-25); automatic `restock` 🟢 2026-11-05 |
 | BR-ORD-10 | An order has a human-readable number unique per store (e.g. `S01-000123`), separate from its UUID. | 🟡 |
 | BR-ORD-11 | Placed orders are never edited (lines, prices). Changes are cancel + re-order, until a modification feature is designed. | 🟡 |
-| BR-ORD-12 | order-service **orchestrates** the order saga (reserve, payment, delivery booking, timeouts, compensations); other services execute commands and report back with events. | 🟢 Q6 (2026-10-25) |
+| BR-ORD-12 | order-service **orchestrates** the order saga (reserve, payment, delivery booking, timeouts, compensations); other services execute commands and report back with events. Commands travel over Kafka from order-service's outbox (stock: `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation`, key `orderId`); replies come from the executing service's outbox (ADR 0006). | 🟢 Q6 (2026-10-25); transport 🟢 2026-11-05 |
 | BR-ORD-13 | After placement, each order of a checkout lives on its own: each store accepts, rejects, prepares and cancels its own order; refunds are per order. | 🟡 |
 
 ## Pricing & promotion
@@ -145,7 +146,7 @@
 
 | Id | Decision |
 |----|----------|
-| Q1 | Both made-to-order (F&B) and stocked retail goods. |
+| Q1 | Both made-to-order (F&B) and stocked retail goods. Revised 2026-11-05: stocked goods only (BR-CAT-05). |
 | Q2 | Customer app. |
 | Q3 | One checkout may contain several stores; it is split automatically into one order per store. |
 | Q4 | Stock is held at order placement. |
@@ -154,7 +155,7 @@
 | Q8 | Third-party delivery. |
 | Q9 | One currency per store — refined by Q33: one currency (VND) for the whole platform. Revised 2026-10-31: not limited to one currency (BR-MER-01). |
 | Q10 | SKU unique within a store. |
-| Q11 | `trackStock` flag per SKU — nice to have. |
+| Q11 | `trackStock` flag per SKU — nice to have. Withdrawn 2026-11-05 with made-to-order items (BR-INV-06). |
 | Q13 | Customer cancels until accepted; then store only; full refund; stock returned only if reusable. |
 | Q7 | Pre-order is supported. |
 | Q12 | Manual acceptance timeout: 5 minutes, then auto-reject. |
@@ -184,6 +185,7 @@
 | — | Merchant with markets (2026-10-31): the merchant is the business account (brand group), not the legal entity; legal entity, tax id, payout and verification are per market in a merchant market profile; a store is enabled in a market only if its merchant has a profile there (BR-MER-02, BR-MER-03, BR-STO-09; closes Q34). |
 | — | Excel import (2026-11-01): limits 5 MB / 1,000 products / 10,000 SKU rows / 20,000 image rows → 400; one import per store (409); different stores never block each other, the server waits for a free slot (503 only if saturated); errors for internal faults are generic (BR-CAT-13; closes open question 24). |
 | — | Collections (2026-11-01): add-products and remove-products are idempotent — products already in (or not in) the collection are skipped, concurrent requests both succeed (BR-CAT-15; closes open question 35). |
+| — | Stock commands (2026-11-05): order-service sends stock commands over Kafka and inventory replies with events (BR-ORD-12, ADR 0006); stocked goods only, made-to-order and `trackStock` dropped (BR-CAT-05, BR-INV-06); a SKU without an inventory record cannot be ordered (BR-CAT-04); confirm at `PLACED`, a cancelled order releases holds and returns confirmed goods when `restock` (set automatically when the store never touched them) (BR-INV-03/04, BR-ORD-09); hold TTL 15 min configurable (BR-INV-02); every quantity or hold change writes a movement (BR-INV-05); duplicate commands change nothing and re-publish the reply (BR-INV-07); all-or-nothing reserve of ≤ 100 lines, stale reserve rejected (BR-INV-11). |
 | — | Storefront (2026-10-27): only ACTIVE products shown and only ACTIVE stores take orders (BR-STO-02, BR-CAT-01); stock shown as a status (BR-CAT-04); cart problems flagged, not removed, checkout blocked until fixed (BR-CRT-03); max 99 per cart line (BR-CRT-02). |
 
 ## Open business questions

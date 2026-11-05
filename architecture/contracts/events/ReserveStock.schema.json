@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReserveStock",
+  "description": "Command (ADR 0006). Sent by order-service through its outbox (topic = this name, key = orderId). Consumed by inventory-service. Holds stock for every line of one order, all or nothing (BR-INV-11); group inventory-reserve-stock. Answered by StockReserved or StockReservationRejected. A duplicate with the same lines changes nothing and re-publishes the reply; the same orderId with different lines is a contract error (DLT). Rejected as STALE_COMMAND when occurredAt is older than the hold TTL.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "ReserveStock"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "orderItemId",
+          "productId",
+          "sku",
+          "quantity"
+        ],
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique within the order; one reservation per order line."
+          },
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -18,13 +18,22 @@ validate it (oms-core `MdcPropagation.restore`). It is not part of the payload s
 |-------|----------|-----------|----------|---------|--------|
 | `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, merchantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
 | `ProductUpdated` | stores-service (`OutboxEventHelper`, on update-product PUT) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductUpdatedConsumer` (group `inventory-product-updated`, topic `ProductUpdated`) | snapshot of catalog fields: `eventId, eventType, occurredAt, merchantId, storeId, productId, version, status, name, categoryId, skus[{id, sku, name, status, price, currency}]`; key = productId. Schema: `contracts/events/ProductUpdated.schema.json` | **Built** — built (stores-service#48, inventory-service#32; live once merged) ([flow](flows/product-updated.md)) |
-| `OrderCreated` | order-service (not built) | Kafka | inventory-service `OrderCreatedEventConsumer` (group `order-consumer`) | not defined | Listener commented out |
+| `ReserveStock` *(command)* | order-service (not built), outbox | Outbox → Debezium → Kafka, key `orderId` | inventory-service (group `inventory-reserve-stock`) | `merchantId, storeId, orderId, lines[1..100]{orderItemId, productId, sku, quantity}`. Schema: `contracts/events/ReserveStock.schema.json` | **Designed** (ADR 0006) |
+| `ConfirmStockReservation` *(command)* | order-service, at `PLACED` | same | inventory-service (group `inventory-confirm-stock-reservation`) | `merchantId, storeId, orderId` | **Designed** |
+| `ReleaseStockReservation` *(command)* | order-service, on cancel / reject / timeout | same | inventory-service (group `inventory-release-stock-reservation`) | `merchantId, storeId, orderId, restock, reason` | **Designed** |
+| `StockReserved` | inventory-service outbox (connector `inventory-outbox-cdc`, planned) | Outbox → Debezium → Kafka, key `orderId` | order-service | `causationId, replayed, expiresAt, lines[{orderItemId, sku, quantity, expiresAt}]` | **Designed** |
+| `StockReservationRejected` | inventory-service | same | order-service | `orderReason?` (`ORDER_CLOSED`, `STALE_COMMAND`), `lines[{orderItemId, sku, reason}]`, no stock counts | **Designed** |
+| `StockReservationConfirmed` / `StockReservationConfirmationFailed` | inventory-service | same | order-service | `lines[{orderItemId, status}]`; failure `reason` (`UNKNOWN_ORDER`, `ORDER_CLOSED`, `NOT_RESERVED`) | **Designed** |
+| `StockReservationReleased` | inventory-service | same | order-service | `restock, lines[{orderItemId, status, restocked}]` | **Designed** |
+| `StockReservationExpired` | inventory-service expiry job (no command) | same | order-service | `lines[{orderItemId, sku}]`; an order may get several, each for some lines | **Designed** |
 | Reservation-expire tick | EventBridge rule `rate(1 minute)` | SQS `<profile>-reservation-expire-queue` | inventory-service `SqsReservationExpireConsumer` (1 in flight, visibility 90 s) | body ignored (trigger only); SQS `SentTimestamp` used to drop stale ticks | Live |
 
 Payload contract for `ProductCreated` is duplicated: `stores-service/.../domain/event/ProductCreatedEvent`
 and `inventory-service/.../infrastructure/message/dto/ProductCreatedEvent`. Change both together.
 `ProductCreated` carries an optional `version` (always 0; consumers treat a missing value as 0; stores-service#48). Schemas: `contracts/events/`. Failed records go to `ProductCreated.DLT` / `ProductUpdated.DLT` (technical topics, not event types; inventory-service#32).
 The consumer double-decodes the value (JSON string inside JSON) because of the Connect JSON converter.
+
+Stock commands and replies (ADR 0006, [flow](flows/order-stock-reservation.md)): commands come from order-service's outbox, replies from inventory's own outbox through a second connector (`inventory-outbox-cdc`, DB `inventory`, planned in the `development` repo). Every message carries `eventId, eventType, occurredAt, merchantId, storeId, orderId`; replies add `causationId` (the command's `eventId`) and `replayed`. Business outcomes are replies; contract errors go to `<topic>.DLT`. Inventory's `OrderCreatedEventConsumer` stub (topic `OrderCreated`) is replaced by these commands.
 
 ## REST — stores-service (`:8048`)
 

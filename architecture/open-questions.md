@@ -13,9 +13,9 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 
 ## Correctness (inventory-service)
 
-13. `ReserveStockService` is **not idempotent per order item** — replay reserves twice. Needs a uniqueness rule on (order_item_id, inventory_id) or a check.
-14. Reserve / confirm / expire do **not write `StockMovement`** — audit trail incomplete.
-39. **Reserve does not check inventory status** (BR-INV-08): `reserve` SQL and `Inventory.reserve` accept an INACTIVE inventory. Harmless until order-service calls reserve; add `AND status = 'ACTIVE'` and a domain check then.
+13. `ReserveStockService` is **not idempotent per order item** — replay reserves twice. *Designed 2026-11-05 (BR-INV-07, ADR 0006):* one header per order (`stock_reservation_orders`) + `UNIQUE (order_id, order_item_id)`; closes with the reservation hardening.
+14. Reserve / confirm / expire do **not write `StockMovement`** — audit trail incomplete. *Decided 2026-11-05 (BR-INV-05):* every quantity or hold change writes a movement; closes with the reservation hardening.
+39. **Reserve does not check inventory status** (BR-INV-08): `reserve` SQL and `Inventory.reserve` accept an INACTIVE inventory. Harmless until order-service calls reserve; add `AND status = 'ACTIVE'` and a domain check then. *Scheduled* in the reservation hardening (with `UNKNOWN_SKU` for a SKU without a record, BR-CAT-04, BR-INV-11).
 
 ## Correctness (stores-service)
 
@@ -37,7 +37,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 
 ## Reliability (messaging)
 
-17. Kafka DLT exists for inventory's catalog consumers (inventory-service#32: `<topic>.DLT`, contract errors at once, DB outages retried until back), but there is **no alerting on DLT records and no replay tool** (see 40); records are only visible as ERROR logs.
+17. Kafka DLT exists for inventory's catalog consumers (inventory-service#32: `<topic>.DLT`, contract errors at once, DB outages retried until back), but there is **no alerting on DLT records and no replay tool** (see 40); records are only visible as ERROR logs. *Planned* with the stock commands (metric + bounded replay endpoint, longer DLT retention).
 18. SQS `reservation-expire` queue has **no DLQ / redrive policy** (`development/docker/infra/local/main.tf`).
 19. **`outbox_events` is never cleaned up**: rows stay `PENDING` forever; no job deletes published rows.
 30. **Kafka topics are auto-created** with broker defaults (1 partition): `ProductCreated` exists only because the broker auto-creates it. Create topics explicitly (partitions, retention) in `development` before consumers need to scale.
@@ -60,7 +60,7 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 
 6. inventory-service REST has **no `merchantId`** in path or header, unlike stores-service.
 7. `InventoryServiceClient` (stores → inventory) and `PromotionServiceClient` have no adapter.
-8. `ReleaseStockReservationUseCase` has no implementation; reserve/confirm have no entry points.
+8. `ReleaseStockReservationUseCase` has no implementation; reserve/confirm have no entry points. *Designed 2026-11-05:* Kafka commands with replies from an inventory outbox (ADR 0006).
 9. No event for **store** close or status change (`StoreStatusChanged` proposed). Product and SKU changes travel as `ProductUpdated` ([flow](flows/product-updated.md)).
 10. `ProductCreatedEvent` is duplicated in both services; no shared schema / schema-registry subject.
 11. Consumer group `product-consumer` is a generic name; may collide when more services consume products. Do not rename it (with `earliest` a new group replays all `ProductCreated` history); new consumers use specific names (planned: `inventory-product-updated`).
@@ -70,3 +70,6 @@ Resolve each item, then delete it or turn it into an ADR. Last reviewed 2026-11-
 48. **Dead code in oms-core:** `CoreConfiguration` (`@EnableAutoConfiguration` on a class that is never registered), `application-core.yaml` (never loaded) and unused `RequestLoggingProperties` fields (`logRequestMetadata`, `logResponseMetadata`, payload limits, `skipContentTypes`).
 49. **No API-compatibility check for oms-core releases** (ADR 0005). With the downstream job gone, a breaking change shows up only when a service bumps `coreVersion`. Option: japicmp (or Revapi) in oms-core CI against the last release, failing unless the version is a new MAJOR.
 50. **`coreVersion` bumps are manual.** Dependabot can open them, but needs a `registries` entry for `https://maven.pkg.github.com/domt97/oms-core` with a Dependabot secret (classic token, `read:packages`; it cannot use `GITHUB_TOKEN`), and its support for a version in `gradle.properties` is uncertain (a version catalog is supported).
+51. **`stock_reservation_orders` grows by one row per order and is never cleaned** (ADR 0006: the header is also the tombstone that rejects late commands). A cleanup after N days is safe only when N exceeds the command topics' retention, the DLT retention and the stale-command window. Decide N when volume matters.
+52. **`GET /v1/inventory/inventories/stock-movements/{inventoryId}` is not paged.** With movements for every hold and sale (BR-INV-05) a busy SKU gets tens of thousands of rows. Paging the endpoint is a breaking change for oms-web (*Front-end consumers*).
+53. **Integration tests (Testcontainers) for SQL, concurrency and the outbox** are planned for inventory-service (decided 2026-11-05: a separate CI job that needs Docker, not a required check at first). Until it exists, the workspace CI rule "unit tests only" and the `/ship` checklist (`./gradlew test`) stay as they are; update both when the job lands.

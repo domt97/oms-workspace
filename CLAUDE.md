@@ -45,7 +45,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).
-8. **Kafka topic name = event type** (`ProductCreated`), key = aggregate id. Event type names are unique across services (ADR 0002).
+8. **Kafka topic name = message type** (event `ProductCreated`, command `ReserveStock`), key = aggregate id. Names are unique across services (ADR 0002). Commands between services also go through the sender's outbox, and replies through the executor's outbox (ADR 0006).
 
 ## How to analyse a feature
 

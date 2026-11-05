@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConfirmStockReservation",
+  "description": "Command (ADR 0006). Sent by order-service through its outbox (topic = this name, key = orderId). Consumed by inventory-service. Sent when the order becomes PLACED (BR-INV-04): every RESERVED line becomes CONFIRMED and its quantity is deducted (SALE). Group inventory-confirm-stock-reservation. Answered by StockReservationConfirmed or StockReservationConfirmationFailed.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "ConfirmStockReservation"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    }
+  }
+}
