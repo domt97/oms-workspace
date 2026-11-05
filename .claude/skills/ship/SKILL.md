@@ -42,9 +42,12 @@ Do not start step 2 until the branch exists.
    - files to add/change in order (domain → application → infrastructure → tests), migrations,
      contracts touched (mark BREAKING);
    - routing table: file → repo → branch → PR base; docs to update.
-4. Send the draft to the **`plan-reviewer`** agent. Fix every "Must fix"; address or justify "Should fix".
+4. Send the draft to the **`plan-reviewer`** agent. Fix every "Must fix"; address or justify "Should fix". Then send the
+   fixed plan back with the previous Must fix list verbatim, how each was fixed and what changed, and repeat until a round
+   has no Must fix — at most 3 rounds, then ask the user (CLAUDE.md → *Review until clean*).
 5. Present the plan to the user **with the reviewer's verdict** and what you changed because of it.
-6. **Wait for the user to approve the plan.** Adjust and re-present if asked.
+6. **Wait for the user to approve the plan.** Adjust and re-present if asked; a plan changed after review gets a review
+   round on the changed parts before it is re-presented.
 
 ## 3. Implement
 Follow the "Adding a use case" checklist and the invariants in `repos/<service>/CLAUDE.md`.
@@ -62,10 +65,16 @@ bumped (merging it publishes that version; the user may tag an `-rc.N` for CI fe
 in the service PR (see CLAUDE.md → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
 
 ## 5. Review
-Ask the **`plan-reviewer`** agent to review the uncommitted diff of `repos/<service>` against the approved
-plan: correctness, invariants, races, idempotency, missing tests. Fix real findings, then re-run `./gradlew test`.
+Do step 6 (docs) **first**, then ask the **`plan-reviewer`** agent to review the uncommitted diff of `repos/<service>`
+**and** the workspace `docs/<slug>` diff (if any) against the approved plan: correctness, invariants, races, idempotency, missing
+tests, docs accuracy. Fix real findings, re-run `./gradlew test`, then send `plan-reviewer` the previous Must fix list
+verbatim, how each was fixed and what changed, so it reviews only the fixes and what they could affect; repeat until a round
+has no Must fix (at most 3 rounds, then ask the user). Any edit after the last clean round gets its own round before
+step 7. Counting: each new piece of work (a plan change asked by the user, a CI fix) starts again at round 1, but a
+finding that comes back still stops the loop.
 
 ## 6. Docs
+*(Done at the start of step 5, so the review covers it.)*
 - If the change added/changed a REST endpoint, event, consumer, table or aggregate:
   - update `repos/<service>/CLAUDE.md` in this same branch if layout, checklist or known gaps changed;
   - update `oms-workspace` docs (`architecture/domain-map.md`, `integration.md`, flows, `open-questions.md`)
@@ -82,7 +91,8 @@ If it is `master` or `develop`, **stop**: do not commit there. Create the workin
 `origin/develop` (`git switch -c <branch> origin/develop`), carry the changes over, and continue.
 Same gate for oms-workspace: never commit on its `master`.
 
-Show the user: `git status`, a one-paragraph summary, test result. **Ask before committing.**
+Show the user: `git status`, a one-paragraph summary, test result, and the **last review round's verdict** with any
+Must fix left open. **Ask before committing.**
 If the tests did not run locally, say so in the question ("tests did not run here; CI on the PR will be their first run —
 commit and push?").
 Never commit IDE files (`.idea/`, `*.iml`) or `memory/`.
@@ -125,6 +135,9 @@ PR body template:
 
 ## Docs
 - <service CLAUDE.md / oms-workspace PR link / none>
+
+## Review
+- plan-reviewer: <verdict of the last round>, <n> rounds; open Must fix: <none | list>
 ```
 
 After opening the PR, check its CI: `gh pr checks <pr-number> --repo domt97/<repo> --watch`

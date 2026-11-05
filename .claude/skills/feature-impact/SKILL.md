@@ -11,6 +11,10 @@ Input: a feature description (from the user's message or `$ARGUMENTS`).
 2. If more than one context may be affected, hand the work to the `oms-architect` agent; otherwise ask the single domain expert directly.
 3. Verify every claim about existing behaviour in code under `repos/` — READMEs can be stale.
 4. Write the report below. Ask the user about genuinely open business rules instead of inventing them.
+5. **Review until clean** (CLAUDE.md, step 6 of *How to analyse a feature*): send the report to `plan-reviewer`, fix,
+   send it back with the previous Must fix list, the fixes and the changed files/lines, until a round has no Must fix (at most 3 rounds, then
+   ask the user). When `oms-architect` already ran the loop and returned a clean verdict, review only what you changed
+   after it; when it returned open Must fix items, ask the user. Present the report with section 15.
 
 ## Report format
 
@@ -57,3 +61,6 @@ Including any item from `open-questions.md` the feature depends on. Anything del
 
 ### 14. Docs to update
 `domain-map.md`, `integration.md`, flows, new ADR if a system rule changes.
+
+### 15. Review
+Verdict of the last `plan-reviewer` round, number of rounds, and any Must fix left open for the user.

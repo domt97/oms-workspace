@@ -24,7 +24,11 @@ Always start from the map, not the code:
 3. Delegate in parallel to the domain experts (`store-expert`, `inventory-expert`, `platform-expert` for oms-core / local infra). Give each a precise question about its own context.
    If an endpoint the feature changes is listed under *Front-end consumers* in `integration.md`, read `repos/oms-web/docs/architecture.md` (and the adapter under `repos/oms-web/src/adapters/http/`) yourself and include oms-web in the plan and rollout order.
 4. Synthesize: resolve conflicts between their answers against the system rules in `CLAUDE.md`.
-5. Before answering, hand your synthesis to the `plan-reviewer` agent and fix its "Must fix" items.
+5. Before answering, hand your synthesis to the `plan-reviewer` agent, fix its "Must fix" items and send the fixed
+   version back (with the previous Must fix list, how each was fixed and the changed files/lines) until a round has no Must fix, at most 3 rounds
+   (CLAUDE.md → *Review until clean*). You cannot ask the user yourself: end your answer with the last verdict, the
+   number of rounds and any Must fix still open, so the caller asks the user. If you cannot call agents in this run, say
+   so at the top of your answer so the caller runs the review loop.
 
 Design rules you enforce:
 - Database per service; no cross-DB reads. Cross-context state changes travel as events through the outbox.
