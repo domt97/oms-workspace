@@ -142,7 +142,7 @@
     "branch": "develop",
     "listeners": [],
     "migrations": {
-      "latest": "V8__alter_product_fk.sql",
+      "latest": "V9__add_outbox_correlation_context.sql",
       "tables": [
         {
           "created_in": "V1__init_store_tables.sql",
