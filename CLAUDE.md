@@ -55,7 +55,21 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 3. Only then go into `repos/<service>`: read its `CLAUDE.md` first, then `application/usecase` and `domain/model`.
 4. Check `open-questions.md` — docs in service READMEs may be out of date; **code wins**.
 5. Use the `/feature-impact` skill for the standard output format; for multi-service features use the `oms-architect` agent, which delegates to the domain experts.
-6. Every analysis or plan must pass `sa-analysis-checklist`; have it challenged by the `plan-reviewer` agent before presenting it.
+6. Every analysis, plan or diff (code or docs) must pass `sa-analysis-checklist` and be challenged by the `plan-reviewer`
+   agent before it is presented, committed or put in a PR. **Review until clean** — run by whoever presents the work to
+   the user (the main session, or `oms-architect`; domain experts cannot call agents):
+   - after fixing the findings, send `plan-reviewer` the **previous round's Must fix list verbatim**, how each was fixed,
+     and the changed files/lines (a new reviewer remembers nothing). A follow-up round reviews **only what changed since
+     the previous round** — each fix, and the places that depend on it (callers, other files, docs, contracts, tests) —
+     not the whole work again;
+   - repeat until a round has an **empty Must fix list** (that is "clean", whatever the verdict word); any later edit,
+     even a small one, gets its own round;
+   - **stop and ask the user** after 3 rounds (a new piece of work, e.g. a plan change the user asked for or a CI fix,
+     starts again at round 1), or earlier when a Must fix needs the user's decision (e.g. a 🟡/❓ rule),
+     a finding comes back after being fixed, or the reviewer contradicts an earlier round. Show the open Must fix items,
+     the last verdict and the number of rounds; the user decides;
+   - never present a version **as clean** that has not passed the last round, and commit or open a PR only when it is
+     clean or the user has seen the open findings and still asks for it. Always tell the user the last round's verdict.
 
 ## How to implement a change
 
