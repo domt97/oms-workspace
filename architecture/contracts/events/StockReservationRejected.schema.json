@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StockReservationRejected",
+  "description": "Reply (ADR 0006). Published by inventory-service through its outbox (aggregateType=StockReservation, key=orderId). Consumed by order-service, which deduplicates by (orderId, causationId, eventType) and saga state. Nothing was held. Either the whole order was refused (orderReason) or some lines were (reason per line). Never contains stock counts (BR-CAT-04). A replayed rejection repeats the stored reasons.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId",
+    "causationId",
+    "replayed",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "StockReservationRejected"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    },
+    "causationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "eventId of the command this replies to (for a replayed reply: the duplicate command's eventId)."
+    },
+    "replayed": {
+      "type": "boolean",
+      "description": "true when the command was a duplicate and this reply only describes the current state (BR-INV-07). It has a new eventId."
+    },
+    "orderReason": {
+      "enum": [
+        "ORDER_CLOSED",
+        "STALE_COMMAND",
+        null
+      ],
+      "description": "ORDER_CLOSED: the order was closed before this reserve (a release or a confirm left a tombstone). STALE_COMMAND: the command is older than the hold TTL. A duplicate of a rejected reserve repeats the stored reasons instead."
+    },
+    "lines": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "orderItemId",
+          "sku",
+          "reason"
+        ],
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "reason": {
+            "enum": [
+              "INSUFFICIENT_STOCK",
+              "NOT_ORDERABLE",
+              "UNKNOWN_SKU"
+            ],
+            "description": "UNKNOWN_SKU also covers a SKU of another product or store (BR-CAT-04); NOT_ORDERABLE = inventory INACTIVE (BR-INV-08)."
+          }
+        }
+      },
+      "description": "Only the rejected lines. Empty when the whole order was refused (orderReason set)."
+    }
+  },
+  "if": {
+    "properties": {
+      "orderReason": {
+        "const": null
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "lines": {
+        "minItems": 1
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "lines": {
+        "maxItems": 0
+      }
+    }
+  }
+}

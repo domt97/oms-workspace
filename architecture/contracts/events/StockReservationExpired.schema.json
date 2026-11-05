@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StockReservationExpired",
+  "description": "Reply (ADR 0006). Published by inventory-service through its outbox (aggregateType=StockReservation, key=orderId). Consumed by order-service, which deduplicates this event by eventId (it has no command and is never replayed). Emitted by inventory's expiry job, not by a command: these lines passed their TTL while RESERVED and were freed. An order may receive several, each covering some of its lines (one per inventory transaction).",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId",
+    "causationId",
+    "replayed",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "StockReservationExpired"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    },
+    "causationId": {
+      "type": "null",
+      "description": "No command causes an expiry."
+    },
+    "replayed": {
+      "const": false,
+      "description": "Never replayed; deduplicate StockReservationExpired by eventId."
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "orderItemId",
+          "sku"
+        ],
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      },
+      "maxItems": 100
+    }
+  }
+}

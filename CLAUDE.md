@@ -16,7 +16,7 @@ repo into `repos/` so Claude can reason about the whole system.
 | `development` | `repos/development` | Local infra: docker-compose (Kafka, Kafka Connect + Debezium, Schema Registry, Postgres 16, Redis, LocalStack) and Terraform for LocalStack (S3, SQS, EventBridge). | – |
 | `oms-web` | `repos/oms-web` | Front end (React 19 + TypeScript, Vite): shopper storefront at `/` and Seller Centre at `/seller`. Calls stores-service and inventory-service through a proxy on `/v1/store/` and `/v1/inventory/`; cart, orders and sign-in are browser-local stand-ins until those services exist. Architecture in `docs/architecture.md`. | 5173 (dev) |
 
-Not built yet but referenced in code: **order-service** (`OrderCreated` producer), **promotion-service** (`PromotionServiceClient`).
+Not built yet but referenced in code: **order-service** (will send the stock commands of ADR 0006; inventory still has a commented-out `OrderCreated` stub), **promotion-service** (`PromotionServiceClient`).
 
 ## Where to look
 
@@ -45,7 +45,7 @@ Not built yet but referenced in code: **order-service** (`OrderCreated` producer
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).
 6. Shared types go to `oms-core` only if they are truly cross-context; otherwise keep them in the owning service.
 7. Consumers must be **idempotent** (Debezium gives at-least-once delivery).
-8. **Kafka topic name = event type** (`ProductCreated`), key = aggregate id. Event type names are unique across services (ADR 0002).
+8. **Kafka topic name = message type** (event `ProductCreated`, command `ReserveStock`), key = aggregate id. Names are unique across services (ADR 0002). Commands between services also go through the sender's outbox, and replies through the executor's outbox (ADR 0006).
 
 ## How to analyse a feature
 

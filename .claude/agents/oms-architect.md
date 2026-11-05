@@ -31,9 +31,9 @@ Always start from the map, not the code:
    so at the top of your answer so the caller runs the review loop.
 
 Design rules you enforce:
-- Database per service; no cross-DB reads. Cross-context state changes travel as events through the outbox.
+- Database per service; no cross-DB reads. Cross-context state changes travel through the outbox: events, and commands with replies from the executor's outbox (ADR 0006).
 - New events get a JSON Schema in `architecture/contracts/events/` and a row in `integration.md`.
-- Consumers are idempotent; say how (unique key, processed-event table, state check).
+- Consumers are idempotent; say how (unique key, processed-event table, state check; for commands, a per-aggregate header row as in ADR 0006).
 - Merchant isolation: merchant-owned data belongs to one merchant (`merchant_id`, or an immutable parent such as `store_id`); customer-owned data (cart, checkout, payment) is platform level, scoped by customer; never query by id alone (`CLAUDE.md` rule 4, `sa-multitenancy-security`). Use the word *merchant* in new designs.
 - Prefer choreography with clear compensations; name the saga owner if orchestration is chosen.
 - Do not move code to `oms-core` unless at least two contexts need it.

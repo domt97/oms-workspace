@@ -10,14 +10,14 @@ A **multi-merchant marketplace** launching in **Vietnam (VND)** and not limited 
 
 ```
 Platform (launch market: Vietnam, VND)
- ├─ Merchant = seller, often a chain (e.g. a tea chain, a coffee chain, a small bakery)   ← isolated from each other
+ ├─ Merchant = seller, often a chain (e.g. a mini-mart chain, a cosmetics brand, a phone-accessories shop)   ← isolated from each other
  │   └─ Store = branch with its own hours, catalog and stock
  └─ Customer = platform user (one account for all merchants)
      └─ Cart → Checkout → one Order per store, one payment
 ```
 
 - **Merchant** (formerly *tenant* in code). Merchants are isolated from each other: a merchant sees only its own stores, catalog, stock and orders.
-- **Merchants** sell both made-to-order items (food & beverage) and stocked retail goods. One merchant = one seller company; it has one or more stores.
+- **Merchants** sell **stocked goods**: every SKU has counted stock that is held for orders. Made-to-order items (food & beverage cooked per order) are not part of the product (BR-CAT-05, 2026-11-05). One merchant = one seller company; it has one or more stores.
 - **Customers** belong to the platform and use the **customer app** with an account. They fill one cart, possibly with items from stores of **different merchants**. At checkout the cart is split into **one order per store**. Each store accepts and prepares its order, and a **third-party delivery partner** brings it to the customer (pickup later). Customers pay by **COD or online** (one payment per checkout). Pre-orders for a later time slot are supported.
 - **Not limited to one market** (decided 2026-10-31). We launch in Vietnam (VND) and build no market level yet, but no design may assume a single market or currency: every amount carries its ISO-4217 currency, and currency-dependent rules (minor unit, rounding) are per currency. Adding a country later means adding markets and enabling them per store (BR-STO-09), without rebuilding.
 
@@ -38,7 +38,7 @@ The order then moves to completion with one reliable status that every party see
 
 Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` has `autoAcceptOrder`, `allowPreOrder`,
 `preparationTimeMinutes`, `maxOrdersPerDay`; business hours and availability windows (`STAFF_SHORTAGE`,
-`INVENTORY`, `HOLIDAY`); stock is per store; reservations expire after 30 minutes.
+`INVENTORY`, `HOLIDAY`); stock is per store; reservations expired after 30 minutes in the code of that time (decided since: 15 minutes, configurable, BR-INV-02).
 
 ## 2. Subdomains
 
@@ -60,7 +60,7 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 | Context | Service | Status | Owns (aggregates) | Publishes | Consumes |
 |---------|---------|--------|-------------------|-----------|----------|
 | Store & Catalog | `stores-service` | built | `Store`, `StoreAvailability`, `StoreProduct`, `StoreCollection` | `ProductCreated`, `ProductUpdated` (catalog snapshot incl. status); *proposed*: `StoreStatusChanged` | — |
-| Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *proposed*: `StockReserved`, `StockReservationFailed`, `StockReservationExpired` | `ProductCreated`, `ProductUpdated`; *proposed*: order events |
+| Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *designed* (ADR 0006): replies `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired` | `ProductCreated`, `ProductUpdated`; *designed*: commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` |
 | **Cart** | `cart-service` (platform level, owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductUpdated` (to flag unavailable lines) |
 | **Ordering** | `order-service` | planned (next) | `Checkout` (owned by the customer, one payment) groups N `Order`s (each owned by one merchant/store, + `OrderLine` snapshots) | `OrderPlaced`, `OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderCompleted` | inventory, payment, store events |
 | Payment | `payment-service` (mock provider) | planned | `Payment` (intent, attempts, refunds) | `PaymentSucceeded`, `PaymentFailed`, `RefundSucceeded` | order events |
@@ -103,7 +103,7 @@ flowchart LR
     Cart -- "PlaceCheckout (command, idempotent per cart) → 1 order per store" --> Ord
     Store -- "authoritative price & availability at placement (customer/supplier, sync)" --> Ord
     Ord -- "reserve / confirm / release (commands)" --> Inv
-    Inv -- "StockReserved / Failed / Expired (events)" --> Ord
+    Inv -- "StockReserved / Rejected / Confirmed / ConfirmationFailed / Released / Expired (events)" --> Ord
     Ord -- "quote / redeem (customer/supplier)" --> Promo
     Ord -- "create payment (command)" --> Pay
     Pay -- "PaymentSucceeded / Failed (events)" --> Ord
@@ -120,7 +120,7 @@ flowchart LR
   - Order-service re-validates and re-prices everything (BR-ORD-02/03), so a stale cart can never produce a wrong order.
 - **Ordering owns the order saga** (orchestration, decided Q6). It decides what happens next; inventory and payment execute and report back.
 - **Payment hides the gateway** and **delivery hides the partner** behind ACLs, so changing provider changes nothing outside them.
-- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout and for "can I?" commands. State changes travel as events through the outbox.
+- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout. State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, mechanics 🟡); since stock replies arrive asynchronously, it accepts the checkout and the outcome follows from the saga (exact contract decided with order-service).
 
 ## 5. Ubiquitous language — terms that change meaning across contexts
 
@@ -128,9 +128,9 @@ flowchart LR
 |------|-----------------|-----------|----------|
 | Product / SKU | live catalog item, price can change | stock key (store, SKU) | in Cart: a reference + indicative price, refreshed on view; in Ordering: **snapshot** on an `OrderLine` (name, SKU, unit price at placement) — never re-read later |
 | Available | product `ACTIVE` and store open | `quantity − reserved` | can be ordered now = all of these |
-| Reservation | — | hold of stock with TTL | the order's claim on stock until paid/accepted |
+| Reservation | — | hold of stock with TTL; confirmed (sold) when the order is `PLACED`, returned to stock on a later cancel with `restock` | the order's claim on stock until the order is `PLACED` |
 | Cart vs order vs checkout | — | — | a cart is a wish list that can change freely; a checkout is one customer action that creates one order per store; an order is the commitment of one store |
-| Cancel | — | release a hold | order state change with a reason and an actor (customer, store, system) |
+| Cancel | — | release a hold, and return confirmed goods to stock when `restock` (BR-ORD-09) | order state change with a reason and an actor (customer, store, system) |
 | Store open | business hours + availability windows | — | checked at placement (and for pre-order, at the slot) |
 
 ## 6. Core flow: place an order *(proposed, see BR-ORD, Q4–Q8)*
@@ -150,16 +150,17 @@ sequenceDiagram
     K->>O: PlaceCheckout(lines grouped by store, idempotencyKey = cartId + version)
     O->>S: get store status/hours + SKU prices (sync)
     O->>O: validate rules, price lines (snapshot), one Order per store = PENDING
-    O->>I: ReserveStock(orderId, lines) per order (sync command)
-    I-->>O: reserved (TTL) / insufficient → release all, checkout rejected (all-or-nothing)
+    O->>I: ReserveStock(orderId, lines) per order (Kafka command, ADR 0006)
+    I-->>O: StockReserved (expiresAt) / StockReservationRejected (reason per line) → release all, checkout rejected (all-or-nothing)
     O->>P: CreatePayment(checkoutId, total) (online only, COD skips this)
     P-->>O: PaymentSucceeded (event)
-    O->>I: ConfirmReservation (event/command) → stock SALE movement
     O-->>K: orderId → Cart=CHECKED_OUT
-    O->>O: each Order=PLACED → store accepts (auto or manual) → PREPARING
+    O->>O: each Order=PLACED
+    O->>I: ConfirmStockReservation (command, at PLACED) → SALE movement → StockReservationConfirmed
+    O->>O: store accepts (auto or manual) → PREPARING
     O->>D: book delivery (per order)
     D-->>O: driver picked up / delivered (callbacks) → DELIVERING → DELIVERED → COMPLETED
-    Note over O,I: Timeouts are compensations: payment not done before reservation TTL → cancel order + release
+    Note over O,I: Timeouts are compensations: payment not done before reservation TTL → cancel order + ReleaseStockReservation; cancel after PLACED → release with restock (BR-ORD-09)
 ```
 
 ## 7. Roadmap *(proposed)*

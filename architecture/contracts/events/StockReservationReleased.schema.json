@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StockReservationReleased",
+  "description": "Reply (ADR 0006). Published by inventory-service through its outbox (aggregateType=StockReservation, key=orderId). Consumed by order-service, which deduplicates by (orderId, causationId, eventType) and saga state. The order's stock lifecycle is closed. Lists every line with its final status.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId",
+    "causationId",
+    "replayed",
+    "restock",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "StockReservationReleased"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    },
+    "causationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "eventId of the command this replies to (for a replayed reply: the duplicate command's eventId)."
+    },
+    "replayed": {
+      "type": "boolean",
+      "description": "true when the command was a duplicate and this reply only describes the current state (BR-INV-07). It has a new eventId."
+    },
+    "restock": {
+      "type": "boolean",
+      "description": "The value fixed by the first release."
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "orderItemId",
+          "status",
+          "restocked"
+        ],
+        "properties": {
+          "orderItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "RELEASED",
+              "RETURNED",
+              "CONFIRMED",
+              "EXPIRED"
+            ],
+            "description": "CONFIRMED = sold and kept (release without restock)."
+          },
+          "restocked": {
+            "type": "boolean",
+            "description": "true only for lines returned to stock by this order (RETURNED)."
+          }
+        }
+      },
+      "maxItems": 100
+    }
+  }
+}

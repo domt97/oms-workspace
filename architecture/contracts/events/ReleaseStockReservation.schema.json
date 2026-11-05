@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReleaseStockReservation",
+  "description": "Command (ADR 0006). Sent by order-service through its outbox (topic = this name, key = orderId). Consumed by inventory-service. Ends the order's stock lifecycle (cancel, reject, timeout). RESERVED lines are released; CONFIRMED lines are returned to stock when restock is true (RETURNED), otherwise stay sold (BR-ORD-09). The first release fixes restock. Allowed before any ReserveStock (leaves a closed order so a late reserve is rejected). Group inventory-release-stock-reservation. Answered by StockReservationReleased.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "merchantId",
+    "storeId",
+    "orderId",
+    "restock",
+    "reason"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "ReleaseStockReservation"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "merchantId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Owner of the order's store. inventory scopes every read and write by merchantId + storeId."
+    },
+    "storeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Saga id and Kafka key; one order belongs to one store (BR-ORD-01)."
+    },
+    "restock": {
+      "type": "boolean",
+      "description": "true when the goods can be sold again; set by order-service automatically for auto-reject and customer cancel before ACCEPTED, by the store otherwise."
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 50,
+      "description": "Free code for logs and movements, e.g. CUSTOMER_CANCELLED, STORE_REJECTED, PAYMENT_TIMEOUT."
+    }
+  }
+}
