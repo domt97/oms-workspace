@@ -15,7 +15,7 @@ and every step is durable on both sides.
   `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (one topic each). Command names are imperative,
   replies are past tense; all names stay unique across services. Schemas: `contracts/events/*.schema.json`.
 - **Replies** are events from the executing service's own outbox, key `orderId`, `aggregate_type = StockReservation`,
-  each carrying `causationId` (the command's `eventId`) and `replayed`:
+  each carrying `causationId` (the command's `eventId`):
   `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`,
   `StockReservationReleased`; `StockReservationExpired` is emitted by inventory's expiry job without a command.
 - **inventory gets an outbox** (`outbox_events` in DB `inventory`, with `correlation_context` from day one, ADR 0004)
@@ -27,7 +27,7 @@ and every step is durable on both sides.
   `orderId` owned by another merchant/store, the same order with different lines) go to `<topic>.DLT`.
 - **Idempotency and order** (BR-INV-07): inventory keeps one header row per order (`stock_reservation_orders`) and
   decides every command from the header and line states under a row lock. A duplicate command changes no stock and
-  publishes its reply again (`replayed: true`, a new `eventId`); what each duplicate answers is the table *Duplicate
+  publishes its reply again (a new `eventId`; replies have no "replayed" flag); what each duplicate answers is the table *Duplicate
   commands* in `flows/order-stock-reservation.md`. Commands of one order sit on different topics, so they can arrive
   out of order; the header absorbs it: a `ReleaseStockReservation` or a `ConfirmStockReservation` that finds no header
   creates a closed one (tombstone, `restock` unset), so a later `ReserveStock` is rejected `ORDER_CLOSED`, a repeated
@@ -41,8 +41,8 @@ and every step is durable on both sides.
   2. A `StockReserved` arriving for a saga that is already closed is compensated with a release, not ignored.
   3. No release is sent while a sent `ConfirmStockReservation` has no reply yet.
   4. Replies to commands are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a
-     replayed reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is never
-     replayed: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
+     re-published reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is
+     never re-published: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
   5. `restock` on a release follows BR-ORD-09.
 - inventory rejects a `ReserveStock` whose `occurredAt` is older than the hold TTL (`STALE_COMMAND`, BR-INV-11), with a
   small clock-skew tolerance; the check never applies to confirm or release.

@@ -11,7 +11,6 @@
     "storeId",
     "orderId",
     "causationId",
-    "replayed",
     "reason",
     "lines"
   ],
@@ -44,11 +43,7 @@
     "causationId": {
       "type": "string",
       "format": "uuid",
-      "description": "eventId of the command this replies to (for a replayed reply: the duplicate command's eventId)."
-    },
-    "replayed": {
-      "type": "boolean",
-      "description": "true when the command was a duplicate and this reply only describes the current state (BR-INV-07). It has a new eventId."
+      "description": "eventId of the command this replies to (for a re-published reply: the duplicate command's eventId)."
     },
     "reason": {
       "enum": [
