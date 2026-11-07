@@ -44,7 +44,7 @@ One row per order: `merchant_id`, `store_id`, status `RESERVED | REJECTED | CONF
 (set by the first release), and for `REJECTED` the rejection (`orderReason`, reason per rejected line) so a duplicate
 reserve gets the same answer. Every command first takes this row under `FOR UPDATE`, scoped by `(order, merchant, store)`;
 a row owned by another merchant/store is a contract error (DLT). A duplicate command changes nothing and re-publishes a
-reply for the current state (`replayed: true`, BR-INV-07).
+reply for the current state (BR-INV-07).
 
 | Arrives out of order | Result |
 |----------------------|--------|
@@ -59,20 +59,20 @@ for a closed saga is compensated; no release while a confirm has no reply; repli
 
 ## Duplicate commands (BR-INV-07)
 
-A duplicate changes no stock and publishes a reply again (`replayed: true`, new `eventId`, `causationId` = the duplicate
-command's `eventId`). A **first** command that meets a closed order (e.g. the first `ReserveStock` after a release left a
-tombstone) is not a duplicate: its reply has `replayed: false` (see the out-of-order table).
+A duplicate changes no stock and publishes a reply again (new `eventId`, `causationId` = the duplicate command's
+`eventId`). Replies carry no "replayed" flag: order-service deduplicates by `(orderId, causationId, eventType)` and its
+saga state (ADR 0006).
 
 | Command | Header / lines found | Reply |
 |---------|----------------------|-------|
 | `ReserveStock`, same lines | header `RESERVED`, `CONFIRMED` or `CANCELLED` after a successful reserve | `StockReserved` with the lines and `expiresAt` of that reserve (the reserve step's outcome; later changes were reported by their own replies) |
 | `ReserveStock`, different lines | header with reservations (compared with `stock_reservations`) | contract error → `ReserveStock.DLT`, nothing published |
 | `ReserveStock` (lines not compared: nothing to compare with) | header `REJECTED` | `StockReservationRejected` with the stored reasons (the header keeps the rejection: `orderReason` and the reason per line) |
-| `ReserveStock` (lines not compared) | header `CANCELLED` without any reservation (tombstone) | `StockReservationRejected{ORDER_CLOSED}`; `replayed: true` only from the second reserve on |
+| `ReserveStock` (lines not compared) | header `CANCELLED` without any reservation (tombstone) | `StockReservationRejected{ORDER_CLOSED}` |
 | `ConfirmStockReservation` | all lines `CONFIRMED` | `StockReservationConfirmed` |
 | `ConfirmStockReservation` | header `REJECTED` / `CANCELLED`, or a line no longer `RESERVED` | `StockReservationConfirmationFailed` (`ORDER_CLOSED` / `NOT_RESERVED`) with the current line statuses |
 | `ReleaseStockReservation` | header `CANCELLED` | `StockReservationReleased` with the current line statuses and the `restock` fixed by the first release (a different `restock` is logged at WARN and ignored) |
-| `ReleaseStockReservation` | header `REJECTED` | `StockReservationReleased` with no lines |
+| `ReleaseStockReservation` | header `REJECTED` | `StockReservationReleased` with no lines; `restock` = the value stored by the first release (a different `restock` later is logged at WARN and ignored) |
 
 ## Reserve (one transaction, all-or-nothing per order, ≤ 100 lines)
 
