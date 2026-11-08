@@ -6,16 +6,18 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
 
 ## OMS today (verified in code)
 - PostgreSQL 16, one database + schema per service (`store`, `inventory`). Spring Data JPA / Hibernate 6.4, Flyway.
-- Migrations: `src/main/resources/db/migration/V<n>__<what>.sql` — stores-service up to `V8`, inventory-service `V2`.
+- Migrations: `src/main/resources/db/migration/V<n>__<what>.sql` — stores-service up to `V8`, inventory-service `V4`.
 - `merchant_id`: every inventory-service table has it; in stores-service only `stores` does and child tables are scoped by `store_id` by design (`sa-multitenancy-security` rule 1).
-- Inventory constraints (`inventory-service/.../V1__init_inventory_tables.sql`):
+- Inventory constraints (`inventory-service/.../db/migration/V1`..`V4`):
   - `inventories`: `UNIQUE (store_id, sku)` (`uk_inventory_store_sku`), indexes on store, sku, (store, product).
-  - `stock_reservations`: indexes on `order_id`, `inventory_id`, `status`, plus partial `idx_stock_reservation_expiry (expires_at, id) WHERE status = 'RESERVED'` (V2, serves the expiry keyset query — keep `status = 'RESERVED'` a SQL literal there, a bound parameter stops the planner using a partial index under generic plans) — **no unique constraint on `(order_item_id, inventory_id)`** (root of open question 13).
-  - `stock_movements`: append-only audit, sequence with cache.
+  - `stock_reservations`: indexes on `inventory_id`, `status`, plus partial `idx_stock_reservation_expiry (expires_at, id) WHERE status = 'RESERVED'` (V2, serves the expiry keyset query — keep `status = 'RESERVED'` a SQL literal there, a bound parameter stops the planner using a partial index under generic plans); `UNIQUE (order_id, order_item_id)` (`uk_stock_reservation_order_item`, V4, one reservation per order line, BR-INV-07; it serves lookups by order and replaced V1's plain `order_id` index).
+  - `stock_reservation_orders` (V4): one header per order (`order_id` PK, merchant, store, status, `restock`, JSONB `rejection`) with CHECKs tying `rejection` to REJECTED and `restock` to REJECTED/CANCELLED; written only by native SQL (`INSERT … ON CONFLICT DO NOTHING`, `SELECT … FOR UPDATE` scoped by merchant/store, guarded `UPDATE … AND status = :expected`).
+  - `stock_movements`: append-only audit, sequence with cache; `reservation_id` (V4, not mapped in JPA) with the partial unique index `uk_stock_movement_reservation_type (reservation_id, type) WHERE reservation_id IS NOT NULL`, written by a set-based `INSERT … SELECT … ON CONFLICT (reservation_id, type) WHERE reservation_id IS NOT NULL DO NOTHING`.
 - Stock quantities change only through **native conditional UPDATEs** in `SpringDataInventoryRepository` (`reserve`, `confirm`, `release`, `stockIn`, `stockOut`), each guarded by a `WHERE` (e.g. `(quantity - reserved_quantity) >= :quantity`) and checked via the returned row count.
-- Reservation status changes use a **native guarded UPDATE per row** (`SpringDataStockReservationRepository.transitionStatus`: `WHERE id = :id AND status = :from`), called by `markConfirmed` / `markExpired` (`@Transactional(MANDATORY)`); the row count says who won. It bypasses the persistence context — entities loaded earlier in the same transaction keep the old status. No `@Version` on any entity.
+- Reservation status changes use a **native guarded UPDATE per row** (`SpringDataStockReservationRepository.transitionStatus`: `WHERE id = :id AND status = :from`), called by `markConfirmed` / `markExpired` / `markReleased` / `markReturned` (`@Transactional(MANDATORY)`); the row count says who won. It bypasses the persistence context — entities loaded earlier in the same transaction keep the old status. No `@Version` on any entity.
 - `createBatch` uses `saveAllAndFlush`.
-- Tests are Mockito-only: **native SQL and constraints are not exercised by any test.**
+- Nullable binds in native SQL are cast (`CAST(CAST(:restock AS TEXT) AS BOOLEAN)`, `CAST(:reason AS VARCHAR)`): Hibernate may bind an untyped null as bytea.
+- Tests: inventory-service has an `integrationTest` suite (Testcontainers Postgres, Flyway V1..V4) covering its native SQL, constraints, JSONB and locks (`sa-testing-strategy`); stores-service SQL is exercised by no test.
 
 ## Rules
 1. **Migrations are immutable** once merged. New change ⇒ new `V<next>__<what>.sql`. Check the highest existing version on `develop` first.
@@ -47,4 +49,4 @@ description: Data and persistence in the OMS — PostgreSQL schema, constraints 
 
 ## Known gaps
 - No `@Version` / optimistic locking anywhere (state is guarded with conditional UPDATEs instead).
-- No integration tests against a real database.
+- No integration tests against a real database in stores-service.

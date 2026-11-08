@@ -28,14 +28,14 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 | Aggregate | Holds | Tables |
 |-----------|-------|--------|
 | `Inventory` | `quantity`, `reservedQuantity`, `available = quantity − reserved`, status (`ACTIVE`, `INACTIVE`); unique (store_id, sku) | `inventories` |
-| `StockReservation` | hold for one order item, `expires_at`, status (`RESERVED`, `CONFIRMED`, `RELEASED`, `EXPIRED`; designed: `RETURNED`; `CANCELLED` unused, BR-INV-03) | `stock_reservations` |
-| Order header *(designed, ADR 0006)* | one row per order: `merchant_id`, `store_id`, status (`RESERVED`, `REJECTED` with the stored reasons, `CONFIRMED`, `CANCELLED` = closed), `restock`; idempotency and out-of-order commands. Also designed: `UNIQUE (order_id, order_item_id)` on `stock_reservations`, `stock_movements.reservation_id`, inventory `outbox_events` (with `correlation_context`) | `stock_reservation_orders` |
+| `StockReservation` | hold for one order item, `expires_at`, status (`RESERVED`, `CONFIRMED`, `RELEASED`, `EXPIRED`, `RETURNED`; `CANCELLED` unused, BR-INV-03); `UNIQUE (order_id, order_item_id)` (V4) | `stock_reservations` |
+| `StockReservationOrder` — order header *(ADR 0006, V4)* | one row per order: `merchant_id`, `store_id`, status (`RESERVED`, `REJECTED` with the stored reasons in JSONB `rejection`, `CONFIRMED`, `CANCELLED` = closed), `restock` (set by the first release); idempotency and out-of-order commands. Still designed: inventory `outbox_events` (with `correlation_context`) | `stock_reservation_orders` |
 | `ProductCatalogVersion` *(inventory-service#32)* | last applied catalog event version per product (`product_id`, `merchant_id`, `store_id`, `version`); ordering gate for `ProductCreated`/`ProductUpdated` | `product_catalog_versions` |
-| `StockMovement` | append-only audit; type `RECEIVE`, `SALE`, `RETURN`, `ADJUSTMENT_IN/OUT`, `DAMAGE`, `TRANSFER_IN/OUT` (designed: `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE`, BR-INV-05); polymorphic `reference_type` + `reference_id` | `stock_movements` |
+| `StockMovement` | append-only audit; type `RECEIVE`, `SALE`, `RETURN`, `ADJUSTMENT_IN/OUT`, `DAMAGE`, `TRANSFER_IN/OUT`, and the hold types `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE` (BR-INV-05); polymorphic `reference_type` + `reference_id`: movements of an order reference the order line (`ORDER_ITEM` + order item id) and carry `reservation_id` (unique per reservation and type, V4) | `stock_movements` |
 
 **Consumes:** `ProductCreated` and `ProductUpdated` (Kafka, inventory-service#32) → create missing SKUs and set inventory status, through a per-product version gate (`product_catalog_versions`); failures to `<topic>.DLT`; reservation-expire tick (EventBridge → SQS) → expires overdue reservations; `OrderCreated` (consumer stub, disabled; to be removed). *Designed (ADR 0006):* commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation`.
 **Publishes:** nothing yet. *Designed (ADR 0006):* `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired` through a new `outbox_events` table and connector.
-**Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (interface only).
+**Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (implemented, return results; Kafka consumers and replies come with the outbox).
 
 ## Shared kernel — `oms-core`
 

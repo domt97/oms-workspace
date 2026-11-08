@@ -1,7 +1,7 @@
 # Flow: Order → stock reservation lifecycle
 
-Status: **designed** (ADR 0006, 2026-11-05). Inventory has the reserve / confirm / expire logic but no entry point
-and no release implementation; order-service, the commands, the replies and inventory's outbox are not built.
+Status: **designed** (ADR 0006, 2026-11-05); inventory's use cases are built (reservation hardening), with no entry
+point yet. order-service, the command consumers, the replies and inventory's outbox are not built.
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -90,6 +90,25 @@ saga state (ADR 0006).
 7. Otherwise insert reservations (TTL from configuration, default 15 min), `RESERVE` movements, header `RESERVED`,
    outbox `StockReserved`.
 
+## Timeouts (how they surface, and how the error handler must treat them)
+
+Each command transaction sets `lock_timeout` 3 s and `statement_timeout` 5 s (`SET LOCAL`) and has a 10 s transaction
+timeout (`app.reservation.*`; `StockCommandTransactionIT` asserts that reserve / confirm / release take it from the property). All
+three are transient, not contract errors: retried with a bounded backoff like other failures in `KafkaErrorHandlingConfig`,
+then `<topic>.DLT` (decided 2026-11-08: unlimited retries would block the order's partition if a command times out every
+time; a command in a DLT is covered by ADR 0006 — the saga times out and releases, the hold TTL is the last net). Never
+dead-lettered at once like a contract error. As asserted by `StockConcurrencyIT`:
+`lock_timeout` → `PessimisticLockingFailureException` (SQLState 55P03); `statement_timeout` → Spring
+`QueryTimeoutException` (57014); a query created after the deadline → `TransactionTimedOutException`. Not covered by a
+test: Hibernate also gets the deadline in whole seconds and may refuse a statement (or the flush at commit) in the last
+second with `org.hibernate.TransactionException` (likely translated to `JpaSystemException`), and a statement running at
+the deadline is cancelled by the JDBC query timeout (57014). No timeout-specific handling is needed: the default bounded
+policy already applies. What matters is that a timeout is never matched as a contract error (DLT at once) or as a
+connection failure (unlimited retries). So when the command consumers add their contract exceptions to the not-retryable
+list or widen the connection-failure check, a test must show, by cause chain (SQLState 55P03 / 57014,
+`TransactionTimedOutException`, a "transaction timeout expired" Hibernate `TransactionException`), that timeouts still get
+the bounded retries and then the DLT.
+
 ## Locks
 
 Global order: order header → reservations (id ascending) → inventories (Java `UUID.compareTo`). Expiry takes only
@@ -100,11 +119,11 @@ decided by the guarded `status = 'RESERVED'` updates.
 
 | Step | inventory-service code | Entry point |
 |------|------------------------|-------------|
-| Reserve | `ReserveStockService` (not idempotent, no status check, no movement) | none |
-| Confirm | `ConfirmStockReservationService` (loads by `orderId` only, no movement) | none |
-| Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction` (no movement, no event) | `SqsReservationExpireConsumer` |
-| Release | `ReleaseStockReservationUseCase` interface | none, no implementation |
+| Reserve | `ReserveStockService`: header, duplicate / stale checks, reasons, guarded reserve, `RESERVE` movements → `ReserveStockResult` | none |
+| Confirm | `ConfirmStockReservationService`: header (tombstone if missing), `SALE` movements → `ConfirmStockReservationResult` | none |
+| Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction`: `RESERVE_EXPIRE` movements (no event yet) | `SqsReservationExpireConsumer` |
+| Release | `ReleaseStockReservationService`: `RESERVE_RELEASE` / `RETURN` movements, `restock` fixed by the first release → `ReleaseStockReservationResult` | none |
 
-Delivery plan (one PR each, in order): workspace docs and contracts → oms-web (missing record = not orderable, hold
-movement types) → inventory reservation hardening → inventory outbox → `development` connector `inventory-outbox-cdc` →
+Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
+movement types) ✅ → inventory reservation hardening ✅ → inventory outbox → `development` connector `inventory-outbox-cdc` →
 inventory command consumers → DLT tooling.

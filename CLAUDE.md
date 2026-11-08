@@ -134,7 +134,9 @@ response fields) is a breaking change for oms-web: include oms-web in the impact
   4. the service PR sets `coreVersion=X.Y.Z` (no `v`; `core-pin` green) and is merged.
   A service PR whose pinned version is not published yet has a red `test`: never merge it before the Publish run is green.
   Breaking change in oms-core = MAJOR version (oms-core `README.md`).
-- Unit tests only (no Docker); SQL, Debezium and Kafka behaviour stay manual checks.
+- **inventory-service** also has a job **`Integration tests`** (`./gradlew integrationTest`: Testcontainers Postgres on the
+  runner's Docker; native SQL, constraints, locks, races). It is not a required check yet. Everything else is unit tests
+  only (no Docker): Debezium and Kafka behaviour, and stores-service SQL, stay manual checks.
 - Branch protection (after the first green runs): required checks `Unit tests` and `core-pin` on service `develop`/`master`,
   `oms-core unit tests` and `release-version` on oms-core `master`, `Check and build` on oms-web.
 

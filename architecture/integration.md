@@ -63,8 +63,8 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 | Method | Path | Visibility |
 |--------|------|------------|
-| POST | `/internal/v1/inventory/inventories` (create for a product's SKUs) | Internal only (`@Hidden`, blocked at gateway); kept for support. Rows it creates are **INACTIVE** (not orderable, BR-INV-08) until the catalog's next `ProductUpdated` sets their status — only when the request's `productId` is the product that owns the SKU in the catalog (otherwise the row stays INACTIVE); `ProductCreated` never changes an existing row, so to make such a row sellable, change the product in stores-service (decided 2026-11-06, ships with the reservation hardening) |
-| POST | `/v1/inventory/inventories/{inventoryId}` (adjust stock) | Public |
+| POST | `/internal/v1/inventory/inventories` (create for a product's SKUs) | Internal only (`@Hidden`, blocked at gateway); kept for support. Rows it creates are **INACTIVE** (not orderable, BR-INV-08) until the catalog's next `ProductUpdated` sets their status — only when the request's `productId` is the product that owns the SKU in the catalog (otherwise the row stays INACTIVE); `ProductCreated` never changes an existing row, so to make such a row sellable, change the product in stores-service (decided 2026-11-06; inventory-service#39) |
+| POST | `/v1/inventory/inventories/{inventoryId}` (adjust stock; the hold types `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE` are refused with 400, BR-INV-05; oms-web offers only the on-hand types) | Public |
 | GET | `/v1/inventory/inventories/{inventoryId}`, `/v1/inventory/inventories/products/{productId}` | Public |
 | GET | `/v1/inventory/inventories/stock-movements/{inventoryId}` | Public |
 
