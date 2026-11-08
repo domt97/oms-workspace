@@ -58,8 +58,10 @@ Keep the change limited to the approved plan. Write the tests the plan lists.
 ./gradlew test
 ```
 If tests fail, fix them. If you cannot make them pass, stop and report — do not commit.
-If `./gradlew test` cannot run here (no network to Maven Central or Gradle), say so plainly; CI on the PR is then
-the first real test run (step 8).
+If the service has an `integrationTest` suite (inventory-service; needs Docker), also run `./gradlew integrationTest` when
+the change touches SQL, migrations, locking or transactions, and add an IT for any new native SQL.
+If `./gradlew test` / `integrationTest` cannot run here (no network to Maven Central or Gradle, no Docker), say so plainly;
+CI on the PR is then the first real test run (step 8).
 For a change that also needs an oms-core change: change both locally (composite build), ship oms-core first with its `version`
 bumped (merging it publishes that version; the user may tag an `-rc.N` for CI feedback before), then bump `coreVersion`
 in the service PR (see CLAUDE.md → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
@@ -131,6 +133,7 @@ PR body template:
 
 ## Tests
 - `./gradlew test`: passed (locally, or CI only — say which)
+- `./gradlew integrationTest` (if the service has it): passed / not run (locally, or CI only — say which)
 - <new tests>
 
 ## Docs
