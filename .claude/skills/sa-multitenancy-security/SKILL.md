@@ -16,7 +16,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 - This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check (the collection use cases did until open question 27 was fixed).
 
 **Isolation in data — inventory-service**
-- Every table (`inventories`, `stock_reservations`, `stock_movements`) has `merchant_id`.
+- Every table (`inventories`, `stock_reservations`, `stock_movements`, `stock_reservation_orders`, `outbox_events`) has `merchant_id`; `debezium_heartbeat` (connector heartbeat rows, no merchant data) is the exception.
 - The public REST API takes no merchant (open question 6), and reads by id (`GET /v1/inventory/inventories/{id}`, `/products/{productId}`, stock movements) are not scoped by merchant.
 - Only `AdjustStockService` calls `Inventory.validateMerchantAndStore`.
 
