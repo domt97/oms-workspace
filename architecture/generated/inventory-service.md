@@ -25,18 +25,21 @@
 
 - none
 
-## Database tables (latest migration: `V3__product_catalog_versions_and_wider_sku.sql`)
+## Database tables (latest migration: `V4__stock_reservation_orders_and_movement_reservation.sql`)
 
 - `inventories` (created in V1__init_inventory_tables.sql)
 - `product_catalog_versions` (created in V3__product_catalog_versions_and_wider_sku.sql)
 - `stock_movements` (created in V1__init_inventory_tables.sql)
+- `stock_reservation_orders` (created in V4__stock_reservation_orders_and_movement_reservation.sql)
 - `stock_reservations` (created in V1__init_inventory_tables.sql)
 
 ## Aggregates / domain models
 
 - `Inventory`
+- `ReservationRejection`
 - `StockMovement`
 - `StockReservation`
+- `StockReservationOrder`
 
 ## Use cases (inbound ports)
 
