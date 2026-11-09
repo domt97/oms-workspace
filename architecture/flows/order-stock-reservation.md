@@ -1,8 +1,7 @@
 # Flow: Order → stock reservation lifecycle
 
 Status: **designed** (ADR 0006, 2026-11-05). inventory's use cases (inventory-service#39) and its outbox replies
-(inventory-service#40) are built, with no entry point and not published until the connector `inventory-outbox-cdc`
-exists. order-service and the command consumers are not built.
+(inventory-service#40) are built, published by the connector `inventory-outbox-cdc` (development#7), with no entry point. order-service and the command consumers are not built.
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -149,10 +148,9 @@ decided by the guarded `status = 'RESERVED'` updates.
 
 Every result above is written as its reply to `outbox_events` in the same transaction (`StockReplyFactory`,
 `OutboxEventPersistenceAdapter`): inserted with `id = eventId` and deleted at once; Debezium publishes it from the
-WAL. Not published until the connector exists.
+WAL. Published by `inventory-outbox-cdc` once registered (development#7).
 
 Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
-movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc`
-(must prove the deleted rows give one record per reply, no tombstone, task RUNNING; option: publication
-`WITH (publish = 'insert')`) → stores-service outbox delete-after-insert + open question 45 (any time after the
+movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc` ✅ (development#7)
+(insert-only publication; merge condition: Verify a–f in `development` `docs/connectors.md`) → stores-service outbox delete-after-insert + open question 45 (any time after the
 connector PR) → inventory command consumers → DLT tooling.

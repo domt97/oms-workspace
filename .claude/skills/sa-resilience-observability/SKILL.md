@@ -58,7 +58,7 @@ description: Resilience and observability in the OMS — failure modes of depend
    - per endpoint: latency and error rate;
    - business counters (reservations created, expired, oversell attempts rejected).
    - Every metric that indicates a stuck flow has an alert.
-10. **Outbox health**, by outbox kind: an outbox that **keeps** rows — alert on rows older than N minutes that are not yet published (note: stores-service rows never leave `PENDING`, so "not published" cannot be measured there today); a **delete-after-insert** outbox (inventory) is always empty — alert on replication slot lag (WAL kept) and connector task status instead. Both: alert on connector status.
+10. **Outbox health**, by outbox kind: an outbox that **keeps** rows — alert on rows older than N minutes that are not yet published (note: stores-service rows never leave `PENDING`, so "not published" cannot be measured there today); a **delete-after-insert** outbox (inventory) is always empty — alert on replication slot lag (WAL kept) and connector task status instead. Both: alert on connector status. Slot lag is a health signal only while the heartbeat works (inventory: `heartbeat.action.query` into `debezium_heartbeat`; to be proven by Verify f in `development` `docs/connectors.md`, *Verify inventory-outbox-cdc*; until then slot lag is not a reliable signal). Task `RUNNING` does not prove the heartbeat: Debezium 2.2 is expected to only log most heartbeat query failures (to be confirmed in the connector's *First application*) — also alert on `max(beat_at)` (open question 55).
 
 ## Checklist
 - [ ] Failure table: dependency → failure → behaviour → recovery → how we notice.
