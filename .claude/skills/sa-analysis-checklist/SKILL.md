@@ -22,7 +22,10 @@ If an item does not apply, say so in one line — do not silently skip it.
       flow as decided unless the user decided it (cite the date) — cross-context designs done with `/feature-impact`
       or `oms-architect` decide such obligations with the user, as ADR 0006 did. If an existing rule or obligation is
       called into question, propose in the plan a note on that item — "Under review (YYYY-MM-DD, open question N)" —
-      leaving the ADR status and any BR status unchanged; apply it only once the user approves the plan.
+      leaving the ADR status and any BR status unchanged (for a BR, append the note to the status column, after the
+      existing status, and cite the business question id too: "Under review (YYYY-MM-DD, open question N, Qn)" —
+      open-questions numbers and business Q-ids are different series); apply it only once the user approves the plan. Remove the note when open question N is
+      resolved: the ADR or BR is then updated, or superseded by a new ADR, with the user's decision.
 
 ## 2. Root cause
 - [ ] State the root cause in one sentence, then the **real impact** (data loss? duplicate? noise? stuck?).
