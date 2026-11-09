@@ -6,6 +6,8 @@
 > - 🟡 **Proposed**: solution-architect recommendation. **Not decided**; the product owner must confirm or change it.
 > - ❓ **Open**: needs a decision; see the question at the end.
 > - ~~Struck through~~ **Withdrawn**: a rule the product owner dropped (date given); kept so old references still resolve.
+> - *Under review (date, open question N, Qn)*: appended to a status; the status still holds, but ask the user before
+>   designing on that rule (`sa-analysis-checklist` §1).
 >
 > **Agents:** design only on ✅ and 🟢 rules, and on 🟡 rules the user has confirmed in the conversation.
 > For ❓ items, ask the user (quote the question id). Never invent a rule. When the user decides, update
