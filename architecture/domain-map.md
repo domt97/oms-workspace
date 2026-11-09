@@ -36,7 +36,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 **Consumes:** `ProductCreated` and `ProductUpdated` (Kafka, inventory-service#32) → create missing SKUs and set inventory status, through a per-product version gate (`product_catalog_versions`); failures to `<topic>.DLT`; reservation-expire tick (EventBridge → SQS) → expires overdue reservations; `OrderCreated` (consumer stub, disabled; to be removed). *Designed (ADR 0006):* commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation`.
 **Publishes:** the stock replies through `outbox_events` (V5; rows inserted and deleted in the same transaction, published by Debezium from the WAL; built; connector `inventory-outbox-cdc`, development#7): `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired`. Also in DB `inventory`, owned by the connector setup and not by Flyway: table `debezium_heartbeat` (heartbeat rows only, no merchant data).
-**Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (implemented; their replies are written to the outbox; Kafka consumers come after the connector).
+**Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (implemented; their replies are written to the outbox; Kafka consumers are the next step).
 
 ## Shared kernel — `oms-core`
 
