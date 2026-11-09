@@ -2,8 +2,10 @@
   "inventory-service": {
     "aggregates": [
       "Inventory",
+      "ReservationRejection",
       "StockMovement",
-      "StockReservation"
+      "StockReservation",
+      "StockReservationOrder"
     ],
     "branch": "develop",
     "listeners": [
@@ -49,7 +51,7 @@
       }
     ],
     "migrations": {
-      "latest": "V3__product_catalog_versions_and_wider_sku.sql",
+      "latest": "V4__stock_reservation_orders_and_movement_reservation.sql",
       "tables": [
         {
           "created_in": "V1__init_inventory_tables.sql",
@@ -62,6 +64,10 @@
         {
           "created_in": "V1__init_inventory_tables.sql",
           "table": "stock_movements"
+        },
+        {
+          "created_in": "V4__stock_reservation_orders_and_movement_reservation.sql",
+          "table": "stock_reservation_orders"
         },
         {
           "created_in": "V1__init_inventory_tables.sql",
