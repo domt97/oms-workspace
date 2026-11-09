@@ -1,6 +1,6 @@
 # ADR 0006 — Stock commands over Kafka, replies from inventory's outbox
 
-Status: Accepted (2026-11-05). Design only: nothing built yet (see `flows/order-stock-reservation.md`).
+Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); connector, command consumers and order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is under review (open question 54).
 
 ## Context
 order-service (not built) orchestrates the order saga and "other services execute commands and report back with
@@ -35,11 +35,12 @@ and every step is durable on both sides.
 - **Obligations of order-service** (the saga owner), part of the contract:
   1. A saga that sent `ReserveStock` and did not get `StockReservationRejected` ends with a confirmed order or with
      `ReleaseStockReservation`, **including when no reply arrives** (command in a DLT, timeout); giving up means sending
-     a release, never just stopping. A confirmed order that is cancelled
+     a release, never just stopping (for a confirm step without a reply see open question 54). A confirmed order that is cancelled
      later is released too (with `restock`, BR-ORD-09). After `StockReservationRejected` nothing is held and no release
      is needed (one is harmless).
   2. A `StockReserved` arriving for a saga that is already closed is compensated with a release, not ignored.
-  3. No release is sent while a sent `ConfirmStockReservation` has no reply yet.
+  3. No release is sent while a sent `ConfirmStockReservation` has no reply yet. *Under review (open question 54):* with
+     only this rule a lost confirm reply leaves the saga with no way out.
   4. Replies to commands are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a
      re-published reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is
      never re-published: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
@@ -57,11 +58,14 @@ and every step is durable on both sides.
 ## Consequences
 - Checkout latency adds two outbox → Debezium hops (≈ 0.5–2 s estimated); order-service must treat placement as
   asynchronous.
-- A command in a DLT gets no reply: the saga notices by timeout and releases (obligation 1); the hold TTL is the last
-  safety net.
+- A command in a DLT gets no reply: the saga notices by timeout and releases (obligation 1; for a confirm step see open
+  question 54); the hold TTL is the last safety net.
 - Each producing service runs its own connector and replication slot; a stopped connector keeps WAL on that database.
 - System rule 8 now covers commands too: topic = message type, unique across services, key = aggregate id.
 - Kafka has no ACLs locally; in production only order-service may write the command topics.
-- inventory's outbox grows by about three rows per order (≈ 55M a year at the estimated volume): pick its cleanup when
-  it is built (insert and delete in the same transaction, which Debezium still reads from the WAL, or a cleanup job);
-  see open question 19.
+- About three replies per order pass through inventory's outbox. The rows are inserted and deleted in the same
+  transaction (decided 2026-11-08, open question 19): Debezium reads the INSERTs from the WAL, the table stays empty,
+  and the replication slot (WAL kept, lag) is what must be watched. This holds only if the connector PR proves one
+  record per reply, no tombstone and a RUNNING task; otherwise rows are kept a few days and removed by a cleanup job.
+  A reply lost after commit (slot dropped or recreated) cannot be re-published; recovery per reply type is in the
+  flow (*Lost replies*).

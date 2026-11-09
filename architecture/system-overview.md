@@ -18,7 +18,7 @@ flowchart LR
     end
     EB[EventBridge 1 min] --> Q[(SQS reservation-expire)] --> SQS
     ORD[order-service<br/>planned] -. ReserveStock / Confirm / Release commands .-> K
-    K -. StockReserved / … replies (inventory outbox, designed) .-> ORD
+    K -. StockReserved / … replies (inventory outbox, built; not live until inventory-outbox-cdc) .-> ORD
     WEB[oms-web<br/>storefront + Seller Centre] -- /v1/store --> SAPI
     WEB -- /v1/inventory --> IAPI
     SUC -. checkItemDetail .-> IAPI

@@ -1,7 +1,8 @@
 # Flow: Order → stock reservation lifecycle
 
-Status: **designed** (ADR 0006, 2026-11-05); inventory's use cases are built (reservation hardening), with no entry
-point yet. order-service, the command consumers, the replies and inventory's outbox are not built.
+Status: **designed** (ADR 0006, 2026-11-05). inventory's use cases (inventory-service#39) and its outbox replies
+(inventory-service#40) are built, with no entry point and not published until the connector `inventory-outbox-cdc`
+exists. order-service and the command consumers are not built.
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -30,10 +31,10 @@ sequenceDiagram
   K->>I: tx: lock order header, guarded reserve per line, RESERVE movements, outbox reply
   I-->>O: StockReserved (expiresAt) | StockReservationRejected (reason per line)
   O->>K: ConfirmStockReservation (when the order is PLACED)
-  K->>I: tx: header lock, RESERVED→CONFIRMED, SALE movements
+  K->>I: tx: header lock, RESERVED→CONFIRMED, SALE movements, outbox reply
   I-->>O: StockReservationConfirmed | StockReservationConfirmationFailed
   O->>K: ReleaseStockReservation {restock, reason} (cancel, reject, timeout)
-  K->>I: tx: RESERVED→RELEASED / CONFIRMED→RETURNED (restock) / keep CONFIRMED
+  K->>I: tx: RESERVED→RELEASED / CONFIRMED→RETURNED (restock) / keep CONFIRMED, outbox reply
   I-->>O: StockReservationReleased
   Note over I: expiry job: RESERVED→EXPIRED, RESERVE_EXPIRE, StockReservationExpired (no command)
 ```
@@ -50,12 +51,33 @@ reply for the current state (BR-INV-07).
 |----------------------|--------|
 | Release before Reserve (order timed out) | header created `CANCELLED` (tombstone); the late Reserve gets `Rejected{ORDER_CLOSED}`, nothing held |
 | Confirm before Reserve | `ConfirmationFailed{UNKNOWN_ORDER}` and a tombstone (`restock` unset); a repeated confirm answers `ORDER_CLOSED`, a later Reserve is rejected `ORDER_CLOSED`, the first release still sets `restock` |
-| Release before Confirm | RESERVED lines released, header `CANCELLED`; the late Confirm gets `ConfirmationFailed{ORDER_CLOSED}` |
+| Release before Confirm | RESERVED lines released, header `CANCELLED`; the late Confirm (also one replayed from a DLT) gets `ConfirmationFailed{ORDER_CLOSED}` |
+| Release sent before the Confirmed reply arrived, confirm already applied (reachable only if obligation 3 is relaxed, open question 54) | with `restock`: lines `RETURNED`, stock back, `RETURN` movements; without: lines stay `CONFIRMED` (goods stay sold), header `CANCELLED`. How the saga treats the late `Confirmed`: open question 54 |
 | Old command replayed from a DLT | decided by the header and line states; an old `ReserveStock` is also `STALE_COMMAND` |
 
-order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives; a `StockReserved`
-for a closed saga is compensated; no release while a confirm has no reply; replies to commands deduplicated by
+order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives (for a confirm step see open question 54); a `StockReserved`
+for a closed saga is compensated; no release while a confirm has no reply (obligation 3, under review: open question 54); replies to commands deduplicated by
 `(orderId, causationId, eventType)`, `StockReservationExpired` by `eventId`.
+
+Audit note: a confirm that was applied and then cancelled with `restock` writes both a `SALE` and a `RETURN` movement
+for goods never handed over; sales reports must net them by `reservation_id`.
+
+### Inventory's guarantee
+
+Any interleaving of confirm and release on one order ends in the state the commands
+describe (header lock; no oversell, no double count); whether `restock = false` is right is order-service's choice.
+Stock correctness never depends on order-service's timeouts.
+
+## Lost replies (outbox rows are deleted at once, so a reply lost after commit cannot be re-published)
+
+A reply can be lost when the connector's slot is dropped or recreated (open question 19). What brings the saga back:
+
+| Lost reply | Recovery |
+|------------|----------|
+| `StockReserved` / `StockReservationRejected` | the saga times out and releases (obligation 1), or re-sends the reserve (the duplicate answers the stored outcome) |
+| `StockReservationReleased` | inventory's state is already final; obligation 1 is met by the release; a re-send is optional and harmless |
+| `StockReservationExpired` | a later confirm answers `NOT_RESERVED`; a release reports the line `EXPIRED` |
+| `StockReservationConfirmed` / `StockReservationConfirmationFailed` | open question 54 (re-send the confirm, which is safe, or cancel; decided with order-service) |
 
 ## Duplicate commands (BR-INV-07)
 
@@ -96,7 +118,8 @@ Each command transaction sets `lock_timeout` 3 s and `statement_timeout` 5 s (`S
 timeout (`app.reservation.*`; `StockCommandTransactionIT` asserts that reserve / confirm / release take it from the property). All
 three are transient, not contract errors: retried with a bounded backoff like other failures in `KafkaErrorHandlingConfig`,
 then `<topic>.DLT` (decided 2026-11-08: unlimited retries would block the order's partition if a command times out every
-time; a command in a DLT is covered by ADR 0006 — the saga times out and releases, the hold TTL is the last net). Never
+time; a command in a DLT is covered by ADR 0006 — the saga times out and releases (for a confirm step see open question
+54), the hold TTL is the last net). Never
 dead-lettered at once like a contract error. As asserted by `StockConcurrencyIT`:
 `lock_timeout` → `PessimisticLockingFailureException` (SQLState 55P03); `statement_timeout` → Spring
 `QueryTimeoutException` (57014); a query created after the deadline → `TransactionTimedOutException`. Not covered by a
@@ -121,9 +144,15 @@ decided by the guarded `status = 'RESERVED'` updates.
 |------|------------------------|-------------|
 | Reserve | `ReserveStockService`: header, duplicate / stale checks, reasons, guarded reserve, `RESERVE` movements → `ReserveStockResult` | none |
 | Confirm | `ConfirmStockReservationService`: header (tombstone if missing), `SALE` movements → `ConfirmStockReservationResult` | none |
-| Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction`: `RESERVE_EXPIRE` movements (no event yet) | `SqsReservationExpireConsumer` |
+| Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction`: `RESERVE_EXPIRE` movements, `StockReservationExpired` per (order, merchant, store) | `SqsReservationExpireConsumer` |
 | Release | `ReleaseStockReservationService`: `RESERVE_RELEASE` / `RETURN` movements, `restock` fixed by the first release → `ReleaseStockReservationResult` | none |
 
+Every result above is written as its reply to `outbox_events` in the same transaction (`StockReplyFactory`,
+`OutboxEventPersistenceAdapter`): inserted with `id = eventId` and deleted at once; Debezium publishes it from the
+WAL. Not published until the connector exists.
+
 Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
-movement types) ✅ → inventory reservation hardening ✅ → inventory outbox → `development` connector `inventory-outbox-cdc` →
-inventory command consumers → DLT tooling.
+movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc`
+(must prove the deleted rows give one record per reply, no tombstone, task RUNNING; option: publication
+`WITH (publish = 'insert')`) → stores-service outbox delete-after-insert + open question 45 (any time after the
+connector PR) → inventory command consumers → DLT tooling.
