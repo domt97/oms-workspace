@@ -66,6 +66,7 @@ and every step is durable on both sides.
 - About three replies per order pass through inventory's outbox. The rows are inserted and deleted in the same
   transaction (decided 2026-11-08, open question 19): Debezium reads the INSERTs from the WAL, the table stays empty,
   and the replication slot (WAL kept, lag) is what must be watched. This holds only if the connector PR proves one
-  record per reply, no tombstone and a RUNNING task; otherwise rows are kept a few days and removed by a cleanup job.
+  record per reply, no tombstone and a RUNNING task (proven locally 2026-11-09, development#7 *First application*;
+  production slots: open question 55); otherwise rows are kept a few days and removed by a cleanup job.
   A reply lost after commit (slot dropped or recreated) cannot be re-published; recovery per reply type is in the
   flow (*Lost replies*).
