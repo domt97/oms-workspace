@@ -25,9 +25,10 @@
 
 - none
 
-## Database tables (latest migration: `V4__stock_reservation_orders_and_movement_reservation.sql`)
+## Database tables (latest migration: `V5__outbox_events.sql`)
 
 - `inventories` (created in V1__init_inventory_tables.sql)
+- `outbox_events` (created in V5__outbox_events.sql)
 - `product_catalog_versions` (created in V3__product_catalog_versions_and_wider_sku.sql)
 - `stock_movements` (created in V1__init_inventory_tables.sql)
 - `stock_reservation_orders` (created in V4__stock_reservation_orders_and_movement_reservation.sql)
