@@ -152,5 +152,5 @@ WAL. Published by `inventory-outbox-cdc` once registered (development#7).
 
 Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
 movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc` ✅ (development#7)
-(insert-only publication; Verify a–g passed locally, `development` `docs/connectors.md` *First application*) → stores-service outbox delete-after-insert + open question 45 (any time after the
-connector PR) → inventory command consumers → DLT tooling.
+(insert-only publication; Verify a–g passed locally, `development` `docs/connectors.md` *First application*) → stores-service outbox delete-after-insert + open question 45 ✅ (stores-service#59, development#8)
+→ inventory command consumers → DLT tooling.

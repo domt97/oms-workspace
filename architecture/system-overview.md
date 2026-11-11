@@ -41,7 +41,7 @@ Text logs; every line starts with the MDC (`logging.pattern.correlation: "[%X] "
 (defaults: `merchantId`, `storeId`, `productId`, `collectionId`, `inventoryId`, `storeAvailabilityId` as UUID path variables), and for messages `eventId`, `kafkaTopic`/`kafkaPartition`/`kafkaOffset`,
 `sqsMessageId`. Search by `requestId` across services: stores-service's request and inventory's consumer and DLT lines share it
 (the browser's `X-Request-Id` when valid). All records of one Excel import share the import's id; to isolate one record use `eventId` or
-`kafkaOffset`. `eventId` (the payload `eventId`, not `outbox_events.id`, open question 45) still joins stores' DEBUG "Outbox event queued"
+`kafkaOffset`. `eventId` (the payload `eventId`, equal to the Kafka header `id`) still joins stores' DEBUG "Outbox event queued"
 line (`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG`). A Kafka record keeps its
 `requestId` across retries and on the DLT line (the recoverer reopens the scope); the error handler's own retry lines have no MDC.
 `show_sql` lines bypass Logback.

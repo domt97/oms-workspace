@@ -11,7 +11,7 @@ description: Multi-tenancy and security in the OMS — merchant isolation in dat
 
 **Isolation in data — stores-service**
 - **Only the `stores` table has `merchant_id`** (column in `V1__init_store_tables.sql`; `UNIQUE (merchant_id, code)` added in `V4__add_unique_constraints.sql`).
-- Every child table (products, SKUs, images, collections, availability, configs, business hours, addresses, `outbox_events`) is isolated **by `store_id` only**.
+- Every child table (products, SKUs, images, collections, availability, configs, business hours, addresses, `outbox_events`) is isolated **by `store_id` only**; `debezium_heartbeat` (connector heartbeat rows, no merchant data) is outside the domain.
 - Isolation therefore depends on every use case first loading the store with `findByMerchantIdAndStoreId` (e.g. `GetStoreProductDetailService`) and then querying children by that store id.
 - This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check (the collection use cases did until open question 27 was fixed).
 
