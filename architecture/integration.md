@@ -8,7 +8,11 @@ Every way services talk to each other. Generated contracts (OpenAPI, event schem
 Topic naming (ADR 0002): **topic = `event_type`** (e.g. `ProductCreated`), key = `aggregate_id`.
 Connector `postgres-cdc` on Kafka Connect `:9084` reads `store.outbox_events` with
 `EventRouter` + `route.topic.replacement=${routedByValue}`; config in the `development` repo
-(`docker/kafka-connect/connectors/postgres-cdc.json`, applied by `register-connectors.sh`, see its `docs/connectors.md`).
+(`docker/kafka-connect/connectors/postgres-cdc.json`, applied by `register-connectors.sh`, see its `docs/connectors.md`)
+through the insert-only publication of `docker/kafka-connect/sql/store-outbox-cdc.sql`, with a heartbeat
+(`store.debezium_heartbeat`, topic `__debezium-heartbeat.store`) (development#8). stores-service inserts each row with
+`id` = payload `eventId` and deletes it in the same transaction (stores-service#59): the table is always empty and the
+Kafka header `id` of `ProductCreated` / `ProductUpdated` equals the payload `eventId`.
 Connector `inventory-outbox-cdc` reads `inventory.outbox_events` (DB `inventory`) through the insert-only publication of
 `docker/kafka-connect/sql/inventory-outbox-cdc.sql`; its topics are pre-created by `docker/kafka/create-topics.sh` (development#7).
 Every outbox-routed record carries the optional header **`correlationContext`** (ADR 0004): UTF-8 JSON object of the

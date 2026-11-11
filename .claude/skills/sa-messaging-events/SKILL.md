@@ -7,11 +7,10 @@ description: Event-driven integration in the OMS — transactional outbox with D
 ## OMS today (verified in code)
 **Publishing — transactional outbox + CDC (ADR 0001, 0002)**
 - Use case writes the business rows and an `outbox_events` row in the **same transaction** (`stores-service/.../CreateStoreProductUseCaseService.java`, built by `OutboxEventHelper`).
-- `outbox_events` (`stores-service/.../db/migration/V7__add_outbox_events_table.sql`): `aggregate_type`, `aggregate_id`, `event_type`, `payload JSONB`, `status`; rows are kept (`PENDING`, never cleaned, open question 19).
+- `outbox_events` (`stores-service/.../db/migration/V7__add_outbox_events_table.sql`): `aggregate_type`, `aggregate_id`, `event_type`, `payload JSONB`, `correlation_context`; since stores-service#59 a native INSERT with `id = eventId` then DELETE in the **same transaction** (`OutboxEventPersistenceAdapter`, like inventory's) — always empty; `postgres-cdc` reads it through the insert-only publication of `development` `sql/store-outbox-cdc.sql`, with a heartbeat into `store.debezium_heartbeat` (development#8); `status`/`retry_count` columns are dead (open question 56).
 - inventory-service `outbox_events` (V5) for the stock replies: native INSERT with `id = eventId` (header `id`), then DELETE in the **same transaction** — the table stays empty, Debezium publishes from the WAL (`OutboxEventPersistenceAdapter`, one write point per use case via `StockReplyFactory`). Payloads are plain JSON (no typed-id objects), checked against copies of the contract schemas. Published by the connector `inventory-outbox-cdc` (development#7): insert-only publication (`publish = 'insert'`, created by script; the DELETEs never reach Debezium), heartbeat table `inventory.debezium_heartbeat` so the slot advances between replies, topics pre-created with 6 partitions by `docker/kafka/create-topics.sh`.
 - Debezium `EventRouter` reads the WAL: **topic = `event_type`**, **key = `aggregate_id`** (`route.topic.replacement=${routedByValue}`). Connector config: `development/docker/kafka-connect/connectors/postgres-cdc.json` and `inventory-outbox-cdc.json` + `register-connectors.sh` (secrets via `FileConfigProvider`).
 - Every record carries the optional header `correlationContext` (JSON of the producer's propagated MDC keys, from `outbox_events.correlation_context`, ADR 0004). Consumers restore it with oms-core `MdcPropagation.restore` (validated, never throws) inside `KafkaMdc`. A new outbox column placed by the connector needs the ordered rollout in `development/docs/connectors.md` (migration → slot past it → connector), or the task fails and all events stop.
-- stores-service: rows are inserted with `status = PENDING` and **never updated or deleted** — the table grows forever (gap, open question 19). inventory deletes its rows in the same transaction (above).
 
 **Consuming — Kafka (inventory-service)**
 - `ProductCreatedConsumer` (`ProductCreated`, group `product-consumer`) and `ProductUpdatedConsumer` (`ProductUpdated`, group `inventory-product-updated`); value is a JSON string inside JSON (Connect JsonConverter), decoded twice (`OutboxPayloadDecoder`).
@@ -61,7 +60,7 @@ description: Event-driven integration in the OMS — transactional outbox with D
 
 ## Known gaps
 - Kafka DLT topics have no alerting and no replay tool (open questions 17, 40); no DLQ on SQS.
-- stores-service's `outbox_events` is never cleaned up (inventory's is always empty).
+- Both outboxes are always empty: a lost or recreated replication slot loses the gap's events for good (no resync tool, open question 40; runbooks in `development` `docs/connectors.md`).
 - `OrderCreatedEventConsumer` exists but its listener is commented out.
 - `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
 - Consumer group name `product-consumer` is generic.

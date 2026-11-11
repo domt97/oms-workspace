@@ -14,7 +14,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 | `StoreAvailability` | forced open/close windows | `store_availability` |
 | `StoreProduct` | product (`DRAFT`, `ACTIVE`, `INACTIVE`), `ProductSku[]` (price, dimensions), `ProductImage[]` | `store_products`, `product_skus`, `product_images` |
 | `StoreCollection` | merchandising group, list of `ProductId` | `store_collections`, `product_collections` |
-| Outbox | pending integration events | `outbox_events` |
+| Outbox | `ProductCreated` / `ProductUpdated`; `id` = payload `eventId`, JSONB `payload` and `correlation_context`; rows inserted and deleted in the same transaction (stores-service#59), so the table is always empty and Debezium publishes from the WAL; `store.debezium_heartbeat` is a table of the connector setup (no merchant data, not Flyway) | `outbox_events` |
 
 **Publishes:** `ProductCreated` (on create and on Excel import, `version` 0) and `ProductUpdated` (update-product PUT; built (stores-service#48, inventory-service#32; live once merged)). Tables: `store_products.version`, `product_skus.store_id` / `removed_at`, `UNIQUE (store_id, sku)`.
 **Consumes:** nothing yet.
