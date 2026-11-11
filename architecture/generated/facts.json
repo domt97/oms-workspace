@@ -51,11 +51,15 @@
       }
     ],
     "migrations": {
-      "latest": "V4__stock_reservation_orders_and_movement_reservation.sql",
+      "latest": "V5__outbox_events.sql",
       "tables": [
         {
           "created_in": "V1__init_inventory_tables.sql",
           "table": "inventories"
+        },
+        {
+          "created_in": "V5__outbox_events.sql",
+          "table": "outbox_events"
         },
         {
           "created_in": "V3__product_catalog_versions_and_wider_sku.sql",
