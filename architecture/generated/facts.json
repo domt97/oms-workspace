@@ -11,6 +11,16 @@
     "listeners": [
       {
         "active": true,
+        "class": "ConfirmStockReservationConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/ConfirmStockReservationConsumer.java",
+        "group": "inventory-confirm-stock-reservation",
+        "topics": [
+          "ConfirmStockReservation"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
         "class": "ProductCreatedConsumer",
         "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/ProductCreatedConsumer.java",
         "group": "product-consumer",
@@ -30,12 +40,22 @@
         "transport": "kafka"
       },
       {
-        "active": false,
-        "class": "OrderCreatedEventConsumer",
-        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/OrderCreatedEventConsumer.java",
-        "group": "order-consumer",
+        "active": true,
+        "class": "ReleaseStockReservationConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/ReleaseStockReservationConsumer.java",
+        "group": "inventory-release-stock-reservation",
         "topics": [
-          "OrderCreated"
+          "ReleaseStockReservation"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "ReserveStockConsumer",
+        "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/message/ReserveStockConsumer.java",
+        "group": "inventory-reserve-stock",
+        "topics": [
+          "ReserveStock"
         ],
         "transport": "kafka"
       },

@@ -16,9 +16,11 @@
 
 | Transport | Topic / queue | Group | Class | Active |
 |---|---|---|---|---|
+| kafka | `ConfirmStockReservation` | inventory-confirm-stock-reservation | `ConfirmStockReservationConsumer` | yes |
 | kafka | `ProductCreated` | product-consumer | `ProductCreatedConsumer` | yes |
 | kafka | `ProductUpdated` | inventory-product-updated | `ProductUpdatedConsumer` | yes |
-| kafka | `OrderCreated` | order-consumer | `OrderCreatedEventConsumer` | no (commented out) |
+| kafka | `ReleaseStockReservation` | inventory-release-stock-reservation | `ReleaseStockReservationConsumer` | yes |
+| kafka | `ReserveStock` | inventory-reserve-stock | `ReserveStockConsumer` | yes |
 | sqs | `${aws.sqs.queues.reservation-expire}` | – | `SqsReservationExpireConsumer` | yes |
 
 ## Published events (outbox `eventType`)
