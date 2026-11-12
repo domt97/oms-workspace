@@ -31,6 +31,7 @@ description: Performance and scalability in the OMS — sizing a feature for lar
 
 **Kafka**
 - `ProductCreatedConsumer` uses the default listener concurrency of 1. Throughput is bounded by the number of partitions × consumer instances.
+- The stock command listeners (inventory-service) set `max.poll.records=5` and take their concurrency from `app.kafka.stock-commands.concurrency` (default 1). Two rules to reuse: (1) bound one poll below `max.poll.interval.ms` — records × (pool wait + transaction timeout) + the longest backoff, here 5 × 31 s + 60 s = 215 s < 300 s; the pool's connection wait counts **per record** and lies outside the transaction timeout; (2) every listener thread can hold a connection: `3 × concurrency + 3` (catalog listeners, expiry) must stay within the Hikari pool (10), which also serves REST. With concurrency 1 a record being retried delays the other partitions of its topic on that instance.
 
 ## Rules
 1. **Size it first.** Before designing, write down the volumes: rows per merchant/store, requests or events per second at peak, growth per month. Then estimate cost per unit (DB round trips, remote calls) × volume. If a number is a guess, label it as an estimate and say how to measure it.

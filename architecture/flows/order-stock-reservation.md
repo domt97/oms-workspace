@@ -1,7 +1,8 @@
 # Flow: Order → stock reservation lifecycle
 
-Status: **designed** (ADR 0006, 2026-11-05). inventory's use cases (inventory-service#39) and its outbox replies
-(inventory-service#40) are built, published by the connector `inventory-outbox-cdc` (development#7), with no entry point. order-service and the command consumers are not built.
+Status: **inventory's side built** (ADR 0006, 2026-11-05): the use cases (inventory-service#39), the outbox replies
+(inventory-service#40) published by the connector `inventory-outbox-cdc` (development#7), and the Kafka command
+consumers (inventory-service `feature/stock-command-consumers`). order-service is not built: nothing sends the commands yet.
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -131,6 +132,47 @@ list or widen the connection-failure check, a test must show, by cause chain (SQ
 `TransactionTimedOutException`, a "transaction timeout expired" Hibernate `TransactionException`), that timeouts still get
 the bounded retries and then the DLT.
 
+*Done with the command consumers (inventory-service `feature/stock-command-consumers`):* `KafkaErrorHandlingConfigTest` asserts those cause chains, and
+`StockCommandErrorClassificationIT` gives the real exceptions to the real error handler: 55P03 and 57014 produced by
+Postgres under a use case, and the transaction-deadline exception from a real Spring transaction (not through a use case). That IT found one exception to the paragraph above: the outbox INSERT and DELETE are plain JDBC
+(`NamedParameterJdbcTemplate`), not Hibernate, and Spring JDBC translates the whole SQLState class 57 to
+`DataAccessResourceFailureException` — so a `statement_timeout` (57014) on those statements was classified as a
+connection failure (unlimited retries). `isConnectionFailure` now excludes SQLState 57014 by the cause chain: a
+cancelled statement always gets the bounded retries; other class-57 states (e.g. 57P01, admin shutdown) stay
+connection failures. The Hibernate `TransactionException` case is asserted with a constructed exception only.
+
+## Command consumers (inventory-service)
+
+`ReserveStockConsumer`, `ConfirmStockReservationConsumer`, `ReleaseStockReservationConsumer` — one topic and one
+consumer group each (`inventory-reserve-stock`, `inventory-confirm-stock-reservation`,
+`inventory-release-stock-reservation`). Each only decodes the record (JSON string inside JSON, or a plain object), maps
+it to the command and calls the use case inside the record's MDC scope (so the reply's `correlation_context` carries
+the command's `requestId`; log lines carry `orderId`). They hold no state: idempotency is the order header's.
+
+| Record | What inventory does |
+|--------|---------------------|
+| Valid command | use case runs; whatever the outcome (also a rejection or a duplicate), the reply is in the outbox and the offset is committed |
+| Unreadable JSON, a malformed UUID or instant, a missing required field (only a missing `reason` is accepted), `quantity` not a whole number, `restock` not a JSON boolean, more than 100 lines, the order owned by another merchant/store, the same order with different lines | `<topic>.DLT` at once, nothing written, **no reply** |
+| `eventType` different from the topic's message type | `<topic>.DLT` at once. The three payloads overlap: without this check a `ReleaseStockReservation` payload on topic `ConfirmStockReservation` would be read as a confirm and deduct stock. The schemas already fix `eventType` with a `const` |
+| Lock / statement / transaction timeout, a confirm or release that lost to the expiry | 6 retries with backoff (~35 s plus the attempts), then `<topic>.DLT`; the retry of a lost race answers from the new state |
+| Database unreachable | retried without limit (backoff up to 1 min); the partition waits |
+| Null value (tombstone) | ignored with a WARN |
+
+Not checked: that the record key equals `orderId` (inventory's correctness does not depend on partition order).
+Jackson's lenient readings are accepted: a numeric `occurredAt` is epoch **seconds**, a `quantity` sent as the string
+`"5"` is 5. A command in a DLT gets no reply and is visible only as one ERROR line until the DLT tooling exists (open
+question 17); the saga's timeout covers it (ADR 0006; for a confirm step see open question 54).
+
+Listener sizing: 5 records per poll and one listener thread per topic per instance by default
+(`app.kafka.stock-commands.concurrency`); the reasoning and the pool rule are in inventory-service `CLAUDE.md`,
+production sizing is open question 30.
+
+Verified by hand on the local stack (2026-11-12, messages sent with `kafka-console-producer`, no order-service):
+reserve → duplicate → confirm → release with restock produced `StockReserved` ×2, `StockReservationConfirmed`,
+`StockReservationReleased` on their topics with the command's `requestId` in the `correlationContext` header; not enough
+stock → `StockReservationRejected`; bad JSON and a wrong `eventType` → the DLT at once; a confirm while the order header
+was locked → 7 attempts in 55 s, then `ConfirmStockReservation.DLT`, no rebalance, later commands processed.
+
 ## Locks
 
 Global order: order header → reservations (id ascending) → inventories (Java `UUID.compareTo`). Expiry takes only
@@ -141,10 +183,10 @@ decided by the guarded `status = 'RESERVED'` updates.
 
 | Step | inventory-service code | Entry point |
 |------|------------------------|-------------|
-| Reserve | `ReserveStockService`: header, duplicate / stale checks, reasons, guarded reserve, `RESERVE` movements → `ReserveStockResult` | none |
-| Confirm | `ConfirmStockReservationService`: header (tombstone if missing), `SALE` movements → `ConfirmStockReservationResult` | none |
+| Reserve | `ReserveStockService`: header, duplicate / stale checks, reasons, guarded reserve, `RESERVE` movements → `ReserveStockResult` | `ReserveStockConsumer` (topic `ReserveStock`) |
+| Confirm | `ConfirmStockReservationService`: header (tombstone if missing), `SALE` movements → `ConfirmStockReservationResult` | `ConfirmStockReservationConsumer` (topic `ConfirmStockReservation`) |
 | Expire | `ExpireStockReservationService` → `ExpireByInventoryTransaction`: `RESERVE_EXPIRE` movements, `StockReservationExpired` per (order, merchant, store) | `SqsReservationExpireConsumer` |
-| Release | `ReleaseStockReservationService`: `RESERVE_RELEASE` / `RETURN` movements, `restock` fixed by the first release → `ReleaseStockReservationResult` | none |
+| Release | `ReleaseStockReservationService`: `RESERVE_RELEASE` / `RETURN` movements, `restock` fixed by the first release → `ReleaseStockReservationResult` | `ReleaseStockReservationConsumer` (topic `ReleaseStockReservation`) |
 
 Every result above is written as its reply to `outbox_events` in the same transaction (`StockReplyFactory`,
 `OutboxEventPersistenceAdapter`): inserted with `id = eventId` and deleted at once; Debezium publishes it from the
@@ -153,4 +195,4 @@ WAL. Published by `inventory-outbox-cdc` once registered (development#7).
 Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
 movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc` ✅ (development#7)
 (insert-only publication; Verify a–g passed locally, `development` `docs/connectors.md` *First application*) → stores-service outbox delete-after-insert + open question 45 ✅ (stores-service#59, development#8)
-→ inventory command consumers → DLT tooling.
+→ inventory command consumers ✅ (inventory-service `feature/stock-command-consumers`) → DLT tooling.

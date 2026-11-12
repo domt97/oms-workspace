@@ -34,9 +34,8 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 | `ProductCatalogVersion` *(inventory-service#32)* | last applied catalog event version per product (`product_id`, `merchant_id`, `store_id`, `version`); ordering gate for `ProductCreated`/`ProductUpdated` | `product_catalog_versions` |
 | `StockMovement` | append-only audit; type `RECEIVE`, `SALE`, `RETURN`, `ADJUSTMENT_IN/OUT`, `DAMAGE`, `TRANSFER_IN/OUT`, and the hold types `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE` (BR-INV-05); polymorphic `reference_type` + `reference_id`: movements of an order reference the order line (`ORDER_ITEM` + order item id) and carry `reservation_id` (unique per reservation and type, V4) | `stock_movements` |
 
-**Consumes:** `ProductCreated` and `ProductUpdated` (Kafka, inventory-service#32) → create missing SKUs and set inventory status, through a per-product version gate (`product_catalog_versions`); failures to `<topic>.DLT`; reservation-expire tick (EventBridge → SQS) → expires overdue reservations; `OrderCreated` (consumer stub, disabled; to be removed). *Designed (ADR 0006):* commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation`.
+**Consumes:** `ProductCreated` and `ProductUpdated` (Kafka, inventory-service#32) → create missing SKUs and set inventory status, through a per-product version gate (`product_catalog_versions`); failures to `<topic>.DLT`; reservation-expire tick (EventBridge → SQS) → expires overdue reservations; the stock commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (Kafka, ADR 0006; `ReserveStockConsumer`, `ConfirmStockReservationConsumer`, `ReleaseStockReservationConsumer`, inventory-service `feature/stock-command-consumers`; failures to `<topic>.DLT`; no producer until order-service is built).
 **Publishes:** the stock replies through `outbox_events` (V5; rows inserted and deleted in the same transaction, published by Debezium from the WAL; built; connector `inventory-outbox-cdc`, development#7): `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired`. Also in DB `inventory`, owned by the connector setup and not by Flyway: table `debezium_heartbeat` (heartbeat rows only, no merchant data).
-**Use cases without an entry point yet:** `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` (implemented; their replies are written to the outbox; Kafka consumers are the next step).
 
 ## Shared kernel — `oms-core`
 
@@ -54,5 +53,5 @@ Full target picture (subdomains, context map, roadmap): `vision.md`.
 
 | Context | Expected responsibility | Evidence in code |
 |---------|------------------------|------------------|
-| Order (`order-service`) | Order lifecycle and saga; sends stock commands and consumes inventory's replies (ADR 0006) | Disabled `OrderCreatedEventConsumer`, `OrderId` in oms-core |
+| Order (`order-service`) | Order lifecycle and saga; sends stock commands and consumes inventory's replies (ADR 0006) | inventory's stock command consumers (ADR 0006), `OrderId` in oms-core |
 | Promotion (`promotion-service`) | Pricing rules / discounts | Empty `PromotionServiceClient` |

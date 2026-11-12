@@ -10,8 +10,10 @@ flowchart LR
     OB -- WAL --> DBZ[Debezium<br/>Kafka Connect]
     DBZ -- ProductCreated --> K[(Kafka)]
     K --> PC[ProductCreatedConsumer]
+    K -.-> SC[Stock command consumers]
     subgraph inventory-service
         PC --> IUC[Use cases]
+        SC --> IUC
         IAPI[REST /v1/inventory/inventories] --> IUC
         SQS[SqsReservationExpireConsumer] --> IUC
         IUC --> IDB[(Postgres: inventory)]
@@ -39,7 +41,7 @@ Text logs; every line starts with the MDC (`logging.pattern.correlation: "[%X] "
 `requestId` (one per flow: the HTTP request's id, carried to Kafka consumers in the `correlationContext` header, ADR 0004;
 `topic-partition-offset` for a record without it; the message id for SQS), the request values configured in `app.logging.mdc.fields`
 (defaults: `merchantId`, `storeId`, `productId`, `collectionId`, `inventoryId`, `storeAvailabilityId` as UUID path variables), and for messages `eventId`, `kafkaTopic`/`kafkaPartition`/`kafkaOffset`,
-`sqsMessageId`. Search by `requestId` across services: stores-service's request and inventory's consumer and DLT lines share it
+`sqsMessageId`; inventory's stock command consumers add `orderId` from the payload (a key of inventory-service, not in `MdcKeys`). Search by `requestId` across services: stores-service's request and inventory's consumer and DLT lines share it
 (the browser's `X-Request-Id` when valid). All records of one Excel import share the import's id; to isolate one record use `eventId` or
 `kafkaOffset`. `eventId` (the payload `eventId`, equal to the Kafka header `id`) still joins stores' DEBUG "Outbox event queued"
 line (`logging.level.com.dotran.oms.store.infrastructure.persistence.OutboxEventPersistenceAdapter: DEBUG`). A Kafka record keeps its
