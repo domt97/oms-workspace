@@ -14,7 +14,8 @@ description: Event-driven integration in the OMS — transactional outbox with D
 
 **Consuming — Kafka (inventory-service)**
 - `ProductCreatedConsumer` (`ProductCreated`, group `product-consumer`) and `ProductUpdatedConsumer` (`ProductUpdated`, group `inventory-product-updated`); value is a JSON string inside JSON (Connect JsonConverter), decoded twice (`OutboxPayloadDecoder`).
-- `KafkaErrorHandlingConfig` (`DefaultErrorHandler` bean): contract errors (JSON, `InvalidCatalogEventException`, ownership mismatch, `DataIntegrityViolationException`) go to `<topic>.DLT` at once; database connection failures are retried without limit (backoff up to 1 min); other failures are retried 6 times, then sent to the DLT. The recoverer logs the DLT line inside `KafkaMdc`.
+- Stock command consumers (ADR 0006): `ReserveStockConsumer`, `ConfirmStockReservationConsumer`, `ReleaseStockReservationConsumer` (topic = command name; groups `inventory-reserve-stock`, `inventory-confirm-stock-reservation`, `inventory-release-stock-reservation`; `max.poll.records=5`, concurrency from `app.kafka.stock-commands.concurrency`). They only map and call the use case (idempotent by the order header) inside the `KafkaMdc` scope. Lessons kept in `StockCommandMapping`: check `eventType` against the topic when payloads of different messages overlap; map a missing id to a null wrapper (typed ids accept null); do not let Jackson coerce where a wrong value changes the outcome (`quantity` as `BigDecimal` → whole number required, `restock` as `Object` → JSON boolean required).
+- `KafkaErrorHandlingConfig` (`DefaultErrorHandler` bean): contract errors (JSON, `InvalidCatalogEventException`, `InvalidStockCommandException`, ownership mismatch of a catalog event or a stock command, `DataIntegrityViolationException`) go to `<topic>.DLT` at once; database connection failures are retried without limit (backoff up to 1 min); other failures — also a stock command's lock / statement / transaction timeout — are retried 6 times, then sent to the DLT. A cancelled statement (SQLState 57014) is never a connection failure, although Spring JDBC translates SQLState class 57 to `DataAccessResourceFailureException` (classify by the cause chain's SQLState, and prove it with the real exception: `StockCommandErrorClassificationIT`). The recoverer logs the DLT line inside `KafkaMdc`.
 - Delivery is **at-least-once** (Debezium + Kafka): every consumer must be idempotent (workspace rule 7).
 
 **Consuming — SQS (inventory-service)**
@@ -39,7 +40,7 @@ description: Event-driven integration in the OMS — transactional outbox with D
    - existing item with conflicting data (other product/merchant) → log `warn`, do not overwrite;
    - write only the missing items; do not call the write with an empty list;
    - the unique constraint stays as the last line of defence.
-5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert. Today the answer is "skipped after 10 tries" — call that out when it matters.
+5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert. Today inventory's Kafka listeners classify failures (`KafkaErrorHandlingConfig`, see above): poison → `<topic>.DLT` at once, database down → retried until it is back, anything else → 6 retries then the DLT; nobody is alerted about a DLT record yet (open question 17) — call that out when it matters.
    When a DLT is added, classify failures, because one retry policy for all of them loses data:
    - **poison** (unreadable JSON, contract violation, ownership mismatch, constraint error): will never succeed → DLT at once;
    - **infrastructure down** (no DB connection, cannot create a transaction): only waiting fixes it → retry **without limit**
@@ -61,6 +62,6 @@ description: Event-driven integration in the OMS — transactional outbox with D
 ## Known gaps
 - Kafka DLT topics have no alerting and no replay tool (open questions 17, 40); no DLQ on SQS.
 - Both outboxes are always empty: a lost or recreated replication slot loses the gap's events for good (no resync tool, open question 40; runbooks in `development` `docs/connectors.md`).
-- `OrderCreatedEventConsumer` exists but its listener is commented out.
+- The stock command topics have no producer yet (order-service is not built); a command in a DLT gets no reply.
 - `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
 - Consumer group name `product-consumer` is generic.

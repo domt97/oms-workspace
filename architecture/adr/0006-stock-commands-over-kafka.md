@@ -1,6 +1,6 @@
 # ADR 0006 — Stock commands over Kafka, replies from inventory's outbox
 
-Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); command consumers and order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is under review (open question 54).
+Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); the command consumers (inventory-service `feature/stock-command-consumers`); order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is under review (open question 54).
 
 ## Context
 order-service (not built) orchestrates the order saga and "other services execute commands and report back with

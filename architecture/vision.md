@@ -60,7 +60,7 @@ Original evidence for the "on-demand, store-fulfilled" reading: `StoreConfig` ha
 | Context | Service | Status | Owns (aggregates) | Publishes | Consumes |
 |---------|---------|--------|-------------------|-----------|----------|
 | Store & Catalog | `stores-service` | built | `Store`, `StoreAvailability`, `StoreProduct`, `StoreCollection` | `ProductCreated`, `ProductUpdated` (catalog snapshot incl. status); *proposed*: `StoreStatusChanged` | — |
-| Inventory | `inventory-service` | built (no order entry points) | `Inventory`, `StockReservation`, `StockMovement` | *designed* (ADR 0006): replies `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired` | `ProductCreated`, `ProductUpdated`; *designed*: commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` |
+| Inventory | `inventory-service` | built (stock commands consumed over Kafka; their sender, order-service, is not built) | `Inventory`, `StockReservation`, `StockMovement` | built (ADR 0006): replies `StockReserved`, `StockReservationRejected`, `StockReservationConfirmed`, `StockReservationConfirmationFailed`, `StockReservationReleased`, `StockReservationExpired` | `ProductCreated`, `ProductUpdated`; commands `ReserveStock`, `ConfirmStockReservation`, `ReleaseStockReservation` |
 | **Cart** | `cart-service` (platform level, owned by the customer) | planned | `Cart` (+ `CartLine`), one active cart per customer, lines from stores of several merchants | `CartCheckedOut` *(optional, for analytics)* | *proposed*: `ProductUpdated` (to flag unavailable lines) |
 | **Ordering** | `order-service` | planned (next) | `Checkout` (owned by the customer, one payment) groups N `Order`s (each owned by one merchant/store, + `OrderLine` snapshots) | `OrderPlaced`, `OrderAccepted`, `OrderRejected`, `OrderCancelled`, `OrderCompleted` | inventory, payment, store events |
 | Payment | `payment-service` (mock provider) | planned | `Payment` (intent, attempts, refunds) | `PaymentSucceeded`, `PaymentFailed`, `RefundSucceeded` | order events |
@@ -167,7 +167,7 @@ sequenceDiagram
 
 | Phase | Goal | Contents |
 |-------|------|----------|
-| 0. Harden | Safe base for orders | Open questions 24–26 (import outbox, S3 bucket, SKU uniqueness), 13 (idempotent reserve), 8 (release + entry points), inventory outbox, 17/18 (DLT/DLQ), CI tests |
+| 0. Harden | Safe base for orders | Open questions 24–26 (import outbox, S3 bucket, SKU uniqueness), 13 (idempotent reserve), release + entry points (done, ADR 0006), inventory outbox (done), 17/18 (DLT/DLQ), CI tests |
 | 1. Cart + Order MVP | Take an order end to end | `cart-service` (one multi-store cart per customer, indicative prices, checkout → `PlaceCheckout`) and `order-service`: split per store, line snapshots, reserve on placement, store accept/reject, statuses to `COMPLETED`, cancel before acceptance; **COD** first, delivery fee from the partner quote. Delivery comes first and pickup later (Q25), so the MVP includes the **mock delivery partner** |
 | 2. Payment | Online payment | `payment-service` with a **mock** payment provider (one payment per checkout), reservation TTL aligned with the payment window, refunds on cancel |
 | 3. Promotion & settlement | Discounts, merchant payouts | Platform and shop vouchers (Q31), snapshot on the order; settlement: commission, merchant balances, mocked payouts (Q29) |
