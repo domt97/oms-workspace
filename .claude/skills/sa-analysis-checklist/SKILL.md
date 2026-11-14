@@ -1,6 +1,7 @@
 ---
 name: sa-analysis-checklist
-description: Mandatory checklist for any OMS analysis, plan or review — evidence with file:line, verifying runtime behaviour instead of guessing, concurrency, edge cases, negative tests, which repo/branch each file belongs to, and safety rules. Use before presenting any plan, root-cause analysis or code review.
+description: Mandatory checklist for any OMS analysis, plan or review — evidence, runtime behaviour, concurrency, edge cases, tests, routing, and which other sa-* skill to open. Use before presenting a plan, analysis or review.
+user-invocable: false
 ---
 # Analysis checklist (solution-architect discipline)
 
@@ -15,17 +16,9 @@ If an item does not apply, say so in one line — do not silently skip it.
       without that evidence.
 - [ ] Facts come from `architecture/generated/` and code, not from READMEs. If docs disagree, code wins — note the drift.
 - [ ] Unknown business rules are listed as **questions for the user**, not invented.
-- [ ] A gap that sits in **another bounded context that this piece of work does not design or change** (e.g. an
-      inventory PR that finds a gap in order-service's saga) is recorded as an open question (`open-questions.md`,
-      business half in `business-rules.md` *Open business questions*) together with **what this context guarantees**
-      for every choice the other side may make. Do not write a new rule or obligation for that context into an ADR or
-      flow as decided unless the user decided it (cite the date) — cross-context designs done with `/feature-impact`
-      or `oms-architect` decide such obligations with the user, as ADR 0006 did. If an existing rule or obligation is
-      called into question, propose in the plan a note on that item — "Under review (YYYY-MM-DD, open question N)" —
-      leaving the ADR status and any BR status unchanged (for a BR, append the note to the status column, after the
-      existing status, and cite the business question id too: "Under review (YYYY-MM-DD, open question N, Qn)" —
-      open-questions numbers and business Q-ids are different series); apply it only once the user approves the plan. Remove the note when open question N is
-      resolved: the ADR or BR is then updated, or superseded by a new ADR, with the user's decision.
+- [ ] A gap that sits in **another bounded context that this piece of work does not design or change** is recorded as
+      an open question, with what this context guarantees for each choice the other side may make — never written
+      into an ADR or flow as decided. How to record it: `.claude/skills/sa-analysis-checklist/references/cross-context-gaps.md`.
 
 ## 2. Root cause
 - [ ] State the root cause in one sentence, then the **real impact** (data loss? duplicate? noise? stuck?).
@@ -70,5 +63,19 @@ Present a table — one row per file you will change:
 ## 8. Safety rules (never break)
 - Never ask the user to paste tokens, passwords, keys or `gh auth token` output into the chat.
   If `gh` is not authenticated, ask the user to run `gh auth login`, or give the compare URL.
-- Never push to `develop`/`master`, never force-push, never merge. Ask before commit, push and PR.
-- Never edit `architecture/generated/` by hand.
+- Git and release rules: `CLAUDE.md` → *Rules for Claude and all agents*. Never edit `architecture/generated/` by hand.
+
+## 9. Which other skill to open
+Only this checklist is preloaded. Open the skills below for what the change touches — with the Skill tool, or by reading
+`.claude/skills/<name>/SKILL.md`. Each has a `references/current-state.md` with how the OMS does it today.
+
+| The change touches | Open |
+|---|---|
+| A REST endpoint or a service-to-service call | `sa-api-design`, `sa-multitenancy-security`, `sa-testing-strategy` |
+| An event, a command, a consumer or the outbox | `sa-messaging-events`, `sa-resilience-observability`, `sa-testing-strategy` |
+| SQL, a table, a migration, a transaction boundary | `sa-data-persistence`; add `sa-concurrency-consistency` when writes can overlap |
+| Stock, quantities, a state machine, a multi-step flow | `sa-concurrency-consistency`, `sa-data-persistence` |
+| A queue, bucket, schedule, Terraform, local infra | `sa-aws-platform`, `sa-resilience-observability` |
+| An aggregate, a business rule, a type for oms-core | `sa-ddd-hexagonal` |
+| A job, a batch, large volume | `sa-performance-scalability`, `sa-resilience-observability` |
+| A new bounded context or service | `sa-ddd-hexagonal`, `sa-messaging-events`, `sa-multitenancy-security` |
