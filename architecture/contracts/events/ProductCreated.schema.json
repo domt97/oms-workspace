@@ -17,7 +17,7 @@
       "items": {
         "type": "object",
         "required": ["value"],
-        "properties": { "value": { "type": "string", "maxLength": 100, "description": "stores-service accepts 100; inventory-service stores 50 today (open question 41, planned to widen to 100)." } }
+        "properties": { "value": { "type": "string", "maxLength": 100, "description": "stores-service accepts 100; inventory-service stores 100 since its migration V3." } }
       }
     }
   }
