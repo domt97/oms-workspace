@@ -15,6 +15,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 HTTP_ANN = {
@@ -119,11 +120,54 @@ def extract_listeners(java: Path, root: Path, code: str, comments: str) -> list[
     return out
 
 
+EVENT_DIR_RE = re.compile(r"/(?:application|domain)/event/")
+EVENT_TYPE_CALL_RE = re.compile(r'\.eventType\(\s*"([^"]+)"\s*\)')
+EVENT_TYPE_DECL_RE = re.compile(r'\bString\s+(?:TYPE|eventType)\s*=\s*"([^"]+)"')
+PUBLISHED_BY_RE = re.compile(r"\bPublished by ([a-z][a-z0-9-]*)")
+
+
 def extract_published(java: Path, root: Path, code: str) -> list[dict]:
-    if "OutboxEvent" not in code:
-        return []
-    return [{"event": e, "file": rel(java, root)}
-            for e in sorted(set(re.findall(r'\.eventType\(\s*"([^"]+)"\s*\)', code)))]
+    """Event types a service writes to its outbox. Two spellings are recognised:
+
+    1. a literal passed to the outbox builder, `.eventType("ProductCreated")`, in a file that mentions
+       `OutboxEvent` (stores-service);
+    2. a declared name in the packages that hold outgoing messages, `application/event` and `domain/event`:
+       a constant `String TYPE = "StockReserved"` or a field default `String eventType = "ProductCreated"`
+       (inventory-service replies).
+
+    The package rule is what separates outgoing messages from consumed ones: a consumer's own `TYPE` constant
+    and the incoming DTOs live in `infrastructure/message` (system rule 3) and are not counted.
+    """
+    events = set()
+    if "OutboxEvent" in code:
+        events.update(EVENT_TYPE_CALL_RE.findall(code))
+    if EVENT_DIR_RE.search("/" + Path(rel(java, root)).as_posix()):
+        events.update(EVENT_TYPE_DECL_RE.findall(code))
+    return [{"event": e, "file": rel(java, root)} for e in sorted(events)]
+
+
+def contract_events(contracts: Path) -> dict[str, list[str]]:
+    """Events each service publishes according to the contract schemas, whose `description` says
+    "Published by <service> …". Used to notice when the extractor (or the code) is missing one of them."""
+    by_service: dict[str, list[str]] = {}
+    if not contracts.is_dir():
+        return by_service
+    for schema in sorted(contracts.glob("*.schema.json")):
+        try:
+            description = json.loads(schema.read_text(encoding="utf-8")).get("description") or ""
+        except (OSError, ValueError, AttributeError):
+            continue
+        m = PUBLISHED_BY_RE.search(description)
+        if m:
+            by_service.setdefault(m.group(1), []).append(schema.name[: -len(".schema.json")])
+    return by_service
+
+
+def contract_names(contracts: Path) -> set[str] | None:
+    """Every message that has a schema in the contracts folder, or None when there is no such folder."""
+    if not contracts.is_dir():
+        return None
+    return {schema.name[: -len(".schema.json")] for schema in contracts.glob("*.schema.json")}
 
 
 def extract_migrations(svc: Path) -> dict:
@@ -151,7 +195,8 @@ def type_names(svc: Path, pattern: str, suffix: str = "") -> list[str]:
     return sorted(names)
 
 
-def extract_service(svc: Path, root: Path) -> dict:
+def extract_service(svc: Path, root: Path, contract: list[str] | None = None,
+                    schemas: set[str] | None = None) -> dict:
     main = svc / "src/main/java"
     rest, listeners, published = [], [], []
     for java in sorted(main.rglob("*.java")):
@@ -170,6 +215,9 @@ def extract_service(svc: Path, root: Path) -> dict:
         "rest": rest,
         "listeners": listeners,
         "published_events": [{"event": e, "files": sorted(set(f))} for e, f in sorted(pub.items())],
+        "contract_events": sorted(contract or []),
+        "contract_events_missing": sorted(set(contract or []) - set(pub)),
+        "published_without_contract": sorted(set(pub) - schemas) if schemas is not None else [],
         "migrations": extract_migrations(svc),
         "aggregates": type_names(svc, "src/main/java/**/domain/model/*.java"),
         "use_cases": type_names(svc, "src/main/java/**/application/usecase/**/*.java", "UseCase"),
@@ -194,6 +242,18 @@ def render_md(name: str, f: dict) -> str:
     L += [f"| {l['transport']} | {', '.join('`'+t+'`' for t in l['topics'])} | {l['group'] or '–'} | `{l['class']}` | {'yes' if l['active'] else 'no (commented out)'} |" for l in f["listeners"]] or ["| – | – | – | – | – |"]
     L += ["", "## Published events (outbox `eventType`)", ""]
     L += [f"- `{p['event']}` — {', '.join(p['files'])}" for p in f["published_events"]] or ["- none"]
+    if f["contract_events_missing"]:
+        L += ["", "> **Contract check failed.** `architecture/contracts/events/` says this service publishes "
+              + ", ".join(f"`{e}`" for e in f["contract_events_missing"])
+              + ", but no such event type was found in its code. Either the code does not publish it, or "
+              "`scripts/extract_facts.py` does not recognise how it is declared: do not trust this list until that is settled."]
+    elif f["contract_events"]:
+        L += ["", f"Contract check: all {len(f['contract_events'])} events that `architecture/contracts/events/` "
+              "attributes to this service were found."]
+    if f["published_without_contract"]:
+        L += ["", "> **No contract schema.** " + ", ".join(f"`{e}`" for e in f["published_without_contract"])
+              + " is declared as published in the code but has no schema in `architecture/contracts/events/`. "
+              "Add the schema, or check that the declaration really is an outgoing event."]
     m = f["migrations"]
     L += ["", f"## Database tables (latest migration: `{m['latest']}`)", ""]
     L += [f"- `{t['table']}` (created in {t['created_in']})" for t in m["tables"]] or ["- none"]
@@ -214,13 +274,22 @@ def main() -> None:
     root = Path(__file__).resolve().parent.parent
     ap.add_argument("--repos", default=str(root / "repos"))
     ap.add_argument("--out", default=str(root / "architecture/generated"))
+    ap.add_argument("--contracts", default=str(root / "architecture/contracts/events"))
     a = ap.parse_args()
     repos, out = Path(a.repos), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    by_contract = contract_events(Path(a.contracts))
+    schemas = contract_names(Path(a.contracts))
     facts = {}
     for svc in sorted(p for p in repos.iterdir() if p.is_dir() and is_service(p)):
-        facts[svc.name] = extract_service(svc, repos)
+        facts[svc.name] = extract_service(svc, repos, by_contract.get(svc.name), schemas)
         (out / f"{svc.name}.md").write_text(render_md(svc.name, facts[svc.name]), encoding="utf-8")
+        missing = facts[svc.name]["contract_events_missing"]
+        if missing:
+            print(f"WARNING {svc.name}: in the contracts but not found in code: {', '.join(missing)}", file=sys.stderr)
+        extra = facts[svc.name]["published_without_contract"]
+        if extra:
+            print(f"WARNING {svc.name}: published in code but no contract schema: {', '.join(extra)}", file=sys.stderr)
     (out / "facts.json").write_text(json.dumps(facts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Extracted facts for: {', '.join(facts) or 'no services found'} → {out}")
 

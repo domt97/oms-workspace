@@ -36,8 +36,10 @@
 
 ## Published events (outbox `eventType`)
 
-- `ProductCreated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
-- `ProductUpdated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java
+- `ProductCreated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java, stores-service/src/main/java/com/dotran/oms/store/domain/event/ProductCreatedEvent.java
+- `ProductUpdated` — stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java, stores-service/src/main/java/com/dotran/oms/store/domain/event/ProductUpdatedEvent.java
+
+Contract check: all 2 events that `architecture/contracts/events/` attributes to this service were found.
 
 ## Database tables (latest migration: `V10__clean_outbox_events.sql`)
 

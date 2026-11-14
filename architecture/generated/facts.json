@@ -8,6 +8,15 @@
       "StockReservationOrder"
     ],
     "branch": "develop",
+    "contract_events": [
+      "StockReservationConfirmationFailed",
+      "StockReservationConfirmed",
+      "StockReservationExpired",
+      "StockReservationRejected",
+      "StockReservationReleased",
+      "StockReserved"
+    ],
+    "contract_events_missing": [],
     "listeners": [
       {
         "active": true,
@@ -100,7 +109,45 @@
       ]
     },
     "outbound_clients": [],
-    "published_events": [],
+    "published_events": [
+      {
+        "event": "StockReservationConfirmationFailed",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      },
+      {
+        "event": "StockReservationConfirmed",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      },
+      {
+        "event": "StockReservationExpired",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      },
+      {
+        "event": "StockReservationRejected",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      },
+      {
+        "event": "StockReservationReleased",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      },
+      {
+        "event": "StockReserved",
+        "files": [
+          "inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java"
+        ]
+      }
+    ],
+    "published_without_contract": [],
     "rest": [
       {
         "file": "inventory-service/src/main/java/com/dotran/oms/inventory/infrastructure/rest/internal/InventoryInternalController.java",
@@ -170,6 +217,11 @@
       "StoreProduct"
     ],
     "branch": "develop",
+    "contract_events": [
+      "ProductCreated",
+      "ProductUpdated"
+    ],
+    "contract_events_missing": [],
     "listeners": [],
     "migrations": {
       "latest": "V10__clean_outbox_events.sql",
@@ -232,16 +284,19 @@
       {
         "event": "ProductCreated",
         "files": [
-          "stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java"
+          "stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java",
+          "stores-service/src/main/java/com/dotran/oms/store/domain/event/ProductCreatedEvent.java"
         ]
       },
       {
         "event": "ProductUpdated",
         "files": [
-          "stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java"
+          "stores-service/src/main/java/com/dotran/oms/store/application/event/OutboxEventHelper.java",
+          "stores-service/src/main/java/com/dotran/oms/store/domain/event/ProductUpdatedEvent.java"
         ]
       }
     ],
+    "published_without_contract": [],
     "rest": [
       {
         "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/MerchantController.java",
