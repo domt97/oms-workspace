@@ -1,8 +1,7 @@
 # Flow: Order → stock reservation lifecycle
 
-Status: **inventory's side built** (ADR 0006, 2026-11-05): the use cases (inventory-service#39), the outbox replies
-(inventory-service#40) published by the connector `inventory-outbox-cdc` (development#7), and the Kafka command
-consumers (inventory-service `feature/stock-command-consumers`). order-service is not built: nothing sends the commands yet.
+Status: **inventory's side built** (ADR 0006): the use cases, the outbox replies published by the connector
+`inventory-outbox-cdc`, and the Kafka command consumers. order-service is not built: nothing sends the commands yet.
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -132,7 +131,7 @@ list or widen the connection-failure check, a test must show, by cause chain (SQ
 `TransactionTimedOutException`, a "transaction timeout expired" Hibernate `TransactionException`), that timeouts still get
 the bounded retries and then the DLT.
 
-*Done with the command consumers (inventory-service `feature/stock-command-consumers`):* `KafkaErrorHandlingConfigTest` asserts those cause chains, and
+*Covered by tests:* `KafkaErrorHandlingConfigTest` asserts those cause chains, and
 `StockCommandErrorClassificationIT` gives the real exceptions to the real error handler: 55P03 and 57014 produced by
 Postgres under a use case, and the transaction-deadline exception from a real Spring transaction (not through a use case). That IT found one exception to the paragraph above: the outbox INSERT and DELETE are plain JDBC
 (`NamedParameterJdbcTemplate`), not Hibernate, and Spring JDBC translates the whole SQLState class 57 to
@@ -190,9 +189,6 @@ decided by the guarded `status = 'RESERVED'` updates.
 
 Every result above is written as its reply to `outbox_events` in the same transaction (`StockReplyFactory`,
 `OutboxEventPersistenceAdapter`): inserted with `id = eventId` and deleted at once; Debezium publishes it from the
-WAL. Published by `inventory-outbox-cdc` once registered (development#7).
+WAL. Published by `inventory-outbox-cdc`.
 
-Delivery plan (one PR each, in order): workspace docs and contracts ✅ → oms-web (missing record = not orderable, hold
-movement types) ✅ → inventory reservation hardening ✅ → inventory outbox ✅ → `development` connector `inventory-outbox-cdc` ✅ (development#7)
-(insert-only publication; Verify a–g passed locally, `development` `docs/connectors.md` *First application*) → stores-service outbox delete-after-insert + open question 45 ✅ (stores-service#59, development#8)
-→ inventory command consumers ✅ (inventory-service `feature/stock-command-consumers`) → DLT tooling.
+Still to build: DLT alerting and replay (open questions 17, 40), and order-service itself.
