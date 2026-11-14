@@ -30,7 +30,7 @@ Not built yet but referenced in code: **order-service** (will send the stock com
 | End-to-end flows | `architecture/flows/*.md` |
 | Why things are the way they are | `architecture/adr/*.md` |
 | Terms (SKU, reservation, movement…) | `architecture/glossary.md` |
-| **Extracted facts (generated from code, ground truth)** | `architecture/generated/<service>.md`, `facts.json` |
+| **Extracted facts (generated from code, ground truth)** | `architecture/generated/<repo>.md`, `facts.json` |
 | Known gaps and doc/code drift | `architecture/open-questions.md` |
 | How to work inside one service (layout, checklist, invariants) | `repos/<service>/CLAUDE.md` |
 | Front-end layers, dependency rule, which backend endpoints the web uses and its temporary stand-ins | `repos/oms-web/docs/architecture.md`, `integration.md` → *Front-end consumers* |
@@ -106,7 +106,7 @@ into `develop`; `oms-workspace` changes go on `docs/…`, `chore/…`, `ci/…` 
 
 ## Keeping this map true
 
-- `scripts/extract_facts.py` reads every service (`develop`) and writes `architecture/generated/`; `refresh-facts.yml` runs it
+- `scripts/extract_facts.py` reads every repo (services and `oms-web` on `develop`) and writes `architecture/generated/`; `refresh-facts.yml` runs it
   daily and opens a PR (label `architecture-drift`) when facts change. When hand-written docs and generated facts
   disagree, **generated facts win**. Run `python3 scripts/extract_facts.py` after `sync-repos.sh` to refresh them locally.
 - How to write and update the docs (same-PR rule, contract check, never edit generated files): `.claude/rules/architecture-docs.md`.

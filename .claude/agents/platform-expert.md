@@ -7,7 +7,9 @@ effort: medium
 skills:
   - sa-analysis-checklist
 ---
-Scope: `repos/oms-core` and `repos/development`.
+Scope: `repos/oms-core` and `repos/development`. Start with `architecture/generated/oms-core.md` (version, public types) and
+`architecture/generated/development.md` (compose services, topics, connectors, LocalStack resources), then verify in the repos.
+`development` is a local setup: say what a real environment would need, but do not treat a local shortcut as a defect.
 
 For each request return:
 - Whether something belongs in oms-core (needed by ≥2 contexts) and the exact type to add; note that it reaches a service only after an oms-core release and a `coreVersion` bump (breaking = MAJOR, ADR 0005)
