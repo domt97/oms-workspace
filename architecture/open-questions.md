@@ -9,10 +9,7 @@ is half resolved, rewrite it to what is still open. A number that is not in this
 
 4. **The CDC connectors connect as `postgres` locally** (`development` `docker/kafka-connect/secrets/postgres-cdc.properties.example`). Both connectors use a publication created by script (`publication.autocreate.mode: disabled`), so a dedicated user needs no ownership: REPLICATION, CONNECT on the DB, USAGE on its schema, SELECT on `outbox_events` and `debezium_heartbeat`, INSERT + DELETE on `debezium_heartbeat`, USAGE on `debezium_heartbeat_id_seq` (`development` `docs/connectors.md`).
 5. `development/docker/docker-compose.yml` mounts `./postgres/init` for Postgres, but the folder is not in the repo (DB/schema creation).
-25. **Local AWS resources drifted, and the import bucket comes from the request.**
-    - The LocalStack scripts in `oms-core/localstack/` and `stores-service/localstack/` create unused queues and an EventBridge bus (DynamoDB is gone since merchants moved to Postgres).
-    - In stores-service, `ProductExcelReader.read(path, fileName)` passes the request's `path` as the **S3 bucket** (`S3ObjectStorageReader.read(bucket, key)`), so a caller picks any bucket/key the service can read.
-    - `aws.s3.store-product-bucket` (`S3Properties`) is unused, and its localdev value `localdev_store_products` differs from the Terraform bucket `localdev-store-products`.
+25. **Local AWS resources drifted.** The LocalStack scripts in `oms-core/localstack/` and `stores-service/localstack/` create unused queues and an EventBridge bus (DynamoDB is gone since merchants moved to Postgres).
 
 ## Correctness (stores-service)
 
@@ -56,6 +53,7 @@ is half resolved, rewrite it to what is still open. A number that is not in this
 9. No event for **store** close or status change (`StoreStatusChanged` proposed). Product and SKU changes travel as `ProductUpdated` ([flow](flows/product-updated.md)).
 10. `ProductCreatedEvent` is duplicated in both services; no shared schema / schema-registry subject.
 11. Consumer group `product-consumer` is a generic name; may collide when more services consume products. Do not rename it (with `earliest` a new group replays all `ProductCreated` history); new consumers use specific names (planned: `inventory-product-updated`).
+57. **Product import upload is not built (BR-CAT-17 decided).** Nothing uploads import files: they are copied into `{merchantId}/{storeId}/imports/` by hand. To build: presigned PUT endpoint in stores-service, bucket CORS and a lifecycle rule by tag (7 days) in `development`, file upload in oms-web (which also drops the bucket field and the demo-only gate of `ProductsPage.tsx`). Also open around it: real-environment IAM (`s3:ListBucket` on the prefix, or a missing file is 403 → 500 instead of 404), CORS origins and Terraform; files placed by hand never expire; a name typed in the browser (NFC) and one uploaded from macOS (often NFD) differ byte for byte and give 404.
 32. **Merchant status is not enforced outside stores-service.** Inventory (and later order) only know `merchant_id`. When Q35 decides what a suspended merchant may do, publish `MerchantStatusChanged` from stores-service and keep a local copy in the consumers.
 46. **`requestId` is not carried on outbound HTTP between services** (no client adapter yet; send `X-Request-Id` from `MdcPropagation.capture()` when one is added). Over Kafka it is carried (ADR 0004).
 47. **4xx are logged at ERROR with a stack trace** (`oms-core` `GlobalExceptionHandler.logError`): client mistakes (404, 400) drown real errors. Log 4xx at WARN without the stack.
