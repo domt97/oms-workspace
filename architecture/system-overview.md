@@ -32,6 +32,10 @@ Java 17 · Spring Boot 3.2.3 · Spring Data JPA / Hibernate 6.4 · PostgreSQL 16
 MapStruct 1.6.3 · Lombok · SpringDoc OpenAPI · Kafka (spring-kafka) · Spring Cloud AWS SQS ·
 AWS SDK v2 (S3) · Gradle; `oms-core` pinned by version from GitHub Packages (composite build locally, ADR 0005) · LocalStack for local AWS.
 
+Shared configuration: every service includes the Spring profile `core` (`spring.profiles.include`), which loads oms-core's
+`application-core.yaml` (springdoc, AWS client settings; OpenAPI JSON at `/api-docs`). A profile file wins over the service's
+`application.yaml`, so those values are overridden with environment variables or in `application-localdev.yaml`.
+
 Front end (`oms-web`): React 19 · TypeScript (strict) · Vite · no runtime dependencies besides React;
 layered `domain → ports → adapters / features → app` with the layer rule enforced by a test (`oms-web/docs/architecture.md`).
 
