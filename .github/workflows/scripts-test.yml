@@ -1,0 +1,41 @@
+name: Script tests
+
+# Unit tests of the workspace's own tooling: the facts extractor and the git guard hook.
+on:
+  pull_request:
+    paths:
+      - "scripts/**"
+      - ".claude/hooks/**"
+      - ".claude/settings.json"
+      - ".github/workflows/scripts-test.yml"
+  push:
+    branches: [master]
+    paths:
+      - "scripts/**"
+      - ".claude/hooks/**"
+      - ".claude/settings.json"
+      - ".github/workflows/scripts-test.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scripts-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Script tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: settings.json is valid JSON
+        run: python3 -m json.tool .claude/settings.json > /dev/null
+
+      - name: Unit tests (extract_facts.py, guard_git.py)
+        run: python3 -m unittest discover -s scripts/tests -v

@@ -104,7 +104,11 @@ response fields) is a breaking change for oms-web: include oms-web in the impact
   `version` publishes an oms-core version that can never be changed. Claude may bump `version` in a PR when asked and must
   say in the PR what merging will release.
 - Subagents (`*-expert`, `oms-architect`) are read-only analysts: they never run git write commands.
-- `.claude/settings.json` enforces these with `ask`/`deny` rules; do not try to work around a blocked command — report it instead.
+- `.claude/settings.json` backs these rules up twice. Its `ask`/`deny` rules match the usual spellings. The hook
+  `.claude/hooks/guard_git.py` parses each Bash command, also behind `git -C …` or `cd … &&`, and blocks: a push to
+  `master`/`develop`, force, delete and tag pushes, `reset --hard`, deleting a branch or tag, creating a tag or release,
+  merging an oms-core PR. It reads the command line only (not scripts, aliases or unknown variables), so these rules hold
+  whether or not something blocks. Do not try to work around a blocked command — report it instead.
 
 ## Build & run
 
@@ -137,6 +141,9 @@ response fields) is a breaking change for oms-web: include oms-web in the impact
 - **inventory-service** also has a job **`Integration tests`** (`./gradlew integrationTest`: Testcontainers Postgres on the
   runner's Docker; native SQL, constraints, locks, races). It is not a required check yet. Everything else is unit tests
   only (no Docker): Debezium and Kafka behaviour, and stores-service SQL, stay manual checks.
+- **oms-workspace:** `Script tests` (`python3 -m unittest discover -s scripts/tests`: `scripts/extract_facts.py` and the
+  git guard hook) on PRs that touch `scripts/`, `.claude/hooks/` or `.claude/settings.json`. It is path-filtered, so do not
+  make it a required check as it stands.
 - Branch protection (after the first green runs): required checks `Unit tests` and `core-pin` on service `develop`/`master`,
   `oms-core unit tests` and `release-version` on oms-core `master`, `Check and build` on oms-web.
 
@@ -147,6 +154,9 @@ Two layers keep the docs aligned with code:
 1. **Extracted facts** — `scripts/extract_facts.py` reads every service (`develop`) and writes
    `architecture/generated/`. The GitHub Action `refresh-facts.yml` runs it daily and opens a PR
    (label `architecture-drift`) when facts change. Never edit `architecture/generated/` by hand.
+   The script knows a list of spellings, so it also compares its result with the "Published by <service>" line of each
+   schema in `architecture/contracts/events/`: a "Contract check failed" or "No contract schema" note in a generated file
+   means that list is not to be trusted until the code, the contract or the script is fixed.
    When that PR shows changes, update the hand-written docs to match (or ask Claude:
    "update the docs to match architecture/generated").
 2. **Same-PR rule** — when a change adds/changes a REST endpoint, event, table or aggregate, update
