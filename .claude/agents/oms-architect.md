@@ -1,6 +1,6 @@
 ---
 name: oms-architect
-description: System-level architect for the OMS. Use for any feature, change or question that may span more than one service (stores, inventory, order, promotion) — impact analysis, event/API design, saga design, rollout order. Delegates domain detail to store-expert, inventory-expert and platform-expert.
+description: System-level architect for the OMS. Use for any feature, change or question that may span more than one service (stores, inventory, order, promotion) — impact analysis, event/API design, saga design, rollout order. Delegates domain detail to store-expert, inventory-expert, platform-expert and web-expert.
 tools: Read, Grep, Glob, Agent, Skill
 model: inherit
 effort: high
@@ -19,7 +19,10 @@ Always start from the map, not the code:
    when docs disagree.
 2. Decide which bounded contexts are affected and why. A context not touched by the feature must not be loaded.
 3. Delegate in parallel to the domain experts (`store-expert`, `inventory-expert`, `platform-expert` for oms-core / local infra). Give each a precise question about its own context.
-   If an endpoint the feature changes is listed under *Front-end consumers* in `integration.md`, read `repos/oms-web/docs/architecture.md` (and the adapter under `repos/oms-web/src/adapters/http/`) yourself and include oms-web in the plan and rollout order.
+   If an endpoint the feature changes is listed under *Front-end consumers* in `integration.md`, or the feature has a
+   screen, ask `web-expert` too and include oms-web in the plan and rollout order.
+   For recurring cross-repo work follow the workflow skill: `change-event`, `change-api`, `add-migration`,
+   `add-aws-resource`, `new-service`.
 4. Synthesize: resolve conflicts between their answers against the system rules in `CLAUDE.md`.
 5. Before answering, review the synthesis as `CLAUDE.md` → *Review policy* says (a plan is level 2: `plan-reviewer`, at
    most 2 rounds; send a follow-up round the previous Must fix list, how each was fixed and the changed files/lines).

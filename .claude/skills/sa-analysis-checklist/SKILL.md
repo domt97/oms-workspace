@@ -79,3 +79,6 @@ Only this checklist is preloaded. Open the skills below for what the change touc
 | An aggregate, a business rule, a type for oms-core | `sa-ddd-hexagonal` |
 | A job, a batch, large volume | `sa-performance-scalability`, `sa-resilience-observability` |
 | A new bounded context or service | `sa-ddd-hexagonal`, `sa-messaging-events`, `sa-multitenancy-security` |
+
+Recurring cross-repo work has a step-by-step skill; follow it instead of working the order out again: `change-event`
+(a message), `change-api` (an endpoint), `add-migration` (a schema change), `add-aws-resource`, `new-service`.

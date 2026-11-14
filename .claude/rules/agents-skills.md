@@ -16,3 +16,7 @@ paths:
   and `plan-reviewer` inherit the session's model.
 - **A skill with side effects** (commits, pushes, releases) sets `disable-model-invocation: true` so only the user starts it.
 - `sa-*` skills are background knowledge: `user-invocable: false`.
+- **Three kinds of skill.** `sa-*` say what to check. Workflow skills (`change-event`, `change-api`, `add-migration`,
+  `add-aws-resource`, `new-service`, `docs-sync`) say in which order to do recurring cross-repo work and point at the
+  `sa-*` rules instead of repeating them; keep each under about 3 KB. Commands (`feature-impact`, `ship`, `release-core`)
+  run a whole piece of work.

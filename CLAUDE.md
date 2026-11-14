@@ -51,7 +51,7 @@ Not built yet but referenced in code: **order-service** (will send the stock com
 ## How to work
 
 - **Analyse a feature or change:** `/feature-impact`. It decides which contexts are affected, hands multi-context work to
-  the `oms-architect` agent (which asks `store-expert`, `inventory-expert`, `platform-expert`) and writes the standard report.
+  the `oms-architect` agent (which asks `store-expert`, `inventory-expert`, `platform-expert`, `web-expert`) and writes the standard report.
   Start from the map, not the code: `system-overview.md`, `domain-map.md`, then only the rules, integration sections and
   flow the feature touches. In a service, read `repos/<service>/CLAUDE.md` first, then `application/usecase` and `domain/model`.
 - **Business rules:** design only on ✅ (in code) and 🟢 (decided) rules, or on ones the user confirmed in this conversation.
@@ -62,6 +62,8 @@ Not built yet but referenced in code: **order-service** (will send the stock com
   steps by hand, `npm run check` instead of `./gradlew test`, keep the layer rule in its `docs/architecture.md`.
 - A backend change to an endpoint listed under *Front-end consumers* in `integration.md` (path, auth, paging cap, response
   fields) is a breaking change for oms-web: include oms-web in the analysis and the rollout order.
+- **Recurring cross-repo work** has step-by-step skills: `change-event`, `change-api`, `add-migration`, `add-aws-resource`,
+  `new-service`. Releasing oms-core: the user runs `/release-core`. Docs drifted from code: `docs-sync`.
 - Docs in service READMEs may be out of date; **code wins**. Known gaps: `open-questions.md`.
 
 ## Review policy
