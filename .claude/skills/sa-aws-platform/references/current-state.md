@@ -28,14 +28,11 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 **Naming and config drift**
 - Queue name is set in `aws.sqs.queues.reservation-expire`, default `localdev-reservation-expire-queue`.
-- **The import bucket comes from the request, not from config.**
-  - `ProductExcelReader.read(path, fileName)` calls `S3ObjectStorageReader.read(bucket, key)`, so `ImportStoreProductsRequest.path` is used as the **bucket name** and `fileName` as the key.
-  - `S3Properties.storeProductBucket` (`aws.s3.store-product-bucket`) is defined but not used.
-  - Its localdev value `localdev_store_products` (underscores, not a valid S3 name) also differs from the Terraform bucket `localdev-store-products` (open question 25).
-  - Each read also does a `HeadBucket` call first.
+- **The import bucket comes from config** (`aws.s3.store-product-bucket`, `S3Properties`; localdev `localdev-store-products` = Terraform) and the key is `{merchantId}/{storeId}/imports/{fileName}` (`S3Properties.importKey`, BR-CAT-16). The request carries only the file name (`ImportFileName`).
+  - Each read also does a `HeadBucket` call first (oms-core `S3ObjectStorageReader`).
 
 ## Known gaps
 - Drifted LocalStack scripts outside `development` (open question 25).
-- Import reads from a caller-chosen bucket/key; configured bucket unused and misnamed (open question 25).
-- AWS/LocalStack defaults (endpoint, `test` keys) in base `application.yaml` of both services.
+- No upload path for import files, no lifecycle rule, no CORS (open question 57).
+- AWS/LocalStack defaults (endpoint, `test` keys) for every profile in oms-core `application-core.yaml` (included by both services): a real environment without the env overrides would call LocalStack with test keys.
 - No SQS DLQ (open question 18); Redis provisioned but unused.

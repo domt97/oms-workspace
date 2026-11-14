@@ -19,7 +19,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 **Publishes:** `ProductCreated` (on create and on Excel import, `version` 0) and `ProductUpdated` (update-product PUT). Tables: `store_products.version`, `product_skus.store_id` / `removed_at`, `UNIQUE (store_id, sku)`.
 **Consumes:** nothing yet.
 **Outbound ports (not implemented yet):** `InventoryServiceClient.checkItemDetail`, `PromotionServiceClient`.
-**Other storage:** S3 (product import files / images).
+**Other storage:** S3: product import files in the configured bucket at `{merchantId}/{storeId}/imports/` (BR-CAT-16). Product images are URLs, not stored by the service.
 
 ## Inventory context — `inventory-service`
 

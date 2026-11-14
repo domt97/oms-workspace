@@ -36,4 +36,4 @@ open-question number is not yet in `architecture/open-questions.md`.
 - No authentication or authorization; the path merchant is trusted; internal endpoints unprotected.
 - inventory public reads are not merchant-scoped (open question 6).
 - Merchant `status` ignored everywhere.
-- S3 import uses the request's `path` as the **bucket** and `fileName` as the key (`ProductExcelReader` → `S3ObjectStorageReader.read(bucket, key)`). The caller can read any object the service's credentials allow; there is no merchant prefix (open question 25).
+- S3 import is scoped by the server (`{merchantId}/{storeId}/imports/{fileName}` in the configured bucket, BR-CAT-16), but the path merchant is trusted (no authentication), so whoever can call the endpoint for a merchant can read that merchant's import files.
