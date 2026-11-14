@@ -14,9 +14,7 @@ user-invocable: false
 4. **Set-based SQL over row-by-row.**
    - Use one `UPDATE … WHERE id = ANY(:ids) AND <guard> RETURNING id` instead of N single-row updates.
    - Insert in JDBC batches. Batching is disabled for `IDENTITY` ids; sequence or UUID ids batch.
-5. **Index for every new query**, matching its `WHERE` and `ORDER BY`.
-   - Use a partial index for "active" subsets (status filters).
-   - Keep the status as a SQL literal so the planner can use a partial index.
+5. **Index for every new query**: `sa-data-persistence` rule 8 (also partial indexes, and `CREATE INDEX CONCURRENTLY` in rule 2).
 6. **Horizontal scaling must be designed, not assumed.** For each job or consumer, ask: with N instances, do they split the work or repeat it?
    - **Split** via Kafka partitions, `SELECT … FOR UPDATE SKIP LOCKED LIMIT n`, or hash buckets per instance.
    - **Serialise** via a single-flight lock only when the work cannot be split.

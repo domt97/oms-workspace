@@ -34,3 +34,7 @@ open-question number is not yet in `architecture/open-questions.md`.
 - Kafka DLTs exist but have no alerting or replay (open question 17); no SQS DLQ (open question 18).
 - Import failures are 200 FAILED (by design, BR-CAT-13); a client must read `status`, not the HTTP code.
 - No timeouts configured for AWS SDK clients; no graceful shutdown.
+
+## Outbox kind and heartbeat (moved from rule 10)
+- Both outboxes are delete-after-insert: inventory, and stores-service since stores-service#59.
+- Slot lag is a health signal only while the heartbeat works (both connectors: `heartbeat.action.query` into `debezium_heartbeat`; proven locally by Verify f in `development` `docs/connectors.md`, *First application* 2026-11-09 for inventory and 2026-11-11 for stores). Task `RUNNING` does not prove the heartbeat: Debezium 2.2 is expected to only log most heartbeat query failures (not tested yet: First application 2026-11-09; runbook test in `development` `docs/connectors.md`) — also alert on `max(beat_at)` (open question 55).

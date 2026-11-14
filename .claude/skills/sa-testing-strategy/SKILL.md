@@ -22,7 +22,7 @@ user-invocable: false
    - (b) a documented manual check against local Postgres (statement, data, result, EXPLAIN) in the PR description.
 
    Prefer (a) once the dependency is added.
-3. **Transactions are not tested by Mockito.** `@Transactional` on a self-invoked or non-public method is ignored at runtime; a mock-based test passes anyway. Verify boundaries by reading the call path (proxy entry point), or with an integration test that forces a failure after the first write and asserts nothing was committed.
+3. **Transactions are not tested by Mockito.** `@Transactional` on a self-invoked or non-public method is ignored at runtime (`sa-data-persistence` rule 6); a mock-based test passes anyway. Verify boundaries by reading the call path (proxy entry point), or with an integration test that forces a failure after the first write and asserts nothing was committed.
 4. **Concurrency claims need a concurrency test or a proof.** Either run two transactions against real Postgres (two threads, a latch), or write the interleaving argument in the plan (guard + row count). Never "it's in a transaction".
 5. **Every edge case in the plan has a test**, including negative assertions:
    - "no row written", "no event", "never called";

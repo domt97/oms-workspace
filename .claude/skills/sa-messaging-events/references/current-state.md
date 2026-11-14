@@ -28,3 +28,4 @@ open-question number is not yet in `architecture/open-questions.md`.
 - The stock command topics have no producer yet (order-service is not built); a command in a DLT gets no reply.
 - `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
 - Consumer group name `product-consumer` is generic.
+- Working example of the failure classes of rule 5: inventory-service `KafkaErrorHandlingConfig` (`setBackOffFunction` for connection failures).

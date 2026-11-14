@@ -7,6 +7,11 @@ paths:
 - **A skill holds rules, not the state of the code.** `SKILL.md` = rules, checklists, patterns. How the OMS does it today
   (class names, config values, test counts, known gaps) goes in the skill's `references/current-state.md`, in
   `architecture/`, or in the owning repo's `CLAUDE.md` — never in `SKILL.md`.
+- **One owner per rule.** A rule is written out in one `sa-*` skill; the others name it in one line (`sa-<name>` rule N).
+  Owners: conditional UPDATE, guards, lock order → `sa-concurrency-consistency`; indexes, migrations, transaction
+  boundary → `sa-data-persistence`; Kafka failure classes, DLT, commands → `sa-messaging-events`; timeouts, retries →
+  `sa-resilience-observability`; queue DLQ, S3 key layout → `sa-aws-platform`; merchant scoping, secrets, PII →
+  `sa-multitenancy-security`. Renumbering rules in a skill means fixing the references to them (`grep "rule [0-9]"`).
 - **Sizes.** An `sa-*` `SKILL.md` stays under about 6 KB. A description is at most 250 characters, says what the skill is
   for and "Use when …", and contains no `: ` (it breaks the YAML). `CLAUDE.md` stays under about 11 KB: detail that only
   one workflow needs goes into that skill or a file it reads.
