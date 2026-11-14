@@ -48,8 +48,11 @@ releasing oms-core.
 - **inventory-service** also has a job **`Integration tests`** (`./gradlew integrationTest`: Testcontainers Postgres on the
   runner's Docker; native SQL, constraints, locks, races). It is not a required check yet. Everything else is unit tests
   only (no Docker): Debezium and Kafka behaviour, and stores-service SQL, stay manual checks.
-- **oms-workspace:** `Script tests` (`python3 -m unittest discover -s scripts/tests`: `scripts/extract_facts.py` and the
-  git guard hook) on PRs that touch `scripts/`, `.claude/hooks/` or `.claude/settings.json`. It is path-filtered, so do not
-  make it a required check as it stands.
+- **oms-workspace:** `Script tests` runs the unit tests (`python3 -m unittest discover -s scripts/tests`: the facts
+  extractor, the git guard hook, the lint) and then `python3 scripts/lint_workspace.py` on PRs that touch `scripts/`,
+  `.claude/`, `architecture/`, `CLAUDE.md` or `README.md`. The lint fails on a reference to a rule, skill, file or open
+  question that does not exist, on a skill or agent that breaks `.claude/rules/agents-skills.md`, and on history notes
+  (PR numbers, branch names) in the docs that describe the present. It is path-filtered, so do not make it a required
+  check as it stands.
 - Branch protection (after the first green runs): required checks `Unit tests` and `core-pin` on service `develop`/`master`,
   `oms-core unit tests` and `release-version` on oms-core `master`, `Check and build` on oms-web.
