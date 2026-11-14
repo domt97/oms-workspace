@@ -1,6 +1,6 @@
 # Flow: Product updated → inventory kept in sync
 
-Status: **built** — stores-service#48 (PUT + `ProductUpdated`) and inventory-service#32 (consumer); live once both are merged into `develop` (inventory first). Decisions U1–U11 recorded 2026-10-28 (`business-rules.md` BR-CAT-08..12, BR-INV-08..10; U8 currency revised the same day, BR-STO-03).
+Status: **built** — stores-service (PUT + `ProductUpdated`) and inventory-service (consumer). Decisions U1–U11 recorded 2026-10-28 (`business-rules.md` BR-CAT-08..12, BR-INV-08..10; U8 currency revised the same day, BR-STO-03).
 
 ```mermaid
 sequenceDiagram
