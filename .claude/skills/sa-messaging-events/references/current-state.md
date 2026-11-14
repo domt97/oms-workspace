@@ -1,0 +1,30 @@
+# Messaging & events — how the OMS does it today (snapshot)
+
+Moved out of `SKILL.md` so the rules load without it. This is a hand-written snapshot, not a rule: before relying on
+a line, check it against `architecture/generated/<service>.md` and the code — code wins. A gap listed here without an
+open-question number is not yet in `architecture/open-questions.md`.
+
+## OMS today (verified in code)
+**Publishing — transactional outbox + CDC (ADR 0001, 0002)**
+- Use case writes the business rows and an `outbox_events` row in the **same transaction** (`stores-service/.../CreateStoreProductUseCaseService.java`, built by `OutboxEventHelper`).
+- `outbox_events` (`stores-service/.../db/migration/V7__add_outbox_events_table.sql`): `aggregate_type`, `aggregate_id`, `event_type`, `payload JSONB`, `correlation_context`; since stores-service#59 a native INSERT with `id = eventId` then DELETE in the **same transaction** (`OutboxEventPersistenceAdapter`, like inventory's) — always empty; `postgres-cdc` reads it through the insert-only publication of `development` `sql/store-outbox-cdc.sql`, with a heartbeat into `store.debezium_heartbeat` (development#8); `status`/`retry_count` columns are dead (open question 56).
+- inventory-service `outbox_events` (V5) for the stock replies: native INSERT with `id = eventId` (header `id`), then DELETE in the **same transaction** — the table stays empty, Debezium publishes from the WAL (`OutboxEventPersistenceAdapter`, one write point per use case via `StockReplyFactory`). Payloads are plain JSON (no typed-id objects), checked against copies of the contract schemas. Published by the connector `inventory-outbox-cdc` (development#7): insert-only publication (`publish = 'insert'`, created by script; the DELETEs never reach Debezium), heartbeat table `inventory.debezium_heartbeat` so the slot advances between replies, topics pre-created with 6 partitions by `docker/kafka/create-topics.sh`.
+- Debezium `EventRouter` reads the WAL: **topic = `event_type`**, **key = `aggregate_id`** (`route.topic.replacement=${routedByValue}`). Connector config: `development/docker/kafka-connect/connectors/postgres-cdc.json` and `inventory-outbox-cdc.json` + `register-connectors.sh` (secrets via `FileConfigProvider`).
+- Every record carries the optional header `correlationContext` (JSON of the producer's propagated MDC keys, from `outbox_events.correlation_context`, ADR 0004). Consumers restore it with oms-core `MdcPropagation.restore` (validated, never throws) inside `KafkaMdc`. A new outbox column placed by the connector needs the ordered rollout in `development/docs/connectors.md` (migration → slot past it → connector), or the task fails and all events stop.
+
+**Consuming — Kafka (inventory-service)**
+- `ProductCreatedConsumer` (`ProductCreated`, group `product-consumer`) and `ProductUpdatedConsumer` (`ProductUpdated`, group `inventory-product-updated`); value is a JSON string inside JSON (Connect JsonConverter), decoded twice (`OutboxPayloadDecoder`).
+- Stock command consumers (ADR 0006): `ReserveStockConsumer`, `ConfirmStockReservationConsumer`, `ReleaseStockReservationConsumer` (topic = command name; groups `inventory-reserve-stock`, `inventory-confirm-stock-reservation`, `inventory-release-stock-reservation`; `max.poll.records=5`, concurrency from `app.kafka.stock-commands.concurrency`). They only map and call the use case (idempotent by the order header) inside the `KafkaMdc` scope. Lessons kept in `StockCommandMapping`: check `eventType` against the topic when payloads of different messages overlap; map a missing id to a null wrapper (typed ids accept null); do not let Jackson coerce where a wrong value changes the outcome (`quantity` as `BigDecimal` → whole number required, `restock` as `Object` → JSON boolean required).
+- `KafkaErrorHandlingConfig` (`DefaultErrorHandler` bean): contract errors (JSON, `InvalidCatalogEventException`, `InvalidStockCommandException`, ownership mismatch of a catalog event or a stock command, `DataIntegrityViolationException`) go to `<topic>.DLT` at once; database connection failures are retried without limit (backoff up to 1 min); other failures — also a stock command's lock / statement / transaction timeout — are retried 6 times, then sent to the DLT. A cancelled statement (SQLState 57014) is never a connection failure, although Spring JDBC translates SQLState class 57 to `DataAccessResourceFailureException` (classify by the cause chain's SQLState, and prove it with the real exception: `StockCommandErrorClassificationIT`). The recoverer logs the DLT line inside `KafkaMdc`.
+- Delivery is **at-least-once** (Debezium + Kafka): every consumer must be idempotent (workspace rule 7).
+
+**Consuming — SQS (inventory-service)**
+- `SqsReservationExpireConsumer`: `@SqsListener` with `maxConcurrentMessages = 1`, `maxMessagesPerPoll = 1`, `messageVisibilitySeconds = 90` (Spring Cloud AWS 3.1.1; defaults would be 10/10 and the queue's 30 s). EventBridge sends a tick every minute (`development/docker/infra/local/main.tf`); the body is ignored. The `Sqs_Msa_SentTimestamp` header (`SqsHeaders.MessageSystemAttributes.SQS_SENT_TIMESTAMP`) is used to drop ticks older than `app.reservation-expiry.max-tick-age` when the instance swept recently (fails open otherwise).
+- Default acknowledgement is on success: if the listener throws, the message is not deleted and reappears after the visibility timeout. The Terraform queue has **no redrive policy / DLQ**.
+
+## Known gaps
+- Kafka DLT topics have no alerting and no replay tool (open questions 17, 40); no DLQ on SQS.
+- Both outboxes are always empty: a lost or recreated replication slot loses the gap's events for good (no resync tool, open question 40; runbooks in `development` `docs/connectors.md`).
+- The stock command topics have no producer yet (order-service is not built); a command in a DLT gets no reply.
+- `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
+- Consumer group name `product-consumer` is generic.

@@ -1,17 +1,9 @@
 ---
 name: sa-ddd-hexagonal
-description: Domain-Driven Design and hexagonal architecture as applied in the OMS — bounded contexts, aggregates and invariants, ports and adapters, anti-corruption layer, shared kernel (oms-core). Use when deciding where code or a rule belongs, designing a new aggregate/use case, or reviewing layering.
+description: DDD and hexagonal rules — bounded contexts, aggregates, ports and adapters, anti-corruption layer, what belongs in oms-core. Use when deciding where code or a rule belongs, or designing an aggregate or use case.
+user-invocable: false
 ---
 # DDD & hexagonal architecture
-
-## OMS today
-- **One bounded context per repo**: Store (`stores-service`), Inventory (`inventory-service`); Order and Promotion are planned. Each owns its own Postgres database — no cross-DB reads (workspace `CLAUDE.md`, rule 1).
-- **Layers** in every service (`com.dotran.oms.<context>`):
-  - `domain/` — pure Java: `model`, `valueobject`, `enums`, `event`, `exception`. No Spring, JPA or Kafka; Lombok (`@Builder`, `@Getter`) is the accepted exception.
-  - `application/` — `usecase/` (inbound ports, `XxxUseCase`), `service/` (`@UseCase` impl, `@Transactional`), `repository/` and `client/` (outbound ports), `command/` (`XxxCmd`), `dto/`, `mapper/`.
-  - `infrastructure/` — `rest/` (`@WebAdapter`, Request/Response, exception handler), `persistence/` (`@PersistenceAdapter`, JPA entities, `SpringDataXxxRepository`), `message/` (consumers + external DTOs = ACL).
-- **Shared kernel** `oms-core`: typed IDs extending `BaseId<T>` (value equality via `equals`/`hashCode`, `oms-core/.../domain/id/BaseId.java`), `AggregateRoot` (marker class, `oms-core/.../domain/AggregateRoot.java`), `Money`, `Address`, exceptions (`BusinessException`, `NotFoundException`, `ValidationException`) mapped in `GlobalExceptionHandler`, stereotype annotations.
-- **ACL**: external event payloads live in `infrastructure/message/dto` and are mapped to commands; e.g. inventory's `ProductCreatedEvent` DTO is a copy of the stores domain event, not shared code.
 
 ## Rules
 1. **Invariants live in the aggregate.** A rule that must always hold (`available = quantity − reserved ≥ 0`, "only RESERVED can be confirmed") is enforced by an aggregate method that throws a domain exception. Services orchestrate; they do not re-implement rules.
@@ -38,7 +30,6 @@ description: Domain-Driven Design and hexagonal architecture as applied in the O
 - Re-using another context's domain class instead of an ACL DTO.
 - "Anemic" aggregates whose invariants are only checked in SQL — SQL guards are the concurrency backstop (see `sa-concurrency-consistency`), the aggregate method is still the source of the rule.
 
-## Known gaps
-- `AggregateRoot` is only a marker; aggregates do not collect domain events — integration events are built in the application layer (`OutboxEventHelper`).
-- Order context does not exist yet; `OrderId`/`OrderItemId` already live in `oms-core`.
-- `oms-core/.../domain/page/PagedResult.java` imports Spring Data `Page` — the only framework dependency inside a `domain` package.
+## Current state and known gaps
+Not in this file. When you need how the OMS does this today, or which gaps are known, read
+`.claude/skills/sa-ddd-hexagonal/references/current-state.md`. It is a snapshot: `architecture/generated/` and the code win.

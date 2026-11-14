@@ -1,6 +1,8 @@
 ---
 name: ship
-description: Implement a feature or fix in ONE OMS service end to end — branch from develop, plan, code, test, review, update docs, commit, push and open a PR into develop. Use when the user asks to implement, build, fix or ship something in stores-service, inventory-service or another service repo.
+description: Implement a feature or fix in ONE OMS service end to end — branch from develop, plan, code, test, review, update docs, commit, push and open a PR into develop. Runs only when the user types /ship.
+argument-hint: <service> <feature|fix> <short-slug> [description]
+disable-model-invocation: true
 ---
 # Ship a change to one service
 
@@ -11,9 +13,7 @@ If an argument is missing, ask for it before doing anything. `<service>` must be
 If the change spans more than one service, stop and suggest `/feature-impact` first, then one `/ship` per service.
 
 Work in the service repo at `repos/<service>`. Never touch `master` or `develop` directly. Never merge.
-Apply `sa-analysis-checklist` throughout; load other `sa-*` skills when the change touches their area
-(messaging, data, concurrency, DDD, performance/scale, API, multi-tenancy/security, resilience/observability,
-testing, AWS platform).
+Apply `sa-analysis-checklist` throughout and open the other `sa-*` skills its routing table (§9) names for this change.
 
 ## 1. Branch from latest develop
 ```bash
@@ -42,9 +42,9 @@ Do not start step 2 until the branch exists.
    - files to add/change in order (domain → application → infrastructure → tests), migrations,
      contracts touched (mark BREAKING);
    - routing table: file → repo → branch → PR base; docs to update.
-4. Send the draft to the **`plan-reviewer`** agent. Fix every "Must fix"; address or justify "Should fix". Then send the
-   fixed plan back with the previous Must fix list verbatim, how each was fixed and what changed, and repeat until a round
-   has no Must fix — at most 3 rounds, then ask the user (CLAUDE.md → *Review until clean*).
+4. Send the draft to the **`plan-reviewer`** agent (`CLAUDE.md` → *Review policy*, level 2). Fix every "Must fix"; address
+   or justify "Should fix". Send the fixed plan back once with the previous Must fix list verbatim, how each was fixed and
+   what changed. After 2 rounds, take what is still open to the user.
 5. Present the plan to the user **with the reviewer's verdict** and what you changed because of it.
 6. **Wait for the user to approve the plan.** Adjust and re-present if asked; a plan changed after review gets a review
    round on the changed parts before it is re-presented.
@@ -64,16 +64,15 @@ If `./gradlew test` / `integrationTest` cannot run here (no network to Maven Cen
 CI on the PR is then the first real test run (step 8).
 For a change that also needs an oms-core change: change both locally (composite build), ship oms-core first with its `version`
 bumped (merging it publishes that version; the user may tag an `-rc.N` for CI feedback before), then bump `coreVersion`
-in the service PR (see CLAUDE.md → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
+in the service PR (see `architecture/delivery.md` → CI). Never create tags yourself; never leave an `-rc` pin in a PR meant to be merged (`core-pin` check).
 
 ## 5. Review
 Do step 6 (docs) **first**, then ask the **`plan-reviewer`** agent to review the uncommitted diff of `repos/<service>`
 **and** the workspace `docs/<slug>` diff (if any) against the approved plan: correctness, invariants, races, idempotency, missing
 tests, docs accuracy. Fix real findings, re-run `./gradlew test`, then send `plan-reviewer` the previous Must fix list
-verbatim, how each was fixed and what changed, so it reviews only the fixes and what they could affect; repeat until a round
-has no Must fix (at most 3 rounds, then ask the user). Any edit after the last clean round gets its own round before
-step 7. Counting: each new piece of work (a plan change asked by the user, a CI fix) starts again at round 1, but a
-finding that comes back still stops the loop.
+verbatim, how each was fixed and what changed, so it reviews only the fixes and what they could affect. After 2 rounds,
+take what is still open to the user (`CLAUDE.md` → *Review policy*). An edit after the last clean round is reviewed again
+only when it changes logic, a contract or a test's meaning; a formatting or CI-configuration fix is level 0.
 
 ## 6. Docs
 *(Done at the start of step 5, so the review covers it.)*
@@ -140,7 +139,7 @@ PR body template:
 - <service CLAUDE.md / oms-workspace PR link / none>
 
 ## Review
-- plan-reviewer: <verdict of the last round>, <n> rounds; open Must fix: <none | list>
+- plan-reviewer: <verdict of the last round>, <n> rounds; open Must fix: <none | list> — or "review waived by the user"
 ```
 
 After opening the PR, check its CI: `gh pr checks <pr-number> --repo domt97/<repo> --watch`
