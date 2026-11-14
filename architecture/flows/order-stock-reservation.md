@@ -70,7 +70,7 @@ Stock correctness never depends on order-service's timeouts.
 
 ## Lost replies (outbox rows are deleted at once, so a reply lost after commit cannot be re-published)
 
-A reply can be lost when the connector's slot is dropped or recreated (open question 19). What brings the saga back:
+A reply can be lost when the connector's slot is dropped or recreated (open question 55). What brings the saga back:
 
 | Lost reply | Recovery |
 |------------|----------|
