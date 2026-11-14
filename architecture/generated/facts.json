@@ -1,4 +1,114 @@
 {
+  "development": {
+    "branch": "master",
+    "compose_services": [
+      {
+        "image": "provectuslabs/kafka-ui",
+        "name": "kafka-ui",
+        "ports": [
+          "8080"
+        ]
+      },
+      {
+        "image": "confluentinc/cp-zookeeper:7.3.0",
+        "name": "zookeeper",
+        "ports": [
+          "2181"
+        ]
+      },
+      {
+        "image": "confluentinc/cp-kafka:7.3.0",
+        "name": "kafka",
+        "ports": [
+          "9092",
+          "9997"
+        ]
+      },
+      {
+        "image": "confluentinc/cp-schema-registry:7.3.0",
+        "name": "schemaregistry",
+        "ports": [
+          "9085"
+        ]
+      },
+      {
+        "image": null,
+        "name": "kafka-connect",
+        "ports": [
+          "9084"
+        ]
+      },
+      {
+        "image": "localstack/localstack:3.8.1",
+        "name": "localstack",
+        "ports": [
+          "4566-4597"
+        ]
+      },
+      {
+        "image": "redis:7",
+        "name": "redis",
+        "ports": [
+          "6379"
+        ]
+      },
+      {
+        "image": "postgres:16",
+        "name": "postgres",
+        "ports": [
+          "5432"
+        ]
+      }
+    ],
+    "connectors": [
+      {
+        "database": "inventory",
+        "name": "inventory-outbox-cdc",
+        "publication": "debezium_inventory_publication",
+        "slot": "debezium_inventory_slot"
+      },
+      {
+        "database": "store",
+        "name": "postgres-cdc",
+        "publication": "debezium_store_v2_publication",
+        "slot": "debezium_store_v2_slot"
+      }
+    ],
+    "kind": "local-infra",
+    "localstack_resources": [
+      {
+        "name": "reservation_expire",
+        "type": "aws_cloudwatch_event_rule"
+      },
+      {
+        "name": "reservation_expire_queue",
+        "type": "aws_cloudwatch_event_target"
+      },
+      {
+        "name": "store_products",
+        "type": "aws_s3_bucket"
+      },
+      {
+        "name": "reservation_expire_queue",
+        "type": "aws_sqs_queue"
+      },
+      {
+        "name": "reservation_expire",
+        "type": "aws_sqs_queue_policy"
+      }
+    ],
+    "topics": [
+      "ConfirmStockReservation",
+      "ReleaseStockReservation",
+      "ReserveStock",
+      "StockReservationConfirmationFailed",
+      "StockReservationConfirmed",
+      "StockReservationExpired",
+      "StockReservationRejected",
+      "StockReservationReleased",
+      "StockReserved"
+    ]
+  },
   "inventory-service": {
     "aggregates": [
       "Inventory",
@@ -200,6 +310,316 @@
       "ReleaseStockReservationUseCase",
       "ReserveStockUseCase",
       "SyncProductInventoryUseCase"
+    ]
+  },
+  "oms-core": {
+    "branch": "master",
+    "kind": "library",
+    "packages": {
+      "annotation": [
+        "JobAdapter",
+        "PersistenceAdapter",
+        "UseCase",
+        "WebAdapter"
+      ],
+      "cloud.config": [
+        "AwsProperties"
+      ],
+      "cloud.s3": [
+        "S3Config",
+        "S3FileReference",
+        "S3ObjectStorageReader"
+      ],
+      "config": [
+        "CoreConfiguration"
+      ],
+      "domain": [
+        "AggregateRoot",
+        "BaseDomain"
+      ],
+      "domain.id": [
+        "BaseId",
+        "CategoryId",
+        "CustomerId",
+        "EventId",
+        "InventoryId",
+        "MerchantId",
+        "OrderId",
+        "OrderItemId",
+        "ProductId",
+        "ReferenceId",
+        "SKU",
+        "StoreId"
+      ],
+      "domain.page": [
+        "DomainPageRequest",
+        "PagedResult"
+      ],
+      "exception": [
+        "AWSException",
+        "BusinessException",
+        "ImportValidationException",
+        "NotFoundException",
+        "ValidationException"
+      ],
+      "io.excel": [
+        "ExcelValidator"
+      ],
+      "io.template.imp": [
+        "AbstractImportTemplate",
+        "ImportContext",
+        "ImportResult"
+      ],
+      "logging": [
+        "LogSanitizer",
+        "MdcKeys",
+        "MdcPropagation",
+        "MdcProperties",
+        "MdcScope"
+      ],
+      "mapper": [
+        "IdMapper"
+      ],
+      "rest": [
+        "ErrorResponse",
+        "GlobalExceptionHandler"
+      ],
+      "rest.logging": [
+        "MdcRequestFieldsInterceptor",
+        "MdcWebMvcConfig",
+        "RequestIdFilter",
+        "RequestLoggingProperties",
+        "RequestResponseLoggingFilter"
+      ],
+      "swagger": [
+        "SwaggerConfig",
+        "SwaggerProperties"
+      ],
+      "util": [
+        "CollectionUtils",
+        "POIUtils",
+        "PageUtils",
+        "StringUtils"
+      ],
+      "valueobject": [
+        "Address",
+        "Money",
+        "PriceRange"
+      ]
+    },
+    "version": "1.0.0"
+  },
+  "oms-web": {
+    "branch": "develop",
+    "calls": [
+      {
+        "file": "oms-web/src/adapters/http/inventory/inventoryService.ts",
+        "handler": "InventoryController#getAllProductInventory",
+        "method": "GET",
+        "path": "/v1/inventory/inventories/products/{productId}",
+        "service": "inventory-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/inventory/inventoryService.ts",
+        "handler": "StockMovementController#getAllProductInventory",
+        "method": "GET",
+        "path": "/v1/inventory/inventories/stock-movements/{inventoryId}",
+        "service": "inventory-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/inventory/inventoryService.ts",
+        "handler": "InventoryController#adjustStock",
+        "method": "POST",
+        "path": "/v1/inventory/inventories/{inventoryId}",
+        "service": "inventory-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "MerchantController#registerMerchant",
+        "method": "POST",
+        "path": "/v1/store/merchants",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "MerchantController#getMerchant",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#createStore",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#getStore",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#addStoreAvailability",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/availability",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#cancelStoreAvailability",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/availability/{availabilityId}/cancel",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreConfigController#updateBusinessHour",
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/business-hours",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#closeStore",
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/close",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#getAll",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#create",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#getDetails",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{id}",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#addProducts",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{id}/add-products",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#getProducts",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{id}/products",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreCollectionController#removeProducts",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/collections/{id}/remove-products",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreConfigController#updateBaseConfig",
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/configs",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreProductController#create",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreProductController#importProducts",
+        "method": "POST",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/import",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreProductController#getStoreProducts",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/search",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreProductController#getProductDetails",
+        "method": "GET",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreProductController#update",
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}",
+        "service": "stores-service",
+        "visibility": "public"
+      },
+      {
+        "file": "oms-web/src/adapters/http/stores/storesService.ts",
+        "handler": "StoreController#reopenStore",
+        "method": "PUT",
+        "path": "/v1/store/merchants/{merchantId}/stores/{storeId}/reopen",
+        "service": "stores-service",
+        "visibility": "public"
+      }
+    ],
+    "calls_without_endpoint": [],
+    "kind": "web",
+    "ports": [
+      "CartPort",
+      "CatalogPort",
+      "CategoryPort",
+      "CollectionPort",
+      "InventoryPort",
+      "MerchantPort",
+      "OrderPort",
+      "ProductPort",
+      "SellerWorkspacePort",
+      "SessionPort",
+      "ShopDirectoryPort",
+      "StorePort"
     ]
   },
   "stores-service": {

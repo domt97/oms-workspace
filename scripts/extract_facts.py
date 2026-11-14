@@ -18,6 +18,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import extract_other  # noqa: E402
+
 HTTP_ANN = {
     "GetMapping": "GET", "PostMapping": "POST", "PutMapping": "PUT",
     "DeleteMapping": "DELETE", "PatchMapping": "PATCH",
@@ -290,6 +293,18 @@ def main() -> None:
         extra = facts[svc.name]["published_without_contract"]
         if extra:
             print(f"WARNING {svc.name}: published in code but no contract schema: {', '.join(extra)}", file=sys.stderr)
+    services = dict(facts)
+    others = (("oms-web", lambda r: extract_other.extract_web(r, services), extract_other.render_web),
+              ("oms-core", extract_other.extract_core, extract_other.render_core),
+              ("development", extract_other.extract_development, extract_other.render_development))
+    for name, extract, render in others:
+        repo = repos / name
+        if not repo.is_dir():
+            continue
+        facts[name] = {"branch": git_branch(repo), **extract(repo)}
+        (out / f"{name}.md").write_text(render(name, facts[name], facts[name]["branch"]), encoding="utf-8")
+        for call in facts[name].get("calls_without_endpoint", []):
+            print(f"WARNING {name}: calls {call}, which matches no service endpoint", file=sys.stderr)
     (out / "facts.json").write_text(json.dumps(facts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Extracted facts for: {', '.join(facts) or 'no services found'} → {out}")
 

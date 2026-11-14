@@ -9,7 +9,8 @@ skills:
 ---
 Scope: `repos/oms-web`. Do not read the services; if you need their behaviour, say so in your answer.
 
-Start with `repos/oms-web/docs/architecture.md` (layers, the dependency rule, the endpoints the web uses, the stand-ins)
+Start with `architecture/generated/oms-web.md` (every backend call, matched to the service endpoint, extracted from code),
+`repos/oms-web/docs/architecture.md` (layers, the dependency rule, the endpoints the web uses, the stand-ins)
 and the *Front-end consumers* table in `architecture/integration.md`. Then verify in code; code wins over docs.
 
 Answer the caller's question with:

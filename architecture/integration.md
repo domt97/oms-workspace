@@ -76,6 +76,9 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 ## Front-end consumers
 
+The exact list of calls oms-web makes, each matched to its endpoint, is generated: `architecture/generated/oms-web.md`.
+The table below says what depends on them.
+
 | Consumer | Calls | Notes |
 |----------|-------|-------|
 | **oms-web** (React, repo [`oms-web`](https://github.com/domt97/oms-web)) — Seller Centre `/seller` | All stores-service endpoints above (merchant-scoped), inventory-service `GET …/products/{productId}`, `GET …/{inventoryId}`, `POST …/{inventoryId}` (adjust), `GET …/stock-movements/{inventoryId}` | Through a reverse proxy on `/v1/store/` and `/v1/inventory/`; every call sends `X-Request-Id`; both services keep it when it matches `^[A-Za-z0-9._-]{1,64}$` (else a new UUID), echo it in the response and log it as MDC `requestId`. The product edit form calls the update-product PUT with the `version` from GET and sends back every field it does not edit (full replace); on 409 it re-reads the product to tell a stale version from a SKU code clash. The create form applies the same limits (100 SKUs, 20 images, 5000-character description) |
