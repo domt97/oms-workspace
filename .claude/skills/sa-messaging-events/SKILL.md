@@ -23,13 +23,13 @@ user-invocable: false
    - existing item with conflicting data (other product/merchant) → log `warn`, do not overwrite;
    - write only the missing items; do not call the write with an empty list;
    - the unique constraint stays as the last line of defence.
-5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert. Today inventory's Kafka listeners classify failures (`KafkaErrorHandlingConfig`, see above): poison → `<topic>.DLT` at once, database down → retried until it is back, anything else → 6 retries then the DLT; nobody is alerted about a DLT record yet (open question 17) — call that out when it matters.
-   When a DLT is added, classify failures, because one retry policy for all of them loses data:
+5. **Decide what a failure means.** A poison message must not be silently lost: say whether it should retry, go to a DLT, or be skipped with an alert.
+   Configure a `DefaultErrorHandler` with `ExponentialBackOff` and a `DeadLetterPublishingRecoverer` (`<Topic>.DLT`), mark non-retryable exceptions, and classify failures, because one retry policy for all of them loses data:
    - **poison** (unreadable JSON, contract violation, ownership mismatch, constraint error): will never succeed → DLT at once;
    - **infrastructure down** (no DB connection, cannot create a transaction): only waiting fixes it → retry **without limit**
      (bounded backoff); never dead-letter, or an outage silently drops events — and without a replay tool nobody notices;
    - **transient** (deadlock, lock timeout): a few retries with backoff, then DLT.
-   Reference: inventory-service `KafkaErrorHandlingConfig` (`setBackOffFunction` for connection failures).
+   A working example is named in `references/current-state.md`.
 6. **Event schema evolution** (recommended, not yet formalised in OMS): only additive, optional fields; never rename/remove/retype a field; a breaking change is a **new event type**. Producer and consumer DTOs are separate classes — change both and update `architecture/contracts/events/<Event>.schema.json`.
 7. **Payload = facts at the time of the event**, with `eventId`, `occurredAt`, `merchantId`. Consumers must not call back the producer synchronously to "complete" the event.
 

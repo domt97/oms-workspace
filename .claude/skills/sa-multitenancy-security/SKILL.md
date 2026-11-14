@@ -34,7 +34,7 @@ user-invocable: false
    - no secrets, tokens or full request bodies with PII (customer name, phone, address);
    - log ids, not personal data;
    - extend the filter's redaction list when adding a header.
-9. **Excel/S3 input is untrusted**: validate size, row count and content; never trust a path or filename from the request to point outside the merchant's prefix.
+9. **Excel/S3 input is untrusted**: validate size, row count and content. A path or filename from the request must stay inside the merchant's prefix (key layout: `sa-aws-platform` rule 8).
 
 ## Checklist
 - [ ] Every query in the change scoped by merchant (directly or through a merchant-scoped root)? Show the line.

@@ -15,3 +15,6 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 **Known races / non-idempotent paths**
 - **Already-corrupted `reserved_quantity`** (from before the guard): that inventory's release returns 0 rows, rolls back and logs an error on every tick until repaired with a reconciliation query.
+
+## Order ↔ inventory flow: what is built (moved from the pattern section)
+- Inventory's replies are written to its outbox in the same transaction as each decision (built; published by the connector `inventory-outbox-cdc`, development#7), and its Kafka command consumers are built (they add no state: a redelivered command is a duplicate for the header); order-service is not. A lost confirm reply can leave the saga stuck (obligation 3, open question 54).

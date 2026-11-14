@@ -15,8 +15,7 @@ user-invocable: false
    - the inventory-service#28 pattern applies.
 5. **Credentials**:
    - real environments use the default credential chain (IAM role);
-   - static keys only for LocalStack and only in the `localdev` profile;
-   - never commit real keys;
+   - static keys only for LocalStack and only in the `localdev` profile (secrets in general: `sa-multitenancy-security` rule 7);
    - least-privilege IAM per service (its own bucket prefix, its own queues).
 6. **Client configuration**:
    - endpoint and region from config, not hard-coded;

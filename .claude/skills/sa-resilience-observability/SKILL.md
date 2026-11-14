@@ -15,10 +15,9 @@ user-invocable: false
 2. **Timeouts everywhere**: HTTP clients (connect + read), AWS SDK (`apiCallTimeout`, `apiCallAttemptTimeout`), DB (`connection-timeout`; statement timeout for heavy queries). No call without an upper bound.
 3. **Retries**:
    - only for idempotent operations;
-   - with exponential backoff and jitter, bounded attempts;
+   - with exponential backoff and jitter, bounded attempts (one exception: a consumer whose database is down, `sa-messaging-events` rule 5);
    - never retry a validation or business error.
-   - Kafka: configure a `DefaultErrorHandler` with `ExponentialBackOff` and a `DeadLetterPublishingRecoverer` (`<Topic>.DLT`), and mark non-retryable exceptions.
-   - SQS: a redrive policy (`maxReceiveCount`) to a DLQ.
+   - Message consumers: Kafka failure classes and the DLT are in `sa-messaging-events` rule 5; the SQS dead-letter queue in `sa-aws-platform` rule 3.
 4. **Poison messages never block or vanish silently**: after retries they go to a DLQ/DLT with the reason, and someone is alerted.
 5. **Don't hide failures.** Returning 200 with `FAILED` in the body, or catch-log-continue, is acceptable only when the caller is told and the state is consistent (all or nothing). Prefer failing the transaction to half-done work.
 6. **Graceful shutdown**: `server.shutdown: graceful`, plus listener containers stopping after the in-flight message. Long jobs check a stop/budget signal between pages.
@@ -27,14 +26,14 @@ user-invocable: false
    - one line per business event with ids (`merchantId`, `storeId`, `orderId`, `reservationId`);
    - a correlation id from header or new UUID, put in MDC and propagated to events and outbound calls;
    - client errors (4xx) at WARN or INFO, server errors at ERROR;
-   - no PII.
+   - no PII or secrets (`sa-multitenancy-security` rule 8).
 9. **Metrics** (Micrometer when added):
    - per consumer: processed/failed counts, lag;
    - per job: backlog, oldest item age, duration;
    - per endpoint: latency and error rate;
    - business counters (reservations created, expired, oversell attempts rejected).
    - Every metric that indicates a stuck flow has an alert.
-10. **Outbox health**, by outbox kind: an outbox that **keeps** rows — alert on rows older than N minutes that are not yet published; a **delete-after-insert** outbox (inventory, and stores-service since stores-service#59) is always empty — alert on replication slot lag (WAL kept) and connector task status instead. Both: alert on connector status. Slot lag is a health signal only while the heartbeat works (both connectors: `heartbeat.action.query` into `debezium_heartbeat`; proven locally by Verify f in `development` `docs/connectors.md`, *First application* 2026-11-09 for inventory and 2026-11-11 for stores). Task `RUNNING` does not prove the heartbeat: Debezium 2.2 is expected to only log most heartbeat query failures (not tested yet: First application 2026-11-09; runbook test in `development` `docs/connectors.md`) — also alert on `max(beat_at)` (open question 55).
+10. **Outbox health**, by outbox kind: an outbox that **keeps** rows — alert on rows older than N minutes that are not yet published; a **delete-after-insert** outbox (both services today, `references/current-state.md`) is always empty — alert on replication slot lag (WAL kept) and connector task status instead. Both: alert on connector status. Slot lag is a health signal only while the connector's heartbeat works, and task `RUNNING` does not prove the heartbeat: also alert on the age of the last heartbeat (`max(beat_at)`).
 
 ## Checklist
 - [ ] Failure table: dependency → failure → behaviour → recovery → how we notice.
