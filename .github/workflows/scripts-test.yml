@@ -1,19 +1,24 @@
 name: Script tests
 
-# Unit tests of the workspace's own tooling: the facts extractor and the git guard hook.
+# Unit tests of the workspace's own tooling (facts extractor, git guard hook, lint) and the lint of the map itself:
+# dead references to rules, skills, files and open questions, skill and agent conventions, history notes in the docs.
 on:
   pull_request:
     paths:
       - "scripts/**"
-      - ".claude/hooks/**"
-      - ".claude/settings.json"
+      - ".claude/**"
+      - "architecture/**"
+      - "CLAUDE.md"
+      - "README.md"
       - ".github/workflows/scripts-test.yml"
   push:
     branches: [master]
     paths:
       - "scripts/**"
-      - ".claude/hooks/**"
-      - ".claude/settings.json"
+      - ".claude/**"
+      - "architecture/**"
+      - "CLAUDE.md"
+      - "README.md"
       - ".github/workflows/scripts-test.yml"
   workflow_dispatch: {}
 
@@ -37,5 +42,8 @@ jobs:
       - name: settings.json is valid JSON
         run: python3 -m json.tool .claude/settings.json > /dev/null
 
-      - name: Unit tests (extract_facts.py, guard_git.py)
+      - name: Unit tests (extract_facts.py, guard_git.py, lint_workspace.py)
         run: python3 -m unittest discover -s scripts/tests -v
+
+      - name: Lint the workspace map
+        run: python3 scripts/lint_workspace.py

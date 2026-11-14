@@ -111,3 +111,5 @@ into `develop`; `oms-workspace` changes go on `docs/…`, `chore/…`, `ci/…` 
   disagree, **generated facts win**. Run `python3 scripts/extract_facts.py` after `sync-repos.sh` to refresh them locally.
 - How to write and update the docs (same-PR rule, contract check, never edit generated files): `.claude/rules/architecture-docs.md`.
   Skills and agents: `.claude/rules/agents-skills.md`.
+- After editing docs, skills or agents run `python3 scripts/lint_workspace.py` (CI runs it too): it fails on references to
+  rules, skills, files or open questions that no longer exist.
