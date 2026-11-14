@@ -12,3 +12,7 @@ memory/
 # IntelliJ: only .idea/vcs.xml is shared (registers repos/* as Git roots)
 .idea/*
 !.idea/vcs.xml
+
+# Python
+__pycache__/
+*.pyc

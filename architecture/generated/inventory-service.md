@@ -25,7 +25,14 @@
 
 ## Published events (outbox `eventType`)
 
-- none
+- `StockReservationConfirmationFailed` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+- `StockReservationConfirmed` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+- `StockReservationExpired` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+- `StockReservationRejected` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+- `StockReservationReleased` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+- `StockReserved` — inventory-service/src/main/java/com/dotran/oms/inventory/application/event/StockReply.java
+
+Contract check: all 6 events that `architecture/contracts/events/` attributes to this service were found.
 
 ## Database tables (latest migration: `V5__outbox_events.sql`)
 
