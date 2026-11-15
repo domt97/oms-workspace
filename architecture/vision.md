@@ -120,7 +120,7 @@ flowchart LR
   - Order-service re-validates and re-prices everything (BR-ORD-02/03), so a stale cart can never produce a wrong order.
 - **Ordering owns the order saga** (orchestration, decided Q6). It decides what happens next; inventory and payment execute and report back.
 - **Payment hides the gateway** and **delivery hides the partner** behind ACLs, so changing provider changes nothing outside them.
-- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout. State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, mechanics 🟡); since stock replies arrive asynchronously, it accepts the checkout and the outcome follows from the saga (exact contract decided with order-service).
+- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout. State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, keyed by cart id + cart version); since stock replies arrive asynchronously, it accepts the checkout and the outcome follows from the saga (exact contract decided with order-service).
 
 ## 5. Ubiquitous language — terms that change meaning across contexts
 
@@ -157,8 +157,9 @@ sequenceDiagram
     O-->>K: orderId → Cart=CHECKED_OUT
     O->>O: each Order=PLACED
     O->>I: ConfirmStockReservation (command, at PLACED) → SALE movement → StockReservationConfirmed
-    O->>O: store accepts (auto or manual) → PREPARING
-    O->>D: book delivery (per order)
+    O->>O: store accepts (auto or manual) → ACCEPTED
+    O->>D: book delivery (per order, at ACCEPTED, BR-FUL-03)
+    O->>O: PREPARING → READY
     D-->>O: driver picked up / delivered (callbacks) → DELIVERING → DELIVERED → COMPLETED
     Note over O,I: Timeouts are compensations: payment not done before reservation TTL → cancel order + ReleaseStockReservation; cancel after PLACED → release with restock (BR-ORD-09)
 ```
@@ -168,11 +169,11 @@ sequenceDiagram
 | Phase | Goal | Contents |
 |-------|------|----------|
 | 0. Harden | Safe base for orders | Open questions 24–26 (import outbox, S3 bucket, SKU uniqueness), 13 (idempotent reserve), release + entry points (done, ADR 0006), inventory outbox (done), 17/18 (DLT/DLQ), CI tests |
-| 1. Cart + Order MVP | Take an order end to end | `cart-service` (one multi-store cart per customer, indicative prices, checkout → `PlaceCheckout`) and `order-service`: split per store, line snapshots, reserve on placement, store accept/reject, statuses to `COMPLETED`, cancel before acceptance; **COD** first, delivery fee from the partner quote. Delivery comes first and pickup later (Q25), so the MVP includes the **mock delivery partner** |
+| 1. Cart + Order MVP | Take an order end to end | `cart-service` (one multi-store cart per customer, indicative prices, checkout → `PlaceCheckout`) and `order-service`: split per store, line snapshots, reserve on placement, store accept/reject, statuses to `COMPLETED`, cancel before acceptance; **COD** first (with reconciliation of the partner's settlement, BR-PAY-04), delivery fee from the partner quote. Delivery comes first and pickup later (Q25), so the MVP includes the **mock delivery partner** |
 | 2. Payment | Online payment | `payment-service` with a **mock** payment provider (one payment per checkout), reservation TTL aligned with the payment window, refunds on cancel |
 | 3. Promotion & settlement | Discounts, merchant payouts | Platform and shop vouchers (Q31), snapshot on the order; settlement: commission, merchant balances, mocked payouts (Q29) |
 | 4. Delivery & notifications | More partners, customer updates | Second delivery partner (delivery-service split out), notification service |
-| Later | Returns, reporting, pickup, search | Return/refund flow, analytics read models, pickup (Q25), search across stores (Q30). Pre-order (Q7, up to the next day) fits in phase 1–2 |
+| Later | Returns, reporting, pickup, search | Return/refund flow, analytics read models, pickup (Q25), search across stores (Q30). Pre-order (Q7, up to the next day) comes in phase 2 or later; the Cart + Order MVP has none (BR-ORD-02) |
 
 ## 8. Out of scope (until decided otherwise)
 Building a second market or multi-currency checkout (not built now; the design must not prevent them, BR-MER-01), cross-border checkout, real payment gateways, real delivery partners, POS orders, guest orders, split shipments, B2B invoicing, loyalty points.
