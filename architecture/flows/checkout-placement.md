@@ -18,7 +18,7 @@ sequenceDiagram
     K->>K: tx: cart CHECKING_OUT + outbox PlaceCheckout (key cartId)
     K-->>O: PlaceCheckout
     O->>O: look up checkout by (cartId, cartVersion)
-    O->>S: order-quote per store (store, merchant status, open now, SKU prices) — outside the tx
+    O->>S: order-quote per store (store snapshot and config, merchant status, open + reasons, local date, SKU prices) — outside the tx
     O->>O: tx: insert checkout PENDING (unique key), one order per store PENDING, daily-cap slots, fees; outbox ReserveStock × N
     I-->>O: StockReserved × N
     O->>O: tx: every order PLACED, order numbers; outbox ConfirmStockReservation × N + CheckoutPlaced

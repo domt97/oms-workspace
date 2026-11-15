@@ -6,7 +6,7 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 ## OMS today (verified in code)
 **Paths**
-- stores-service: `/v1/store/merchants/{merchantId}/stores/{storeId}/...` (controllers under `infrastructure/rest/api`, class-level `@RequestMapping("/v1/store")`).
+- stores-service: `/v1/store/merchants/{merchantId}/stores/{storeId}/...` (controllers under `infrastructure/rest/api`, class-level `@RequestMapping("/v1/store")`). Internal: `/internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` (`OrderQuoteInternalController` under `infrastructure/rest/internal`, `@Hidden`; a read sent as `POST` because of the SKU list).
 - inventory-service public: `/v1/inventory/inventories/...`, **without `merchantId`** (open question 6). Internal: `/internal/v1/inventory/inventories` (`InventoryInternalController`, `@Hidden`).
 - Prefix convention: `/v<major>/<service>/...` for public APIs and `/internal/v<major>/<service>/...` for service-to-service calls. `architecture/generated/<service>.md` lists every endpoint with its visibility.
 
