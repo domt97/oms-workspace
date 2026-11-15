@@ -17,4 +17,3 @@ open-question number is not yet in `architecture/open-questions.md`.
 ## Known gaps
 - `AggregateRoot` is only a marker; aggregates do not collect domain events — integration events are built in the application layer (`OutboxEventHelper`).
 - Order context does not exist yet; `OrderId`/`OrderItemId` already live in `oms-core`.
-- oms-core `PagedResult` is framework-free on `master` but unreleased: see open question 20.
