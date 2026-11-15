@@ -44,7 +44,7 @@ is half resolved, rewrite it to what is still open. A number that is not in this
 
 ## Code hygiene
 
-20. `oms-core/.../domain/page/PagedResult.java` imports Spring Data `Page` — the only framework dependency inside a `domain` package.
+20. **oms-core 2.0.0 not released yet.** `PagedResult` lost its Spring Data factories on oms-core `master` (replacement: `PageUtils.toPagedResult(Page)`), so oms-core `domain` has no framework import there, but the version was not bumped: services pinned to `coreVersion` 1.0.0 still get the old type. The next oms-core release must be **2.0.0** (a public method removed); stores-service already builds `PagedResult` without the removed factory, so it needs no code change to move. Close this when 2.0.0 is released.
 
 ## Design decisions pending (decide when a feature needs them)
 

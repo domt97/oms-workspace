@@ -10,10 +10,11 @@ open-question number is not yet in `architecture/open-questions.md`.
   - `domain/` — pure Java: `model`, `valueobject`, `enums`, `event`, `exception`. No Spring, JPA or Kafka; Lombok (`@Builder`, `@Getter`) is the accepted exception.
   - `application/` — `usecase/` (inbound ports, `XxxUseCase`), `service/` (`@UseCase` impl, `@Transactional`), `repository/` and `client/` (outbound ports), `command/` (`XxxCmd`), `dto/`, `mapper/`.
   - `infrastructure/` — `rest/` (`@WebAdapter`, Request/Response, exception handler), `persistence/` (`@PersistenceAdapter`, JPA entities, `SpringDataXxxRepository`), `message/` (consumers + external DTOs = ACL).
+- **oms-core `domain`** follows the same rule: no Spring, Hibernate or any `jakarta.*` / `javax.persistence` API; Lombok and Jackson annotations on typed ids (e.g. `id/SKU.java`, which sets how the id is read and written as JSON) are allowed. Spring bridges live in `util` (`PageUtils`). oms-core's `DomainHasNoFrameworkImportsTest` enforces it.
 - **Shared kernel** `oms-core`: typed IDs extending `BaseId<T>` (value equality via `equals`/`hashCode`, `oms-core/.../domain/id/BaseId.java`), `AggregateRoot` (marker class, `oms-core/.../domain/AggregateRoot.java`), `Money`, `Address`, exceptions (`BusinessException`, `NotFoundException`, `ValidationException`) mapped in `GlobalExceptionHandler`, stereotype annotations.
 - **ACL**: external event payloads live in `infrastructure/message/dto` and are mapped to commands; e.g. inventory's `ProductCreatedEvent` DTO is a copy of the stores domain event, not shared code.
 
 ## Known gaps
 - `AggregateRoot` is only a marker; aggregates do not collect domain events — integration events are built in the application layer (`OutboxEventHelper`).
 - Order context does not exist yet; `OrderId`/`OrderItemId` already live in `oms-core`.
-- `oms-core/.../domain/page/PagedResult.java` imports Spring Data `Page` — the only framework dependency inside a `domain` package.
+- oms-core `PagedResult` is framework-free on `master` but unreleased: see open question 20.

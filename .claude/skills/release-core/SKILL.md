@@ -11,7 +11,9 @@ user tags and merges** (`CLAUDE.md` → *Rules for Claude and all agents*).
 
 1. Change oms-core and the service together locally (composite build: the service uses `../oms-core`).
 2. In the oms-core PR, bump `version` in `gradle.properties` by semver: a removed or renamed public type, method or config
-   key, or behaviour services must adapt to, is **MAJOR**. The `release-version` check says what merging will release.
+   key, or behaviour services must adapt to, is **MAJOR**. Count every change on `master` since the last tag, not only this
+   PR's diff: oms-core `CLAUDE.md` lists unreleased MAJOR changes (*Every change is a release decision*). The
+   `release-version` check says what merging will release.
    Say in the PR what merging publishes — a published version can never be changed.
 3. Optional, for CI feedback before the merge: ask the user to tag the oms-core branch `vX.Y.Z-rc.N`. The service PR may
    pin that rc to get a green `test`; its `core-pin` check stays red, so an rc is never merged.
