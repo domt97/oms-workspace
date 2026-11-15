@@ -24,6 +24,8 @@ validate it (oms-core `MdcPropagation.restore`). It is not part of the payload s
 |-------|----------|-----------|----------|---------|--------|
 | `ProductCreated` | stores-service (`OutboxEventHelper`, on create + import) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductCreatedConsumer` (group `product-consumer`, topic `ProductCreated`) | `eventId, eventType, occurredAt, merchantId, storeId, productId, skus[]`; key = `aggregate_id` (productId) | Live |
 | `ProductUpdated` | stores-service (`OutboxEventHelper`, on update-product PUT) | Outbox → Debezium `EventRouter` → Kafka | inventory-service `ProductUpdatedConsumer` (group `inventory-product-updated`, topic `ProductUpdated`) | snapshot of catalog fields: `eventId, eventType, occurredAt, merchantId, storeId, productId, version, status, name, categoryId, skus[{id, sku, name, status, price, currency}]`; key = productId. Schema: `contracts/events/ProductUpdated.schema.json` | **Built** ([flow](flows/product-updated.md)) |
+| `PlaceCheckout` *(command)* | cart-service (not built), outbox, in the transaction that sets the cart `CHECKING_OUT` | Outbox → Debezium → Kafka, key `cartId` | order-service (group `order-place-checkout`) | `customerId, cartId, cartVersion, requestedAt, delivery, stores[{merchantId, storeId, quoteId, lines}]`, no prices (ADR 0007) | Planned |
+| `CheckoutPlaced` / `CheckoutRejected` | order-service (not built), outbox | same, key `cartId` | cart-service | `causationId, cartId, cartVersion, checkoutId, orders[]` / `reasons[{storeId?, sku?, code}]` | Planned |
 | `ReserveStock` *(command)* | order-service (not built), outbox | Outbox → Debezium → Kafka, key `orderId` | inventory-service (group `inventory-reserve-stock`) | `merchantId, storeId, orderId, lines[1..100]{orderItemId, productId, sku, quantity}`. Schema: `contracts/events/ReserveStock.schema.json` | Consumer **built** (`ReserveStockConsumer`); producer not built (ADR 0006) |
 | `ConfirmStockReservation` *(command)* | order-service, at `PLACED` | same | inventory-service (group `inventory-confirm-stock-reservation`) | `merchantId, storeId, orderId` | Consumer **built** (`ConfirmStockReservationConsumer`); producer not built |
 | `ReleaseStockReservation` *(command)* | order-service, on cancel / reject / timeout | same | inventory-service (group `inventory-release-stock-reservation`) | `merchantId, storeId, orderId, restock, reason` | Consumer **built** (`ReleaseStockReservationConsumer`); producer not built |
@@ -74,6 +76,14 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 | POST | `/v1/inventory/inventories/{inventoryId}` (adjust stock; the hold types `RESERVE`, `RESERVE_RELEASE`, `RESERVE_EXPIRE` are refused with 400, BR-INV-05; oms-web offers only the on-hand types) | Public |
 | GET | `/v1/inventory/inventories/{inventoryId}`, `/v1/inventory/inventories/products/{productId}` | Public |
 | GET | `/v1/inventory/inventories/stock-movements/{inventoryId}` | Public |
+
+## Planned synchronous calls (Cart + Order MVP, ADR 0007)
+
+| From | To | Call | Purpose |
+|------|----|------|---------|
+| order-service | stores-service | `POST /internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` (planned) | Store status, merchant status, open now, SKU prices at placement; read-only, with `X-Request-Id` |
+| cart-service | order-service | `POST /internal/v1/order/customers/{customerId}/checkouts/by-key/expire` (planned) | Unlock a stuck checkout: idempotent, inserts `EXPIRED` or returns the stored outcome |
+| oms-web | order-service | `POST /v1/order/customers/{customerId}/delivery-quotes` (planned) | Delivery fee per store before checkout (BR-PRC-03) |
 
 ## Front-end consumers
 

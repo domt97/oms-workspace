@@ -120,7 +120,7 @@ flowchart LR
   - Order-service re-validates and re-prices everything (BR-ORD-02/03), so a stale cart can never produce a wrong order.
 - **Ordering owns the order saga** (orchestration, decided Q6). It decides what happens next; inventory and payment execute and report back.
 - **Payment hides the gateway** and **delivery hides the partner** behind ACLs, so changing provider changes nothing outside them.
-- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout. State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, keyed by cart id + cart version); since stock replies arrive asynchronously, it accepts the checkout and the outcome follows from the saga (exact contract decided with order-service).
+- No context reads another's database (system rule 1). Synchronous calls are for reads that must be fresh at checkout, and for writes that are idempotent, retried and safe to lose (system rule 2, ADR 0007). State changes travel through the outbox: events, and the saga's commands between services (e.g. reserving stock), which the executor answers with events from its own outbox (ADR 0006). The customer-facing request `PlaceCheckout` (cart → order) stays one idempotent call (BR-CRT-04, keyed by cart id + cart version), sent as a command from the cart's outbox; the outcome follows from the saga (ADR 0007).
 
 ## 5. Ubiquitous language — terms that change meaning across contexts
 

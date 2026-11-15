@@ -13,7 +13,7 @@ user-invocable: false
    - Name non-CRUD state changes as action sub-resources (`/close`), and back each with a guarded domain transition.
 2. **Public vs internal**:
    - Anything only another service calls goes under `/internal/v1/<service>/...`, `@Hidden`, and is never exposed by a future gateway.
-   - Prefer events over synchronous calls for cross-service writes (workspace rule 2). A synchronous call is for reads that need a fresh answer. Commands between services (e.g. reserve stock at checkout) are Kafka messages, not REST (ADR 0006; `sa-messaging-events` rule 2).
+   - A cross-service state change that must happen together with a local commit goes through the outbox (workspace rule 2); commands such as reserving stock are Kafka messages (ADR 0006; `sa-messaging-events` rule 2). A synchronous call is for reads that need a fresh answer, or for a write that is idempotent, retried by the caller and safe to lose (e.g. `checkouts/by-key/expire`, ADR 0007).
 3. **Merchant in every public path** (or a verified token claim later). Every lookup is scoped by merchant, not by id alone (see `sa-multitenancy-security`).
 4. **Validate at the edge**:
    - `@Valid` on every body, with constraints on every field;

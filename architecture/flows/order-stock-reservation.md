@@ -51,11 +51,11 @@ reply for the current state (BR-INV-07).
 | Release before Reserve (order timed out) | header created `CANCELLED` (tombstone); the late Reserve gets `Rejected{ORDER_CLOSED}`, nothing held |
 | Confirm before Reserve | `ConfirmationFailed{UNKNOWN_ORDER}` and a tombstone (`restock` unset); a repeated confirm answers `ORDER_CLOSED`, a later Reserve is rejected `ORDER_CLOSED`, the first release still sets `restock` |
 | Release before Confirm | RESERVED lines released, header `CANCELLED`; the late Confirm (also one replayed from a DLT) gets `ConfirmationFailed{ORDER_CLOSED}` |
-| Release sent before the Confirmed reply arrived, confirm already applied (reachable only if obligation 3 is relaxed, open question 54) | with `restock`: lines `RETURNED`, stock back, `RETURN` movements; without: lines stay `CONFIRMED` (goods stay sold), header `CANCELLED`. How the saga treats the late `Confirmed`: open question 54 |
+| Release sent before the Confirmed reply arrived, confirm already applied (reachable only if obligation 3 is relaxed; ADR 0007 keeps it) | with `restock`: lines `RETURNED`, stock back, `RETURN` movements; without: lines stay `CONFIRMED` (goods stay sold), header `CANCELLED`. How the saga treats the late `Confirmed`: open question 54 |
 | Old command replayed from a DLT | decided by the header and line states; an old `ReserveStock` is also `STALE_COMMAND` |
 
 order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives (for a confirm step see open question 54); a `StockReserved`
-for a closed saga is compensated; no release while a confirm has no reply (obligation 3, under review: open question 54); replies to commands deduplicated by
+for a closed saga is compensated; no release while a confirm has no reply (obligation 3; decided in ADR 0007: the confirm is re-sent until a reply, and a cancel in between waits as `release_pending`); replies to commands deduplicated by
 `(orderId, causationId, eventType)`, `StockReservationExpired` by `eventId`.
 
 Audit note: a confirm that was applied and then cancelled with `restock` writes both a `SALE` and a `RETURN` movement
@@ -76,7 +76,7 @@ A reply can be lost when the connector's slot is dropped or recreated (open ques
 | `StockReserved` / `StockReservationRejected` | the saga times out and releases (obligation 1), or re-sends the reserve (the duplicate answers the stored outcome) |
 | `StockReservationReleased` | inventory's state is already final; obligation 1 is met by the release; a re-send is optional and harmless |
 | `StockReservationExpired` | a later confirm answers `NOT_RESERVED`; a release reports the line `EXPIRED` |
-| `StockReservationConfirmed` / `StockReservationConfirmationFailed` | open question 54 (re-send the confirm, which is safe, or cancel; decided with order-service) |
+| `StockReservationConfirmed` / `StockReservationConfirmationFailed` | re-send the confirm until a reply; a confirmation failure cancels and releases (ADR 0007, BR-ORD-16) |
 
 ## Duplicate commands (BR-INV-07)
 

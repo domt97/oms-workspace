@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CheckoutPlaced",
+  "description": "Reply (ADR 0007). Published by order-service through its outbox (key = cartId) when every order of the checkout is reserved and PLACED (BR-ORD-14). Consumed by cart-service, which sets the cart CHECKED_OUT only when id, version and status CHECKING_OUT match. Re-published unchanged for a duplicate PlaceCheckout. No prices, no personal data.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "causationId",
+    "customerId",
+    "cartId",
+    "cartVersion",
+    "checkoutId",
+    "orders"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "CheckoutPlaced"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "causationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "eventId of the PlaceCheckout it answers."
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "cartId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Kafka key."
+    },
+    "cartVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkoutId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "One per cartId + cartVersion."
+    },
+    "orders": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": [
+          "orderId",
+          "merchantId",
+          "storeId",
+          "orderNumber"
+        ],
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "merchantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "{storeCode}-{yyMMdd}-{seq} (BR-ORD-10)."
+          }
+        }
+      }
+    }
+  }
+}

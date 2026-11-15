@@ -40,7 +40,7 @@ Not built yet but referenced in code: **order-service** (will send the stock com
 ## System rules (do not violate when designing features)
 
 1. **Database per service.** stores → Postgres DB `store`, inventory → DB `inventory`. Never query or join across.
-2. **Cross-service writes go through events**, published with the **transactional outbox + Debezium CDC** (`outbox_events` table). Never publish to Kafka directly from a use case.
+2. **Cross-service state changes that must happen together with a local commit go through the transactional outbox + Debezium CDC** (`outbox_events` table): events, and commands (ADR 0006, 0007). Never publish to Kafka directly from a use case. A synchronous call is fine when it is idempotent, the caller retries it, and losing it leaves both sides consistent (ADR 0007).
 3. **Hexagonal / DDD in every service**: `domain` (pure Java) ← `application` (use cases, ports) ← `infrastructure` (adapters). External event DTOs live in `infrastructure/message/dto` (anti-corruption layer) and are mapped to commands.
 4. **Merchant isolation**: every merchant-owned aggregate root (store, catalog, inventory, order) belongs to exactly one merchant — directly (`merchant_id`) or through an immutable parent (`store_id` → store → merchant). Customer-owned data (customer, cart, checkout, payment) belongs to the platform and is scoped by `customer_id`. Every query filters by merchant (or a merchant-checked parent) or by customer — never by id alone. Merchants live in stores-service (Postgres table `merchants`); other services only carry `merchant_id`.
 5. **Aggregates reference each other by typed ID only** (`StoreId`, `ProductId`, `SKU`… from `oms-core`).

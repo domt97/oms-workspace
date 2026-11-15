@@ -53,5 +53,6 @@ Full target picture (subdomains, context map, roadmap): `vision.md`.
 
 | Context | Expected responsibility | Evidence in code |
 |---------|------------------------|------------------|
-| Order (`order-service`) | Order lifecycle and saga; sends stock commands and consumes inventory's replies (ADR 0006) | inventory's stock command consumers (ADR 0006), `OrderId` in oms-core |
+| Cart (`cart-service`, planned, DB `cart`) | One cart per customer across stores; checkout sends `PlaceCheckout` (ADR 0007) | none yet |
+| Order (`order-service`, planned, DB `orders`) | Checkout placement and the order saga: one order per store, line snapshots, stock commands (ADR 0006), accept/reject, mock delivery partner, COD reconciliation (ADR 0007) | inventory's stock command consumers (ADR 0006), `OrderId` in oms-core |
 | Promotion (`promotion-service`) | Pricing rules / discounts | Empty `PromotionServiceClient` |

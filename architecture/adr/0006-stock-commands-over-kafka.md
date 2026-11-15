@@ -1,6 +1,6 @@
 # ADR 0006 — Stock commands over Kafka, replies from inventory's outbox
 
-Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); the command consumers (inventory-service `feature/stock-command-consumers`); order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is under review (open question 54).
+Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); the command consumers (inventory-service `feature/stock-command-consumers`); order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is decided in ADR 0007 (re-send the confirm, never cancel for silence; not built).
 
 ## Context
 order-service (not built) orchestrates the order saga and "other services execute commands and report back with
@@ -39,8 +39,8 @@ and every step is durable on both sides.
      later is released too (with `restock`, BR-ORD-09). After `StockReservationRejected` nothing is held and no release
      is needed (one is harmless).
   2. A `StockReserved` arriving for a saga that is already closed is compensated with a release, not ignored.
-  3. No release is sent while a sent `ConfirmStockReservation` has no reply yet. *Under review (open question 54):* with
-     only this rule a lost confirm reply leaves the saga with no way out.
+  3. No release is sent while a sent `ConfirmStockReservation` has no reply yet. ADR 0007 resolves a lost reply: the
+     confirm is re-sent until a reply arrives (the first reply to any copy counts).
   4. Replies to commands are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a
      re-published reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is
      never re-published: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
