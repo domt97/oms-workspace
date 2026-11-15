@@ -19,7 +19,12 @@ Local setup only: this lists what the stack defines so it can be found. Nothing 
 
 ## Topics created by `docker/kafka/create-topics.sh`
 
+- `CheckoutPlaced`
+- `CheckoutRejected`
 - `ConfirmStockReservation`
+- `PlaceCheckout`
+- `ProductCreated`
+- `ProductUpdated`
 - `ReleaseStockReservation`
 - `ReserveStock`
 - `StockReservationConfirmationFailed`

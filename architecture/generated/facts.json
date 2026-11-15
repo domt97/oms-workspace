@@ -106,7 +106,12 @@
       }
     ],
     "topics": [
+      "CheckoutPlaced",
+      "CheckoutRejected",
       "ConfirmStockReservation",
+      "PlaceCheckout",
+      "ProductCreated",
+      "ProductUpdated",
       "ReleaseStockReservation",
       "ReserveStock",
       "StockReservationConfirmationFailed",
@@ -388,9 +393,16 @@
       "mapper": [
         "IdMapper"
       ],
+      "message": [
+        "OutboxPayloadDecoder"
+      ],
       "rest": [
         "ErrorResponse",
         "GlobalExceptionHandler"
+      ],
+      "rest.client": [
+        "RequestIdClientConfig",
+        "RequestIdClientInterceptor"
       ],
       "rest.logging": [
         "MdcRequestFieldsInterceptor",
@@ -415,7 +427,7 @@
         "PriceRange"
       ]
     },
-    "version": "1.0.0"
+    "version": "1.2.0"
   },
   "oms-web": {
     "branch": "develop",
@@ -661,7 +673,7 @@
     "contract_events_missing": [],
     "listeners": [],
     "migrations": {
-      "latest": "V10__clean_outbox_events.sql",
+      "latest": "V11__store_config_auto_accept_default_false.sql",
       "tables": [
         {
           "created_in": "V1__init_store_tables.sql",
@@ -735,6 +747,14 @@
     ],
     "published_without_contract": [],
     "rest": [
+      {
+        "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/internal/OrderQuoteInternalController.java",
+        "handler": "OrderQuoteInternalController#orderQuote",
+        "hidden": true,
+        "method": "POST",
+        "path": "/internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote",
+        "visibility": "internal"
+      },
       {
         "file": "stores-service/src/main/java/com/dotran/oms/store/infrastructure/rest/api/MerchantController.java",
         "handler": "MerchantController#registerMerchant",
@@ -925,6 +945,7 @@
       "GetCollectionProductsUseCase",
       "GetListStoreCollectionUseCase",
       "GetMerchantUseCase",
+      "GetOrderQuoteUseCase",
       "GetStoreCollectionUseCase",
       "GetStoreProductDetailUseCase",
       "GetStoreUseCase",
