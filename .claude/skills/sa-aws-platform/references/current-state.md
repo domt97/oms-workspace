@@ -12,7 +12,9 @@ open-question number is not yet in `architecture/open-questions.md`.
 - Redis 7 — **no service uses it yet**.
 
 **Terraform** (`development/docker/infra/local/main.tf`; variables `profile` = `localdev`, `region` = `eu-west-1`, `localstack_endpoint`)
-- S3 bucket `${profile}-store-products`.
+- S3 bucket `${profile}-store-products`, with CORS for browser PUTs from `web_origins` (allowed headers `*`: LocalStack 3.8.1 rejects a named list sent without spaces) and a lifecycle rule deleting objects tagged `purpose=import-upload` after `import_upload_retention_days` (7).
+- aws provider pinned `< 5.86.0`: newer versions never finish creating the lifecycle rule against LocalStack 3.8.1.
+- Compose sets `S3_SKIP_SIGNATURE_VALIDATION=0`: LocalStack checks presigned URLs (ordinary signed requests are still not checked).
 - SQS `${profile}-reservation-expire-queue`, visibility 90 s, **no DLQ**.
 - EventBridge rule `${profile}-reservation-expire` with `rate(1 minute)`, targeting that queue, plus the queue policy that allows the rule.
 - LocalStack scripts in `oms-core/localstack/` and `stores-service/localstack/` create unused queues and an EventBridge bus (open question 25).
@@ -33,6 +35,6 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 ## Known gaps
 - Drifted LocalStack scripts outside `development` (open question 25).
-- No upload path for import files, no lifecycle rule, no CORS (open question 57).
+- Presigned import uploads: stores-service `S3PresignerConfig` (a copy of oms-core `S3Config`'s branches) and `S3ImportUploadSigner`; real-environment CORS, lifecycle and IAM not written (open question 57).
 - AWS/LocalStack defaults (endpoint, `test` keys) for every profile in oms-core `application-core.yaml` (included by both services): a real environment without the env overrides would call LocalStack with test keys.
 - No SQS DLQ (open question 18); Redis provisioned but unused.
