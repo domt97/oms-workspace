@@ -12,7 +12,7 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 **Validation and errors**
 - Request DTOs use Jakarta validation with `@Valid`. Exception: `ImportStoreProductsRequest` (`POST .../products/import`) has **no `@Valid` and no constraints**.
-- Errors use `oms-core` `GlobalExceptionHandler` (`oms-core/.../rest/GlobalExceptionHandler.java`). Body is `ErrorResponse {error, errors[], status, timestamp, path}`.
+- Errors use `oms-core` `GlobalExceptionHandler` (`oms-core/.../rest/GlobalExceptionHandler.java`). Body is `ErrorResponse {error, errors[], status, timestamp, path, code?}` (`code` from oms-core 1.2.0, left out when unset).
 
   | Exception | Status |
   |-----------|--------|
@@ -33,11 +33,11 @@ open-question number is not yet in `architecture/open-questions.md`.
 
 **Documentation and clients**
 - OpenAPI via springdoc 2.3.0 (`/swagger-ui.html`, `@Operation`/`@ApiResponses` on every public endpoint). Internal endpoints are `@Hidden`.
-- Service-to-service: `InventoryServiceClient` and `PromotionServiceClient` are ports without adapters. No HTTP client library is on the classpath yet.
+- Service-to-service: `InventoryServiceClient` and `PromotionServiceClient` are ports without adapters. No HTTP client adapter exists yet (`RestClient` from spring-web is on the classpath; oms-core 1.2.0 adds `X-Request-Id` to it).
 
 ## Known gaps
 - inventory public API has no merchant in the path (open question 6); reads are by id only.
 - Import request not validated; invalid `sortBy`/`direction` → 500 outside product search; no max page size on product search.
 - No idempotency key on stock adjustment.
 - No HTTP client adapters, timeouts or retry policy defined for service-to-service calls.
-- `ErrorResponse` (oms-core) has no machine-readable `code`; stores-service update-product's two kinds of 409 differ only by message.
+- No service sets an `ErrorResponse` `code` yet (oms-core 1.2.0: `BusinessException.withCode`, `GlobalExceptionHandler.errorResponse(...)` for a service's own status): stores-service update-product's two kinds of 409 still differ only by message, and oms-web re-reads the product to tell them apart.
