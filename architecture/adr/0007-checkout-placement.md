@@ -102,9 +102,11 @@ WHERE status = :expected`. These are row locks; N instances split the work. No s
 `mock-delivery`): quotes, booking at `ACCEPTED` (BR-FUL-03), simulated callbacks and a settlement report for the COD
 reconciliation (BR-PAY-04).
 
-**Infrastructure.** New databases `cart` and `orders`, each with `outbox_events` and its own Debezium connector, slot and
-publication (ADR 0001). All new topics (the three above, the stock commands' producers, order events, DLTs) are created
-with partitions before the connectors are registered (open question 30).
+**Infrastructure.** New databases `cart` and `orders` (created by `development` `docker/postgres/init/01-databases.sh`),
+each with `outbox_events` and its own Debezium connector, slot and publication (ADR 0001); each connector is added with
+its service, once the service's outbox table exists. The message topics (the three above and, with their contracts, the
+order events) are created with partitions by `development` `docker/kafka/create-topics.sh` before the connectors are
+registered; dead-letter topics are created by the consuming service (open question 30).
 
 ## Consequences
 - Correctness of "one outcome per checkout" rests on a unique constraint, not on time: a stuck cart can always be
