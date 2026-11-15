@@ -81,9 +81,31 @@ Everything else is under the prefix `/v1/store/merchants/{merchantId}`:
 
 | From | To | Call | Purpose |
 |------|----|------|---------|
-| order-service | stores-service | `POST /internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` (planned) | Store status, merchant status, open now, SKU prices at placement; read-only, with `X-Request-Id` |
+| order-service | stores-service | `POST /internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` (**built** in stores-service; caller planned) | Store status, merchant status, open now, SKU prices at placement and for a delivery quote; read-only, with `X-Request-Id`. Details below |
 | cart-service | order-service | `POST /internal/v1/order/customers/{customerId}/checkouts/by-key/expire` (planned) | Unlock a stuck checkout: idempotent, inserts `EXPIRED` or returns the stored outcome |
 | oms-web | order-service | `POST /v1/order/customers/{customerId}/delivery-quotes` (planned) | Delivery fee per store before checkout (BR-PRC-03) |
+
+**`order-quote`** (stores-service `OrderQuoteInternalController`, `@Hidden`; no authentication for `/internal/**` yet, open question 65):
+- **Request** `{ "skus": [...] }`: 0..100 codes (the `PlaceCheckout` line limit); 0 = store data only (delivery quote).
+- **Response**: `store` {`id`, `code`, `name`, `status`, `address` (nullable, every field nullable), `timeZone`, `currency`,
+  `autoAcceptOrder`, `allowPreOrder`, `maxOrdersPerDay`, `preparationTimeMinutes`}, `merchantStatus`, `now`, `localDate`
+  (the store's date at `now`, for the daily cap and the order number; null when the time zone cannot be read), `open`,
+  `reasons` (`STORE_NOT_ACTIVE`, `OUTSIDE_HOURS`, `CLOSED_WINDOW`, `INVALID_SCHEDULE`; all that apply), `closedWindowTypes`,
+  `skus` [{`sku`, `found`, `productId`, `productName`, `skuName`, `price`, `currency`, `status`, `productStatus`}] — one per
+  distinct code in request order, matched exactly; unknown, removed, null, blank, longer than 100 characters or containing NUL (`\u0000`) → `found: false`.
+- **Advisory, raw**: statuses and currencies are not filtered; order-service applies BR-ORD-02 and maps them to
+  `CheckoutRejected` codes (🟢 2026-11-15, user): `STORE_NOT_ACTIVE` → `STORE_INACTIVE`; `OUTSIDE_HOURS`,
+  `CLOSED_WINDOW` and `INVALID_SCHEDULE` → `STORE_CLOSED` (BR-STO-04); `merchantStatus: SUSPENDED` → `MERCHANT_SUSPENDED`.
+  Several reasons → **one entry per distinct code** for that store (e.g. a closed store outside its hours gets
+  `STORE_INACTIVE` and `STORE_CLOSED`). Not a reservation: a store or price may change right after it.
+- **Answers**: 200; 400 for no list, more than 100 codes or a path id that is not a UUID (a caller bug); 404 when the
+  merchant does not exist or the store is not the merchant's — **final**: stores are never deleted, so the command carried
+  a wrong merchant/store pair; reject that store with `INVALID_REQUEST` (🟢 2026-11-15, user), do not retry, alert; 5xx or a timeout
+  → `STORE_UNAVAILABLE` (retry is the caller's choice).
+- **Callers and volume**: order-service once per store per checkout and per delivery quote (estimate: below 10 calls per
+  second in the MVP). Each call is 4 queries (merchant, store with its graph, windows, SKUs); all use an index except the
+  store's business hours, read through the graph with no index on `store_business_hours.store_id` (open question 66). A
+  store with an unreadable schedule logs one WARN per call.
 
 ## Front-end consumers
 

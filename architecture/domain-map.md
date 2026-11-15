@@ -18,6 +18,7 @@ where the change starts. Source of truth is the code in `repos/`; update this fi
 
 **Publishes:** `ProductCreated` (on create and on Excel import, `version` 0) and `ProductUpdated` (update-product PUT). Tables: `store_products.version`, `product_skus.store_id` / `removed_at`, `UNIQUE (store_id, sku)`.
 **Consumes:** nothing yet.
+**Internal API:** `POST /internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` for order-service (read-only: store, merchant status, open now from `Store.openAt`, SKU prices; `integration.md` → *Planned synchronous calls*).
 **Outbound ports (not implemented yet):** `InventoryServiceClient.checkItemDetail`, `PromotionServiceClient`.
 **Other storage:** S3: product import files in the configured bucket at `{merchantId}/{storeId}/imports/` (BR-CAT-16); the service signs presigned PUTs and the oms-web Seller Centre uploads the files straight to S3 (BR-CAT-17; real-environment setup: open question 57). Product images are URLs, not stored by the service.
 
