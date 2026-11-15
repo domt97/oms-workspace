@@ -26,12 +26,13 @@
 | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/configs` | stores-service | `StoreConfigController#updateBaseConfig` | oms-web/src/adapters/http/stores/storesService.ts |
 | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products` | stores-service | `StoreProductController#create` | oms-web/src/adapters/http/stores/storesService.ts |
 | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import` | stores-service | `StoreProductController#importProducts` | oms-web/src/adapters/http/stores/storesService.ts |
+| POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import-uploads` | stores-service | `StoreProductController#createImportUpload` | oms-web/src/adapters/http/stores/storesService.ts |
 | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/search` | stores-service | `StoreProductController#getStoreProducts` | oms-web/src/adapters/http/stores/storesService.ts |
 | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | stores-service | `StoreProductController#getProductDetails` | oms-web/src/adapters/http/stores/storesService.ts |
 | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | stores-service | `StoreProductController#update` | oms-web/src/adapters/http/stores/storesService.ts |
 | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/reopen` | stores-service | `StoreController#reopenStore` | oms-web/src/adapters/http/stores/storesService.ts |
 
-Endpoint check: all 24 calls match an endpoint of a service (method and path shape).
+Endpoint check: all 25 calls match an endpoint of a service (method and path shape).
 
 ## Ports (`src/ports/index.ts`)
 
@@ -42,6 +43,7 @@ Endpoint check: all 24 calls match an endpoint of a service (method and path sha
 - `InventoryPort`
 - `MerchantPort`
 - `OrderPort`
+- `ProductImportPort`
 - `ProductPort`
 - `SellerWorkspacePort`
 - `SessionPort`
