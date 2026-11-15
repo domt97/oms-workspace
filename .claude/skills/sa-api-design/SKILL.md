@@ -46,8 +46,8 @@ user-invocable: false
 9. **Errors**: always the `ErrorResponse` shape. Never return stack traces or SQL messages. Messages live in each service's `Constants`.
    - When one status has **several causes the client must handle differently**, give each a machine-readable `code` in
      the error body; clients must never parse the message. Example: update-product answers 409 for a stale version
-     (client offers "reload") and for a SKU code used by another product (client keeps the edits). oms-core's
-     `ErrorResponse` has no `code` yet, so oms-web re-reads the product and compares versions (known gap below).
+     (client offers "reload") and for a SKU code used by another product (client keeps the edits). Each service lists
+     its codes (its `CLAUDE.md` / OpenAPI); a code is part of the contract, so renaming or removing one is BREAKING (rule 8).
 10. **Full-replace `PUT` of an aggregate with child items** (e.g. update-product: product + SKUs + images):
     - Document the semantics: omitted optional fields are **cleared**; child items are matched by a natural key
       (SKU code) or id; items left out are removed (say whether soft or hard); the response carries the new `version`.

@@ -37,5 +37,6 @@ browser's `X-Request-Id`). An event produced by stores-service was consumed by i
   all events stop until rollback.
 - The header comes from internal topics but is untrusted: a producer to the topic can plant a misleading `requestId`
   in logs (same as `X-Request-Id` over HTTP until authentication exists), never a tenant id.
-- Not covered: outbound HTTP between services (no client adapter exists yet; it should send `X-Request-Id` from
-  `capture()`), and W3C `traceparent` once tracing exists (it can become a propagated key).
+- Outbound HTTP between services carries only the MDC `requestId` as `X-Request-Id` (oms-core 1.2.0
+  `RequestIdClientInterceptor`), not the whole `capture()`: the callee takes tenant ids from its own path. Not covered:
+  W3C `traceparent` once tracing exists (it can become a propagated key).
