@@ -7,13 +7,13 @@ open-question number is not yet in `architecture/open-questions.md`.
 ## OMS today (verified in code)
 **Merchant model** (`vision.md`): the isolation unit is the **merchant** (seller company, often a chain, owning stores; formerly called *tenant* in code); launching in Vietnam (VND), not limited to one market or currency (BR-MER-01). Customers, carts and checkouts are platform level.
 - `MerchantId` (oms-core typed ID). Merchants (`code`, `name`, `status`) live in stores-service's Postgres table `merchants` (`Merchant` aggregate, `MerchantRepository` port); `stores.merchant_id` has a foreign key to it. Other services only carry `merchant_id` (inventory gets it from `ProductCreated`).
-- **Merchant `status` is never checked** (Q35): stores-service only tests that the merchant exists (`CreateStoreService`, `SearchProductService`, `GetStoreProductDetailService`, `StoreProductImportHandler`); inventory no longer looks merchants up at all. A suspended merchant keeps working.
+- **Merchant `status` is never checked** (Q35): stores-service only tests that the merchant exists (e.g. `CreateStoreService`, `GetStoreProductDetailService`, `ImportProductService`, `CreateStoreProductUseCaseService`, `AddStoreAvailabilityService`, `CancelStoreAvailabilityService`); inventory no longer looks merchants up at all. A suspended merchant keeps working.
 
 **Isolation in data — stores-service**
 - **Only the `stores` table has `merchant_id`** (column in `V1__init_store_tables.sql`; `UNIQUE (merchant_id, code)` added in `V4__add_unique_constraints.sql`).
 - Every child table (products, SKUs, images, collections, availability, configs, business hours, addresses, `outbox_events`) is isolated **by `store_id` only**; `debezium_heartbeat` (connector heartbeat rows, no merchant data) is outside the domain.
-- Isolation therefore depends on every use case first loading the store with `findByMerchantIdAndStoreId` (e.g. `GetStoreProductDetailService`) and then querying children by that store id.
-- This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check (the collection use cases did until open question 27 was fixed).
+- Isolation therefore depends on every use case first checking the store against the merchant — loading it with `findByMerchantIdAndStoreId` (e.g. `GetStoreProductDetailService`) or `existsByMerchantIdAndStoreId` when the store itself is not needed (e.g. the availability use cases) — and then querying children by that store id.
+- This is the intended hierarchical model (rule 1). The risk is a use case that skips the parent check (the collection use cases did until open question 27 was fixed, and the availability add/cancel use cases did until the availability scoping fix).
 
 **Isolation in data — inventory-service**
 - Every table (`inventories`, `stock_reservations`, `stock_movements`, `stock_reservation_orders`, `outbox_events`) has `merchant_id`; `debezium_heartbeat` (connector heartbeat rows, no merchant data) is the exception.
