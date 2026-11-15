@@ -22,6 +22,10 @@ open-question number is not yet in `architecture/open-questions.md`.
 **Runtime checks done instead**
 - Changes to SQL have been checked by hand against local Postgres (EXPLAIN, run against seeded data), as in inventory-service#27 and #28.
 
+**Order of collections in tests (rule 9)**
+- stores-service `OpenStatus.reasons` is an unmodifiable `EnumSet` (declaration order), so `StoreOpenAtTest` asserts it
+  with `containsExactly` (branch `feature/order-quote`, stores-service#66, not merged yet).
+
 ## Known gaps
 - Integration tests exist only for inventory-service's Postgres SQL; none for Kafka, SQS, S3, or stores-service; no MockMvc controller tests.
 - The `Integration tests` CI job is not a required check yet.
