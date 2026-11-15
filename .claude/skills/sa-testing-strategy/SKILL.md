@@ -32,12 +32,19 @@ user-invocable: false
 6. **Event contracts**: when changing an event payload that a producer and a consumer each declare, test serialisation on the producer and deserialisation of an **old** payload on the consumer (backward compatibility).
 7. **Test data** via aggregate builders and fixtures; fix the clock (`Clock` bean, `Clock.fixed`) for time-based logic.
 8. **Keep tests fast and deterministic**: no sleeps unless elapsed time is what is tested (use latches or Awaitility with a timeout), no random ports or real AWS, no order dependence.
+9. **Never assert the order of an unordered collection.** `Set.of`, `Set.copyOf` and `Map.of` iterate in an order that
+   changes from one JVM run to the next (random salt), and `HashSet`/`HashMap` have no guaranteed order (it follows
+   `hashCode`, which for enums and plain objects differs per run), so `containsExactly` on them passes or fails by
+   chance. If the order matters (a response list, a log, a JSON array), make the code keep it (`EnumSet` keeps
+   declaration order, `LinkedHashSet` keeps insertion order, or return a `List`) and assert it with `containsExactly`.
+   If the order does not matter, assert with `containsExactlyInAnyOrder`.
 
 ## Checklist
 - [ ] Test list per level, one per edge case, with negative assertions.
 - [ ] What unit tests cannot prove here (SQL, constraint, transaction, serialisation, concurrency) and how it is verified instead.
 - [ ] Redelivery/idempotency test for consumers; cross-merchant test for lookups.
 - [ ] Old-payload compatibility test if an event changed.
+- [ ] No `containsExactly` on a `Set`/`Map` without a fixed order (rule 9).
 - [ ] `./gradlew test` result in the PR (and `integrationTest` for inventory-service when SQL or locking changed); manual verification steps written down if any.
 
 ## Current state and known gaps
