@@ -6,6 +6,7 @@
 
 | Visibility | Method | Path | Handler |
 |---|---|---|---|
+| internal (hidden) | POST | `/internal/v1/store/merchants/{merchantId}/stores/{storeId}/order-quote` | `OrderQuoteInternalController#orderQuote` |
 | public | POST | `/v1/store/merchants` | `MerchantController#registerMerchant` |
 | public | GET | `/v1/store/merchants/{merchantId}` | `MerchantController#getMerchant` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores` | `StoreController#createStore` |
@@ -42,7 +43,7 @@
 
 Contract check: all 2 events that `architecture/contracts/events/` attributes to this service were found.
 
-## Database tables (latest migration: `V10__clean_outbox_events.sql`)
+## Database tables (latest migration: `V11__store_config_auto_accept_default_false.sql`)
 
 - `merchants` (created in V1__init_store_tables.sql)
 - `outbox_events` (created in V7__add_outbox_events_table.sql)
@@ -85,6 +86,7 @@ Contract check: all 2 events that `architecture/contracts/events/` attributes to
 - `GetCollectionProductsUseCase`
 - `GetListStoreCollectionUseCase`
 - `GetMerchantUseCase`
+- `GetOrderQuoteUseCase`
 - `GetStoreCollectionUseCase`
 - `GetStoreProductDetailUseCase`
 - `GetStoreUseCase`
