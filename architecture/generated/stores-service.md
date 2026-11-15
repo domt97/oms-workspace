@@ -23,6 +23,7 @@
 | public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/configs` | `StoreConfigController#updateBaseConfig` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products` | `StoreProductController#create` |
 | public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import` | `StoreProductController#importProducts` |
+| public | POST | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/import-uploads` | `StoreProductController#createImportUpload` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/search` | `StoreProductController#getStoreProducts` |
 | public | GET | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#getProductDetails` |
 | public | PUT | `/v1/store/merchants/{merchantId}/stores/{storeId}/products/{productId}` | `StoreProductController#update` |
@@ -76,6 +77,7 @@ Contract check: all 2 events that `architecture/contracts/events/` attributes to
 - `AddStoreAvailabilityUseCase`
 - `CancelStoreAvailabilityUseCase`
 - `CloseStoreUseCase`
+- `CreateImportUploadUseCase`
 - `CreateMerchantUseCase`
 - `CreateStoreCollectionUseCase`
 - `CreateStoreProductUseCase`

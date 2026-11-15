@@ -41,5 +41,7 @@ Local setup only: this lists what the stack defines so it can be found. Nothing 
 - `aws_cloudwatch_event_rule` `reservation_expire`
 - `aws_cloudwatch_event_target` `reservation_expire_queue`
 - `aws_s3_bucket` `store_products`
+- `aws_s3_bucket_cors_configuration` `store_products`
+- `aws_s3_bucket_lifecycle_configuration` `store_products`
 - `aws_sqs_queue` `reservation_expire_queue`
 - `aws_sqs_queue_policy` `reservation_expire`
