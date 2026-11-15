@@ -42,10 +42,6 @@ is half resolved, rewrite it to what is still open. A number that is not in this
     - A failing inventory near the front of the order (e.g. already-corrupted `reserved_quantity`) is retried first on every tick.
     Options when volume requires it: set-based `markExpired` (`UPDATE … WHERE id IN (…) AND status = 'RESERVED' RETURNING id`) plus one release per inventory; claim pages with `SELECT … FOR UPDATE SKIP LOCKED LIMIT n` so instances split the work; Micrometer gauges (backlog, oldest expired age) with an alert; `CREATE INDEX CONCURRENTLY` for future indexes on large tables.
 
-## Code hygiene
-
-20. `oms-core/.../domain/page/PagedResult.java` imports Spring Data `Page` — the only framework dependency inside a `domain` package.
-
 ## Design decisions pending (decide when a feature needs them)
 
 6. inventory-service REST has **no `merchantId`** in path or header, unlike stores-service.
