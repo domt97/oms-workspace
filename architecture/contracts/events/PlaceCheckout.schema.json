@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlaceCheckout",
+  "description": "Command (ADR 0007). Sent by cart-service through its outbox in the transaction that sets the cart CHECKING_OUT (topic = this name, key = cartId). Consumed by order-service (group order-place-checkout). Carries no prices: order-service re-prices from stores-service (BR-ORD-03). Answered by CheckoutPlaced or CheckoutRejected. The same cartId + cartVersion with the same content re-publishes the stored outcome; with different content it is answered CONTENT_MISMATCH and the first checkout is untouched (BR-ORD-05).",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "customerId",
+    "cartId",
+    "cartVersion",
+    "requestedAt",
+    "delivery",
+    "stores"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "PlaceCheckout"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "The customer who owns the cart (customer-scoped data, system rule 4)."
+    },
+    "cartId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Kafka key. With cartVersion, the idempotency key of the checkout (BR-ORD-05, BR-CRT-04)."
+    },
+    "cartVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "requestedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Time of the first send; re-sends keep it. A command with no checkout for its key and older than the reserve window is answered STALE (ADR 0007)."
+    },
+    "delivery": {
+      "type": "object",
+      "required": [
+        "address",
+        "recipientName",
+        "phone"
+      ],
+      "additionalProperties": false,
+      "description": "Typed at checkout (BR-ORD-15). Personal data: never logged.",
+      "properties": {
+        "address": {
+          "type": "object",
+          "required": [
+            "line1",
+            "city",
+            "country"
+          ],
+          "properties": {
+            "line1": {
+              "type": "string",
+              "minLength": 1
+            },
+            "line2": {
+              "type": "string"
+            },
+            "ward": {
+              "type": "string"
+            },
+            "district": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string",
+              "minLength": 1
+            },
+            "country": {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$",
+              "description": "ISO 3166-1 alpha-2."
+            },
+            "postalCode": {
+              "type": "string"
+            }
+          }
+        },
+        "recipientName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      }
+    },
+    "stores": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "description": "One entry per store: order-service creates one order each (BR-ORD-01, BR-ORD-14 limits). A storeId appears once, and a SKU once per store; duplicates are answered INVALID_REQUEST.",
+      "items": {
+        "type": "object",
+        "required": [
+          "merchantId",
+          "storeId",
+          "quoteId",
+          "lines"
+        ],
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The delivery quote the customer saw (BR-PRC-03); a different fee at placement → DELIVERY_FEE_CHANGED."
+          },
+          "lines": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "required": [
+                "lineId",
+                "productId",
+                "sku",
+                "quantity"
+              ],
+              "properties": {
+                "lineId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "productId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sku": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 99
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

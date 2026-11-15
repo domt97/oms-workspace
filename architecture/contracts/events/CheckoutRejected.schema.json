@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CheckoutRejected",
+  "description": "Reply (ADR 0007). Published by order-service through its outbox (key = cartId): nothing was placed and every reservation of the checkout is released (BR-ORD-14). Consumed by cart-service, which returns the cart to ACTIVE with a new version and shows the reasons per store or line, only when id, version and status CHECKING_OUT match. No personal data.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "occurredAt",
+    "causationId",
+    "customerId",
+    "cartId",
+    "cartVersion",
+    "reasons"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "CheckoutRejected"
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "causationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "eventId of the PlaceCheckout it answers."
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "cartId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Kafka key."
+    },
+    "cartVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "checkoutId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Present when a checkout row was stored (STALE, EXPIRED or a rejected placement)."
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Absent for checkout-level reasons."
+          },
+          "sku": {
+            "type": "string",
+            "description": "Present for line-level reasons."
+          },
+          "code": {
+            "enum": [
+              "STORE_INACTIVE",
+              "STORE_CLOSED",
+              "MERCHANT_SUSPENDED",
+              "DAILY_CAP_REACHED",
+              "PRODUCT_INACTIVE",
+              "UNKNOWN_SKU",
+              "CURRENCY_MISMATCH",
+              "INSUFFICIENT_STOCK",
+              "NOT_ORDERABLE",
+              "RESERVE_TIMEOUT",
+              "RESERVE_FAILED",
+              "DELIVERY_UNAVAILABLE",
+              "DELIVERY_FEE_CHANGED",
+              "STORE_UNAVAILABLE",
+              "STALE",
+              "EXPIRED",
+              "CONTENT_MISMATCH",
+              "INVALID_REQUEST"
+            ],
+            "description": "Line codes INSUFFICIENT_STOCK, NOT_ORDERABLE and UNKNOWN_SKU pass inventory's StockReservationRejected reasons through unchanged; RESERVE_TIMEOUT = no reserve reply in time, or inventory answered STALE_COMMAND; RESERVE_FAILED = inventory answered ORDER_CLOSED. CONTENT_MISMATCH is not an outcome for the cart (the first checkout of the key stands). STALE and EXPIRED are stored under the key, so a later copy of the command re-publishes them (ADR 0007)."
+          },
+          "deliveryFee": {
+            "type": "object",
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "description": "Only for DELIVERY_FEE_CHANGED: the new fee, shown to the customer before they confirm again (BR-PRC-03).",
+            "properties": {
+              "amount": {
+                "type": "number",
+                "minimum": 0
+              },
+              "currency": {
+                "type": "string",
+                "pattern": "^[A-Z]{3}$"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
