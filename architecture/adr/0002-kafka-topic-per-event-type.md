@@ -12,8 +12,9 @@ The topic name is the event type in PascalCase, e.g. `ProductCreated`. Message k
 `aggregate_id`, so all events of one aggregate land in the same partition (ordered per aggregate).
 
 ## Consequences
-- Adding an event = choose a unique PascalCase `event_type`; the topic appears automatically
-  (broker auto-create) — no connector change needed for a new event in an existing producer.
+- Adding an event = choose a unique PascalCase `event_type` — no connector change needed for a new event in an
+  existing producer. Its topic is created with partitions before the first producer or consumer
+  (`development` `docker/kafka/create-topics.sh`, ADR 0006); a broker-auto-created topic would get 1 partition.
 - Event type names must be unique across all producing services (two services must not both
   publish `ProductCreated` with different meaning). Prefix with the context if ever ambiguous.
 - Consumers subscribe by event name (`@KafkaListener(topics = "ProductCreated")`).
