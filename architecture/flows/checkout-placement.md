@@ -1,7 +1,8 @@
 # Flow: Checkout placement (cart → order → stock)
 
-Status: **designed, not built** (ADR 0007). cart-service and order-service do not exist yet; inventory's side is built
-(ADR 0006, `order-stock-reservation.md`). Rules: BR-CRT-03/04, BR-ORD-01..05, 08, 10, 14..16, BR-MER-05,
+Status: **partly built** (ADR 0007). order-service consumes `PlaceCheckout` and answers every pre-reserve failure with
+`CheckoutRejected` (listener off by default); placement, the stock commands and cart-service are not built.
+Inventory's side is built (ADR 0006, `order-stock-reservation.md`). Rules: BR-CRT-03/04, BR-ORD-01..05, 08, 10, 14..16, BR-MER-05,
 BR-STO-04/05/07, BR-PRC-01/03, BR-FUL-03.
 
 ## Happy path

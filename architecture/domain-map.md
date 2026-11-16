@@ -55,5 +55,5 @@ Full target picture (subdomains, context map, roadmap): `vision.md`.
 | Context | Expected responsibility | Evidence in code |
 |---------|------------------------|------------------|
 | Cart (`cart-service`, planned, DB `cart`) | One cart per customer across stores; checkout sends `PlaceCheckout` (ADR 0007) | none yet |
-| Order (`order-service`, **skeleton** in `repos/order-service`: app, CI, tests, no logic yet; DB `orders`, schema `orders`, port 8068) | Checkout placement and the order saga: one order per store, line snapshots, stock commands (ADR 0006), accept/reject, mock delivery partner, COD reconciliation (ADR 0007) | inventory's stock command consumers (ADR 0006), `OrderId` in oms-core |
+| Order (`order-service`, `repos/order-service`, port 8068, DB `orders`: `outbox_events`, `checkouts`; **checkout intake built** — PlaceCheckout consumed, pre-reserve rejections published as CheckoutRejected; placement not built) | Checkout placement and the order saga: one order per store, line snapshots, stock commands (ADR 0006), accept/reject, mock delivery partner, COD reconciliation (ADR 0007) | inventory's stock command consumers (ADR 0006), `OrderId` in oms-core |
 | Promotion (`promotion-service`) | Pricing rules / discounts | Empty `PromotionServiceClient` |

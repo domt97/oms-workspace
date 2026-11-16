@@ -43,7 +43,7 @@
     "requestedAt": {
       "type": "string",
       "format": "date-time",
-      "description": "Time of the first send; re-sends keep it. A command with no checkout for its key and older than the reserve window is answered STALE (ADR 0007)."
+      "description": "Time of the first send; re-sends keep it. A command with no checkout for its key and older than the reserve window is answered STALE (ADR 0007). Never later than order-service's clock + 30 s (clock skew); a later one is answered INVALID_REQUEST."
     },
     "delivery": {
       "type": "object",
@@ -152,7 +152,10 @@
                 },
                 "sku": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^[^\\u0000]*[^\\s\\u0000][^\\u0000]*$",
+                  "description": "Matched exactly against the store's SKU codes. 1–100 characters, not blank, no NUL: anything else is answered INVALID_REQUEST (a rejection is stored for good, BR-ORD-05)."
                 },
                 "quantity": {
                   "type": "integer",
