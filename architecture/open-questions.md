@@ -47,6 +47,8 @@ is half resolved, rewrite it to what is still open. A number that is not in this
 
 ## Design decisions pending (decide when a feature needs them)
 
+67. **order-service's generated facts show a contract note.** The contracts `CheckoutPlaced` and `CheckoutRejected` name order-service as their publisher, but the skeleton publishes nothing yet, so `architecture/generated/order-service.md` carries *Contract check failed* once the skeleton is on `develop`. Expected until the first PR that publishes them (with the order outbox `V1`, the adapter and the `order-outbox-cdc` connector); delete this item then.
+
 65. **Internal endpoints have no protection.** `/internal/v1/**` (inventory create-inventories, stores-service `order-quote`) are hidden from OpenAPI and not proxied by oms-web, but anyone who reaches the service port can call them (`sa-multitenancy-security` → current state). The order quote returns prices and store state only (no PII). Decide with the first shared environment: network policy, a gateway that blocks `/internal`, or service credentials.
 
 6. inventory-service REST has **no `merchantId`** in path or header, unlike stores-service.

@@ -12,11 +12,12 @@ repo into `repos/` so Claude can reason about the whole system.
 |------|------|------|------|
 | `stores-service` | `repos/stores-service` | Store bounded context: merchants (seller self-registration), stores, own products (SKU, images), collections, business hours, availability. Publishes `ProductCreated` and `ProductUpdated` via outbox. | 8048 |
 | `inventory-service` | `repos/inventory-service` | Inventory bounded context: stock per (store, SKU), reservations, stock movement audit. | 8058 |
+| `order-service` | `repos/order-service` | Order context (ADR 0007): checkouts, one order per store. **Skeleton**, no logic yet. | 8068 |
 | `oms-core` | `repos/oms-core` | Shared kernel, published to GitHub Packages by version (services pin `coreVersion`; composite build locally, ADR 0005): typed IDs, `AggregateRoot`, `Money`/`Address`, exceptions, `@UseCase`/`@WebAdapter`/`@PersistenceAdapter`, S3, Excel import template. | – |
 | `development` | `repos/development` | Local infra: docker-compose (Kafka, Kafka Connect + Debezium, Schema Registry, Postgres 16, Redis, LocalStack) and Terraform for LocalStack (S3, SQS, EventBridge). | – |
 | `oms-web` | `repos/oms-web` | Front end (React 19 + TypeScript, Vite): shopper storefront at `/` and Seller Centre at `/seller`. Calls stores-service and inventory-service through a proxy on `/v1/store/` and `/v1/inventory/`; cart, orders and sign-in are browser-local stand-ins until those services exist. Architecture in `docs/architecture.md`. | 5173 (dev) |
 
-Not built yet but referenced in code: **order-service** (will send the stock commands of ADR 0006; inventory already consumes them), **promotion-service** (`PromotionServiceClient`).
+Not built yet but referenced in code: **order-service** logic (it will send the stock commands of ADR 0006, which inventory already consumes), **promotion-service** (`PromotionServiceClient`).
 
 ## Where to look
 
@@ -51,7 +52,7 @@ Not built yet but referenced in code: **order-service** (will send the stock com
 ## How to work
 
 - **Analyse a feature or change:** `/feature-impact`. It decides which contexts are affected, hands multi-context work to
-  the `oms-architect` agent (which asks `store-expert`, `inventory-expert`, `platform-expert`, `web-expert`) and writes the standard report.
+  the `oms-architect` agent (which asks `store-expert`, `inventory-expert`, `order-expert`, `platform-expert`, `web-expert`) and writes the standard report.
   Start from the map, not the code: `system-overview.md`, `domain-map.md`, then only the rules, integration sections and
   flow the feature touches. In a service, read `repos/<service>/CLAUDE.md` first, then `application/usecase` and `domain/model`.
 - **Business rules:** design only on ✅ (in code) and 🟢 (decided) rules, or on ones the user confirmed in this conversation.
