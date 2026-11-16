@@ -5,8 +5,7 @@ Status: Accepted (2026-11)
 ## Context
 Every service logs with an MDC `requestId` (oms-core `RequestIdFilter`; one id per HTTP request, kept from the
 browser's `X-Request-Id`). An event produced by stores-service was consumed by inventory under a different id
-(`topic-partition-offset`), so one user action could not be followed across services without joining on `eventId`
-(open question 46). Correlation is envelope metadata, not part of the event contract (the JSON Schemas in
+(`topic-partition-offset`), so one user action could not be followed across services without joining on `eventId`. Correlation is envelope metadata, not part of the event contract (the JSON Schemas in
 `contracts/events/` describe the payload only).
 
 ## Decision

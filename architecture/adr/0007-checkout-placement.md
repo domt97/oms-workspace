@@ -33,7 +33,7 @@ the outbox, and a synchronous call is allowed when it is idempotent, retried and
   `WHERE id = :cartId AND version = :cartVersion AND status = 'CHECKING_OUT'`, so a late reply after an unlock is a no-op.
 - Schemas: `contracts/events/PlaceCheckout`, `CheckoutPlaced`, `CheckoutRejected`. The command carries no prices;
   order-service reads store state and SKU prices from stores-service (internal `order-quote`, synchronous, before its
-  transaction, with `X-Request-Id`, open question 46).
+  transaction, with `X-Request-Id` from oms-core 1.2.0's `RequestIdClientConfig`).
 
 **One outcome per checkout key (BR-ORD-05).** order-service keeps one `checkouts` row per key, `UNIQUE (cart_id,
 cart_version)`, with a content hash and a status. The hash covers `customerId`, `delivery` and `stores` (normalised:
@@ -42,7 +42,10 @@ Every path that decides the outcome **inserts or finds that row**:
 - *placement:* the handler first reads the key. Same hash → re-publish the stored outcome (nothing while `PENDING`).
   Different hash → `CheckoutRejected{CONTENT_MISMATCH}`; the stored checkout is untouched. No row → if `requestedAt`
   is older than **10 minutes** (shorter than the 15-minute hold, BR-INV-02), insert the row as `STALE`
-  (`ON CONFLICT DO NOTHING`; on 0 rows re-read it) and reply with the stored outcome; otherwise run the stores-service calls (outside any transaction), then open the placement
+  (`ON CONFLICT DO NOTHING`; on 0 rows re-read it) and reply with the stored outcome; otherwise run the stores-service calls (outside any transaction).
+  **A pre-reserve rejection is stored too** (decided 2026-11-16): any failed check inserts the row as `REJECTED` with its
+  reasons, in the same transaction as its `CheckoutRejected` (`ON CONFLICT DO NOTHING`; on 0 rows re-read it), so a
+  later copy never re-runs the checks and places what the customer already saw rejected. If every check passes, open the placement
   transaction, whose **first statement** is `INSERT … ON CONFLICT DO NOTHING` of the `PENDING` row. If that insert
   affects 0 rows (another copy or an expiry won), the transaction writes nothing else and rolls back; the handler
   re-reads the row and answers as for an existing key. Only the winner writes the orders and the `ReserveStock` commands,
