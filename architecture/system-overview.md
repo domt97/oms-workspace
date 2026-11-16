@@ -19,7 +19,7 @@ flowchart LR
         IUC --> IDB[(Postgres: inventory)]
     end
     EB[EventBridge 1 min] --> Q[(SQS reservation-expire)] --> SQS
-    ORD[order-service<br/>planned] -. ReserveStock / Confirm / Release commands .-> K
+    ORD[order-service<br/>skeleton, no logic yet] -. ReserveStock / Confirm / Release commands .-> K
     K -. StockReserved / … replies (inventory outbox → connector inventory-outbox-cdc) .-> ORD
     WEB[oms-web<br/>storefront + Seller Centre] -- /v1/store --> SAPI
     WEB -- /v1/inventory --> IAPI

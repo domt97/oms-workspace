@@ -6,7 +6,7 @@ releasing oms-core.
 
 ## Branch model
 
-- Service repos (`stores-service`, `inventory-service`) and `oms-web`: `master` is the release branch; **`develop`** is the
+- Service repos (`stores-service`, `inventory-service`, `order-service`) and `oms-web`: `master` is the release branch; **`develop`** is the
   integration branch and the GitHub default branch (new PRs and clones target `develop`).
   Branch features/fixes **from `develop`** and open PRs **into `develop`**; `master` only receives `develop` via release PRs.
 - `oms-workspace`: `master` is protected. Every change (docs, agents, skills, scripts, workflows)
@@ -30,7 +30,7 @@ releasing oms-core.
 
 ## CI (GitHub Actions, `.github/workflows/ci.yml` in each code repo)
 
-- **stores-service, inventory-service:** `./gradlew test` on every PR and push to `develop`/`master`, against the **pinned
+- **stores-service, inventory-service, order-service:** `./gradlew test` on every PR and push to `develop`/`master`, against the **pinned
   `coreVersion`** from GitHub Packages (no oms-core checkout; `GITHUB_TOKEN` with `packages: read`). Job **`core-pin`** fails
   while `coreVersion` is a pre-release (`-rc.N`). Test reports are uploaded as an artifact on failure.
 - **oms-core:** its own tests plus a dry run of the publication files (POM, Gradle module metadata); on PRs, `release-version`
@@ -45,8 +45,8 @@ releasing oms-core.
   4. the service PR sets `coreVersion=X.Y.Z` (no `v`; `core-pin` green) and is merged.
   A service PR whose pinned version is not published yet has a red `test`: never merge it before the Publish run is green.
   Breaking change in oms-core = MAJOR version (oms-core `README.md`).
-- **inventory-service** also has a job **`Integration tests`** (`./gradlew integrationTest`: Testcontainers Postgres on the
-  runner's Docker; native SQL, constraints, locks, races). It is not a required check yet. Everything else is unit tests
+- **inventory-service** and **order-service** also have a job **`Integration tests`** (`./gradlew integrationTest`: Testcontainers Postgres on the
+  runner's Docker; native SQL, constraints, locks, races; order-service so far only checks its Flyway setup). It is not a required check yet. Everything else is unit tests
   only (no Docker): Debezium and Kafka behaviour, and stores-service SQL, stay manual checks.
 - **oms-workspace:** `Script tests` runs the unit tests (`python3 -m unittest discover -s scripts/tests`: the facts
   extractor, the git guard hook, the lint) and then `python3 scripts/lint_workspace.py` on PRs that touch `scripts/`,

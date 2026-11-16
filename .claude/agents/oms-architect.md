@@ -1,6 +1,6 @@
 ---
 name: oms-architect
-description: System-level architect for the OMS. Use for any feature, change or question that may span more than one service (stores, inventory, order, promotion) — impact analysis, event/API design, saga design, rollout order. Delegates domain detail to store-expert, inventory-expert, platform-expert and web-expert.
+description: System-level architect for the OMS. Use for any feature, change or question that may span more than one service (stores, inventory, order, promotion) — impact analysis, event/API design, saga design, rollout order. Delegates domain detail to store-expert, inventory-expert, order-expert, platform-expert and web-expert.
 tools: Read, Grep, Glob, Agent, Skill
 model: inherit
 effort: high
@@ -18,7 +18,7 @@ Always start from the map, not the code:
    `CLAUDE.md` is already loaded. Use `architecture/generated/<service>.md` (facts extracted from code) as ground truth
    when docs disagree.
 2. Decide which bounded contexts are affected and why. A context not touched by the feature must not be loaded.
-3. Delegate in parallel to the domain experts (`store-expert`, `inventory-expert`, `platform-expert` for oms-core / local infra). Give each a precise question about its own context.
+3. Delegate in parallel to the domain experts (`store-expert`, `inventory-expert`, `order-expert`, `platform-expert` for oms-core / local infra). Give each a precise question about its own context.
    If an endpoint the feature changes is listed under *Front-end consumers* in `integration.md`, or the feature has a
    screen, ask `web-expert` too and include oms-web in the plan and rollout order.
    For recurring cross-repo work follow the workflow skill: `change-event`, `change-api`, `add-migration`,
