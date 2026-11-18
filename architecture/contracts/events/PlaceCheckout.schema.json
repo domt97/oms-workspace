@@ -65,20 +65,35 @@
           "properties": {
             "line1": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^\\u0000]*[^\\t\\n\\u000B\\f\\r\\u001C-\\u001F \\u1680\\u2000-\\u2006\\u2008-\\u200A\\u2028\\u2029\\u205F\\u3000\\u0000][^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). Not blank: at least one character that is not whitespace, where whitespace is exactly the characters of Java Character.isWhitespace listed in the pattern (U+00A0, U+2007 and U+202F are not whitespace)."
             },
             "line2": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 255,
+              "pattern": "^[^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). May be empty."
             },
             "ward": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^[^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). May be empty."
             },
             "district": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 100,
+              "pattern": "^[^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). May be empty."
             },
             "city": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 100,
+              "pattern": "^[^\\u0000]*[^\\t\\n\\u000B\\f\\r\\u001C-\\u001F \\u1680\\u2000-\\u2006\\u2008-\\u200A\\u2028\\u2029\\u205F\\u3000\\u0000][^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). Not blank: at least one character that is not whitespace, where whitespace is exactly the characters of Java Character.isWhitespace listed in the pattern (U+00A0, U+2007 and U+202F are not whitespace)."
             },
             "country": {
               "type": "string",
@@ -86,19 +101,26 @@
               "description": "ISO 3166-1 alpha-2."
             },
             "postalCode": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 20,
+              "pattern": "^[^\\u0000]*$",
+              "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). May be empty."
             }
           }
         },
         "recipientName": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 255
+          "maxLength": 255,
+          "pattern": "^[^\\u0000]*[^\\t\\n\\u000B\\f\\r\\u001C-\\u001F \\u1680\\u2000-\\u2006\\u2008-\\u200A\\u2028\\u2029\\u205F\\u3000\\u0000][^\\u0000]*$",
+          "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). Not blank: at least one character that is not whitespace, where whitespace is exactly the characters of Java Character.isWhitespace listed in the pattern (U+00A0, U+2007 and U+202F are not whitespace)."
         },
         "phone": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 32
+          "maxLength": 32,
+          "pattern": "^[^\\u0000]*[^\\t\\n\\u000B\\f\\r\\u001C-\\u001F \\u1680\\u2000-\\u2006\\u2008-\\u200A\\u2028\\u2029\\u205F\\u3000\\u0000][^\\u0000]*$",
+          "description": "Counted in Unicode code points. No NUL and no unpaired surrogate (UTF-16 half); anything else is answered INVALID_REQUEST (BR-ORD-15). Not blank: at least one character that is not whitespace, where whitespace is exactly the characters of Java Character.isWhitespace listed in the pattern (U+00A0, U+2007 and U+202F are not whitespace)."
         }
       }
     },
@@ -106,7 +128,7 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 10,
-      "description": "One entry per store: order-service creates one order each (BR-ORD-01, BR-ORD-14 limits). A storeId appears once, and a SKU once per store; duplicates are answered INVALID_REQUEST.",
+      "description": "One entry per store: order-service creates one order each (BR-ORD-01, BR-ORD-14 limits). A storeId appears once, a SKU once per store, and a lineId once in the whole command (a cart line id is unique across the cart, BR-ORD-14); duplicates are answered INVALID_REQUEST.",
       "items": {
         "type": "object",
         "required": [
@@ -144,7 +166,8 @@
               "properties": {
                 "lineId": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "uuid",
+                  "description": "The cart line id: unique across the whole command (BR-ORD-14)."
                 },
                 "productId": {
                   "type": "string",
@@ -154,8 +177,8 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 100,
-                  "pattern": "^[^\\u0000]*[^\\s\\u0000][^\\u0000]*$",
-                  "description": "Matched exactly against the store's SKU codes. 1–100 characters, not blank, no NUL: anything else is answered INVALID_REQUEST (a rejection is stored for good, BR-ORD-05)."
+                  "pattern": "^[^\\u0000]*[^\\t\\n\\u000B\\f\\r\\u001C-\\u001F \\u1680\\u2000-\\u2006\\u2008-\\u200A\\u2028\\u2029\\u205F\\u3000\\u0000][^\\u0000]*$",
+                  "description": "Matched exactly against the store's SKU codes. 1–100 Unicode code points, no NUL, no unpaired surrogate, not blank (whitespace as for line1): anything else is answered INVALID_REQUEST (a rejection is stored for good, BR-ORD-05)."
                 },
                 "quantity": {
                   "type": "integer",

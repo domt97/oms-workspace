@@ -48,6 +48,7 @@ is half resolved, rewrite it to what is still open. A number that is not in this
 ## Design decisions pending (decide when a feature needs them)
 
 67. **order-service's generated facts show a contract note for `CheckoutPlaced`.** The contract names order-service as its publisher, but only `CheckoutRejected` is published so far (checkout intake). Expected until placement is built; delete this item then.
+68. **oms-web's checkout form does not apply the PlaceCheckout delivery limits** (BR-ORD-15). It has one free-text address field with no caps (`repos/oms-web/src/features/storefront/checkout/CheckoutPage.tsx`), and the cart is browser-local, so nothing reaches order-service yet. When cart-service is built, the form needs the separate address fields with the BR-ORD-15 caps (counted in code points, not blank) so a customer never gets a stored `INVALID_REQUEST` (BR-ORD-05).
 
 65. **Internal endpoints have no protection.** `/internal/v1/**` (inventory create-inventories, stores-service `order-quote`) are hidden from OpenAPI and not proxied by oms-web, but anyone who reaches the service port can call them (`sa-multitenancy-security` → current state). The order quote returns prices and store state only (no PII). Decide with the first shared environment: network policy, a gateway that blocks `/internal`, or service credentials.
 
