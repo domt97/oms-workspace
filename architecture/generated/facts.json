@@ -68,6 +68,12 @@
         "slot": "debezium_inventory_slot"
       },
       {
+        "database": "orders",
+        "name": "order-outbox-cdc",
+        "publication": "debezium_orders_publication",
+        "slot": "debezium_orders_slot"
+      },
+      {
         "database": "store",
         "name": "postgres-cdc",
         "publication": "debezium_store_v2_publication",
@@ -649,6 +655,60 @@
       "SessionPort",
       "ShopDirectoryPort",
       "StorePort"
+    ]
+  },
+  "order-service": {
+    "aggregates": [
+      "Checkout"
+    ],
+    "branch": "develop",
+    "contract_events": [
+      "CheckoutPlaced",
+      "CheckoutRejected"
+    ],
+    "contract_events_missing": [
+      "CheckoutPlaced"
+    ],
+    "listeners": [
+      {
+        "active": true,
+        "class": "PlaceCheckoutConsumer",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/PlaceCheckoutConsumer.java",
+        "group": "order-place-checkout",
+        "topics": [
+          "PlaceCheckout"
+        ],
+        "transport": "kafka"
+      }
+    ],
+    "migrations": {
+      "latest": "V2__checkouts.sql",
+      "tables": [
+        {
+          "created_in": "V2__checkouts.sql",
+          "table": "checkouts"
+        },
+        {
+          "created_in": "V1__outbox_events.sql",
+          "table": "outbox_events"
+        }
+      ]
+    },
+    "outbound_clients": [
+      "OrderQuoteClient"
+    ],
+    "published_events": [
+      {
+        "event": "CheckoutRejected",
+        "files": [
+          "order-service/src/main/java/com/dotran/oms/order/application/event/CheckoutRejectedEvent.java"
+        ]
+      }
+    ],
+    "published_without_contract": [],
+    "rest": [],
+    "use_cases": [
+      "PlaceCheckoutUseCase"
     ]
   },
   "stores-service": {
