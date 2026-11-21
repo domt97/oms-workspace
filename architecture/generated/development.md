@@ -39,6 +39,7 @@ Local setup only: this lists what the stack defines so it can be found. Nothing 
 | Connector | Database | Slot | Publication |
 |---|---|---|---|
 | `inventory-outbox-cdc` | inventory | debezium_inventory_slot | debezium_inventory_publication |
+| `order-outbox-cdc` | orders | debezium_orders_slot | debezium_orders_publication |
 | `postgres-cdc` | store | debezium_store_v2_slot | debezium_store_v2_publication |
 
 ## LocalStack resources (`docker/infra/local`)
