@@ -1,7 +1,8 @@
 # ADR 0007 — Checkout placement: PlaceCheckout over Kafka, unlock by tombstone, confirm re-send
 
-Status: Accepted (2026-11-15). Not built: cart-service and order-service do not exist yet (Cart + Order MVP, roadmap
-phase 1). Rules: BR-CRT-01..06, BR-ORD-01..16, BR-STO-04/05/07/08, BR-FUL-01..03, BR-PRC-01/03, BR-PAY-01/03/04,
+Status: Accepted (2026-11-15), amended 2026-11-22 (*Amendments* below). Built in order-service: intake (pre-reserve
+checks, stored rejections) and placement with the stock saga, the reserve timeout and the confirm/release re-send. Not built: cart-service, `by-key/expire`, accept/reject, cancel,
+delivery (Cart + Order MVP, roadmap phase 1). Rules: BR-CRT-01..06, BR-ORD-01..16, BR-STO-04/05/07/08, BR-FUL-01..03, BR-PRC-01/03, BR-PAY-01/03/04,
 BR-MER-05. Flow: `flows/checkout-placement.md`; stock side: ADR 0006 and `flows/order-stock-reservation.md`.
 
 ## Context
@@ -12,7 +13,7 @@ The outcome is asynchronous in any case: inventory answers the reserve and confi
 Two failure modes drive this design:
 - a placement whose reply is lost or late must never leave the cart locked for ever, **and** unlocking must never let a
   late placement create orders for a cart the customer can edit again (that would duplicate orders on the next checkout);
-- a confirm without a reply (open question 54) must not leave an order stuck, and must not cancel an order whose
+- a confirm without a reply must not leave an order stuck, and must not cancel an order whose
   stock inventory did confirm.
 
 Alternatives considered: a synchronous `POST` from cart to order for the placement (simpler to follow, but locking the
@@ -80,12 +81,12 @@ clock:
 - a rejected or cancelled order gives its slot back on its stored `local_date`, with a guarded decrement **in the same
   transaction as its guarded status change**, so a redelivery cannot give a slot back twice.
 
-**Stock confirm (open question 54, Q42, BR-ORD-16).** After every order of a checkout is reserved, order-service sets
+**Stock confirm (Q42, BR-ORD-16).** After every order of a checkout is reserved, order-service sets
 them `PLACED` and sends `ConfirmStockReservation` (saga state `CONFIRM_SENT`). The reserve itself times out after
 **150 s** without a reply (above inventory's ≈ 105 s retry window for one command) → the checkout is rejected
 (`RESERVE_TIMEOUT`). With no confirm reply after 150 s, order-service **re-sends** the confirm (new `eventId`; inventory
 decides from its order header, ADR 0006), doubling the interval up to 10 minutes with no limit and alerting from the
-second re-send. It never cancels because a reply is missing. Obligation 3 of ADR 0006 is met by the **first** reply to
+third re-send (see *Amendments*). It never cancels because a reply is missing. Obligation 3 of ADR 0006 is met by the **first** reply to
 any copy: inventory's header makes later copies change no stock. A `StockReservationConfirmationFailed` cancels and
 releases the order **only while its saga state is `CONFIRM_SENT`**; a failure for a copy of a saga already confirmed or
 released changes nothing. A cancel that arrives while a confirm is in flight sets `release_pending` with a guarded
@@ -96,6 +97,22 @@ and the cancel sends the release itself. The cancel itself is a guarded status c
 'CANCELLED' WHERE status = :from`), in the same transaction as its `release_pending` update, and a confirmation failure releases only while `CONFIRM_SENT`, so a repeated cancel
 or a cancel after a failure sends nothing more. A duplicate release would still be harmless: inventory answers it from
 its order header (ADR 0006). The store sees the order only after `StockReservationConfirmed`.
+
+**Amendments (2026-11-22, placement built; decisions D1–D8 confirmed by the product owner 2026-11-21).**
+- *Complete reasons (D3):* a checkout is decided only when every order has a reserve reply or its 150 s deadline has
+  passed; then all RESERVED → placed, anything else → rejected with every reason. At the deadline every order still
+  waiting for its reserve is released too (inventory applies a release before the reserve, ADR 0006).
+- *Re-send:* the release is re-sent like the confirm (150 s doubling to 10 min, never given up); ERROR and the alert
+  metric from the **third** attempt. A reply counts by the order's state, not by which copy it answers (ADR 0006
+  obligation 4 as amended). A `StockReservationConfirmationFailed` cancels the order with reason `STOCK_NOT_CONFIRMED`
+  (D5); the checkout stays `PLACED`.
+- *Counters:* "`store_id` order" is Postgres's uuid order, which is the order of the uuid's text form (not Java's
+  `UUID.compareTo`). A cap ≤ 0 means no slot (D6); the day is the order quote's `localDate` (D8).
+- *Not yet:* `release_pending` comes with the customer cancel; until then no Release is sent while an order is
+  `CONFIRM_SENT`. The delivery fee stays null until delivery quotes exist (D2). `PlaceCheckout` stays off until
+  acceptance and cancel, delivery quotes, `by-key/expire` and cart-service are built (D1).
+- *Startup:* the reserve-timeout job does nothing for 150 s after the service starts, so replies queued while it was
+  down are read first.
 
 **Timeouts are database rows.** Reserve, confirm, accept (5 minutes, BR-ORD-08), booking retries and checkout expiry
 are due-time columns read by `@Scheduled` jobs with `SELECT … FOR UPDATE SKIP LOCKED LIMIT n` and a guarded `UPDATE …
@@ -116,7 +133,7 @@ registered; dead-letter topics are created by the consuming service (open questi
   unlocked, and a late placement can never produce orders for an unlocked cart.
 - order-service gains an internal endpoint (`by-key/expire`) that only cart-service may call; internal routes are not
   exposed publicly (`sa-multitenancy-security`).
-- A confirm can be re-sent many times; inventory is idempotent for it (ADR 0006, *Inventory's guarantee*). Because no
+- A confirm or a release can be re-sent many times; inventory is idempotent for both (ADR 0006). Because no
   release is sent while a confirm has no reply (obligation 3), a release never overtakes a confirm.
 - Stuck states are visible only through alerts (carts `CHECKING_OUT`; the saga state `CONFIRM_SENT` and the booking
   state `BOOKING_FAILED`, which are not order statuses of BR-ORD-06); the services need metrics before production.

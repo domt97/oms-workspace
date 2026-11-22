@@ -1,7 +1,7 @@
 # Flow: Order → stock reservation lifecycle
 
 Status: **inventory's side built** (ADR 0006): the use cases, the outbox replies published by the connector
-`inventory-outbox-cdc`, and the Kafka command consumers. order-service is not built: nothing sends the commands yet.
+`inventory-outbox-cdc`, and the Kafka command consumers. **order-service's side built** too: it sends the commands and consumes the five replies (`flows/checkout-placement.md`).
 Rules: BR-INV-02..05, 07, 08, 11, BR-CAT-04, BR-ORD-07, 09, 12, 14.
 
 ## Lifecycle of one reservation (one order line)
@@ -51,12 +51,12 @@ reply for the current state (BR-INV-07).
 | Release before Reserve (order timed out) | header created `CANCELLED` (tombstone); the late Reserve gets `Rejected{ORDER_CLOSED}`, nothing held |
 | Confirm before Reserve | `ConfirmationFailed{UNKNOWN_ORDER}` and a tombstone (`restock` unset); a repeated confirm answers `ORDER_CLOSED`, a later Reserve is rejected `ORDER_CLOSED`, the first release still sets `restock` |
 | Release before Confirm | RESERVED lines released, header `CANCELLED`; the late Confirm (also one replayed from a DLT) gets `ConfirmationFailed{ORDER_CLOSED}` |
-| Release sent before the Confirmed reply arrived, confirm already applied (reachable only if obligation 3 is relaxed; ADR 0007 keeps it) | with `restock`: lines `RETURNED`, stock back, `RETURN` movements; without: lines stay `CONFIRMED` (goods stay sold), header `CANCELLED`. How the saga treats the late `Confirmed`: open question 54 |
+| Release sent before the Confirmed reply arrived, confirm already applied (reachable only if obligation 3 is relaxed; ADR 0007 keeps it) | with `restock`: lines `RETURNED`, stock back, `RETURN` movements; without: lines stay `CONFIRMED` (goods stay sold), header `CANCELLED`. Unreachable with order-service today: it never sends a release while `CONFIRM_SENT` |
 | Old command replayed from a DLT | decided by the header and line states; an old `ReserveStock` is also `STALE_COMMAND` |
 
-order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives (for a confirm step see open question 54); a `StockReserved`
-for a closed saga is compensated; no release while a confirm has no reply (obligation 3; decided in ADR 0007: the confirm is re-sent until a reply, and a cancel in between waits as `release_pending`); replies to commands deduplicated by
-`(orderId, causationId, eventType)`, `StockReservationExpired` by `eventId`.
+order-service's obligations (ADR 0006): a saga that sent `ReserveStock` and was not rejected ends confirmed or released, also when no reply arrives (a confirm or release is re-sent until its reply); a `StockReserved`
+for a closed saga is compensated (met by the order's state: the closing transaction already sent the release); no release while a confirm has no reply (obligation 3; decided in ADR 0007: the confirm is re-sent until a reply, and a cancel in between will wait as `release_pending`); replies to commands deduplicated by
+the order's state, never by `causationId` (a re-sent command has a new `eventId`), `StockReservationExpired` by `eventId` (not consumed yet, open question 69).
 
 Audit note: a confirm that was applied and then cancelled with `restock` writes both a `SALE` and a `RETURN` movement
 for goods never handed over; sales reports must net them by `reservation_id`.
@@ -73,16 +73,16 @@ A reply can be lost when the connector's slot is dropped or recreated (open ques
 
 | Lost reply | Recovery |
 |------------|----------|
-| `StockReserved` / `StockReservationRejected` | the saga times out and releases (obligation 1), or re-sends the reserve (the duplicate answers the stored outcome) |
-| `StockReservationReleased` | inventory's state is already final; obligation 1 is met by the release; a re-send is optional and harmless |
+| `StockReserved` / `StockReservationRejected` | the saga times out after 150 s and releases (obligation 1); order-service does not re-send a reserve |
+| `StockReservationReleased` | inventory's state is already final; order-service re-sends the release until a reply (harmless: inventory answers it from the header) |
 | `StockReservationExpired` | a later confirm answers `NOT_RESERVED`; a release reports the line `EXPIRED` |
 | `StockReservationConfirmed` / `StockReservationConfirmationFailed` | re-send the confirm until a reply; a confirmation failure cancels and releases (ADR 0007, BR-ORD-16) |
 
 ## Duplicate commands (BR-INV-07)
 
 A duplicate changes no stock and publishes a reply again (new `eventId`, `causationId` = the duplicate command's
-`eventId`). Replies carry no "replayed" flag: order-service deduplicates by `(orderId, causationId, eventType)` and its
-saga state (ADR 0006).
+`eventId`). Replies carry no "replayed" flag: order-service deduplicates by the order's state (ADR 0006 obligation 4):
+a reply moves the order only out of the state its command put it in, so a repeated reply changes nothing.
 
 | Command | Header / lines found | Reply |
 |---------|----------------------|-------|
@@ -160,13 +160,13 @@ the command's `requestId`; log lines carry `orderId`). They hold no state: idemp
 Not checked: that the record key equals `orderId` (inventory's correctness does not depend on partition order).
 Jackson's lenient readings are accepted: a numeric `occurredAt` is epoch **seconds**, a `quantity` sent as the string
 `"5"` is 5. A command in a DLT gets no reply and is visible only as one ERROR line until the DLT tooling exists (open
-question 17); the saga's timeout covers it (ADR 0006; for a confirm step see open question 54).
+question 17); the saga's timeout covers a reserve; a confirm or release is re-sent with an alert from attempt 3 (ADR 0006, 0007).
 
 Listener sizing: 5 records per poll and one listener thread per topic per instance by default
 (`app.kafka.stock-commands.concurrency`); the reasoning and the pool rule are in inventory-service `CLAUDE.md`,
 production sizing is open question 30.
 
-Verified by hand on the local stack (2026-11-12, messages sent with `kafka-console-producer`, no order-service):
+Verified by hand on the local stack (2026-11-12, messages sent with `kafka-console-producer`, before order-service):
 reserve → duplicate → confirm → release with restock produced `StockReserved` ×2, `StockReservationConfirmed`,
 `StockReservationReleased` on their topics with the command's `requestId` in the `correlationContext` header; not enough
 stock → `StockReservationRejected`; bad JSON and a wrong `eventType` → the DLT at once; a confirm while the order header
@@ -191,4 +191,4 @@ Every result above is written as its reply to `outbox_events` in the same transa
 `OutboxEventPersistenceAdapter`): inserted with `id = eventId` and deleted at once; Debezium publishes it from the
 WAL. Published by `inventory-outbox-cdc`.
 
-Still to build: DLT alerting and replay (open questions 17, 40), and order-service itself.
+Still to build: DLT alerting and replay (open questions 17, 40).
