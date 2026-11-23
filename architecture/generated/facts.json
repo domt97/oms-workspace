@@ -659,16 +659,16 @@
   },
   "order-service": {
     "aggregates": [
-      "Checkout"
+      "Checkout",
+      "Order",
+      "OrderLine"
     ],
     "branch": "develop",
     "contract_events": [
       "CheckoutPlaced",
       "CheckoutRejected"
     ],
-    "contract_events_missing": [
-      "CheckoutPlaced"
-    ],
+    "contract_events_missing": [],
     "listeners": [
       {
         "active": true,
@@ -679,18 +679,84 @@
           "PlaceCheckout"
         ],
         "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "StockReplyConsumers",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/StockReplyConsumers.java",
+        "group": "order-stock-reserved",
+        "topics": [
+          "StockReserved"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "StockReplyConsumers",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/StockReplyConsumers.java",
+        "group": "order-stock-reservation-rejected",
+        "topics": [
+          "StockReservationRejected"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "StockReplyConsumers",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/StockReplyConsumers.java",
+        "group": "order-stock-reservation-confirmed",
+        "topics": [
+          "StockReservationConfirmed"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "StockReplyConsumers",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/StockReplyConsumers.java",
+        "group": "order-stock-reservation-confirmation-failed",
+        "topics": [
+          "StockReservationConfirmationFailed"
+        ],
+        "transport": "kafka"
+      },
+      {
+        "active": true,
+        "class": "StockReplyConsumers",
+        "file": "order-service/src/main/java/com/dotran/oms/order/infrastructure/message/StockReplyConsumers.java",
+        "group": "order-stock-reservation-released",
+        "topics": [
+          "StockReservationReleased"
+        ],
+        "transport": "kafka"
       }
     ],
     "migrations": {
-      "latest": "V2__checkouts.sql",
+      "latest": "V3__orders.sql",
       "tables": [
         {
           "created_in": "V2__checkouts.sql",
           "table": "checkouts"
         },
         {
+          "created_in": "V3__orders.sql",
+          "table": "order_lines"
+        },
+        {
+          "created_in": "V3__orders.sql",
+          "table": "order_transitions"
+        },
+        {
+          "created_in": "V3__orders.sql",
+          "table": "orders"
+        },
+        {
           "created_in": "V1__outbox_events.sql",
           "table": "outbox_events"
+        },
+        {
+          "created_in": "V3__orders.sql",
+          "table": "store_day_counters"
         }
       ]
     },
@@ -699,16 +765,43 @@
     ],
     "published_events": [
       {
+        "event": "CheckoutPlaced",
+        "files": [
+          "order-service/src/main/java/com/dotran/oms/order/application/event/CheckoutPlacedEvent.java"
+        ]
+      },
+      {
         "event": "CheckoutRejected",
         "files": [
           "order-service/src/main/java/com/dotran/oms/order/application/event/CheckoutRejectedEvent.java"
+        ]
+      },
+      {
+        "event": "ConfirmStockReservation",
+        "files": [
+          "order-service/src/main/java/com/dotran/oms/order/application/event/ConfirmStockReservationCommand.java"
+        ]
+      },
+      {
+        "event": "ReleaseStockReservation",
+        "files": [
+          "order-service/src/main/java/com/dotran/oms/order/application/event/ReleaseStockReservationCommand.java"
+        ]
+      },
+      {
+        "event": "ReserveStock",
+        "files": [
+          "order-service/src/main/java/com/dotran/oms/order/application/event/ReserveStockCommand.java"
         ]
       }
     ],
     "published_without_contract": [],
     "rest": [],
     "use_cases": [
-      "PlaceCheckoutUseCase"
+      "ExpireDueReservesUseCase",
+      "HandleStockReplyUseCase",
+      "PlaceCheckoutUseCase",
+      "ResendStockCommandsUseCase"
     ]
   },
   "stores-service": {
