@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "StockReservationRejected",
-  "description": "Reply (ADR 0006). Published by inventory-service through its outbox (aggregateType=StockReservation, key=orderId). Consumed by order-service, which deduplicates by (orderId, causationId, eventType) and saga state. Nothing was held. Either the whole order was refused (orderReason) or some lines were (reason per line). Never contains stock counts (BR-CAT-04). A rejection re-published for a duplicate reserve repeats the stored reasons.",
+  "description": "Reply (ADR 0006). Published by inventory-service through its outbox (aggregateType=StockReservation, key=orderId). Consumed by order-service, which deduplicates by the order's state: a reply moves the order only out of the state its command put it in, so a repeated, late or re-published reply changes nothing; causationId is logged, never compared (a re-sent command has a new eventId). Nothing was held. Either the whole order was refused (orderReason) or some lines were (reason per line). Never contains stock counts (BR-CAT-04). A rejection re-published for a duplicate reserve repeats the stored reasons.",
   "type": "object",
   "required": [
     "eventId",

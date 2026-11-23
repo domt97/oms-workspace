@@ -1,9 +1,9 @@
 # ADR 0006 — Stock commands over Kafka, replies from inventory's outbox
 
-Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); the command consumers (inventory-service `feature/stock-command-consumers`); order-service not built (see `flows/order-stock-reservation.md`). Obligation 3 is decided in ADR 0007 (re-send the confirm, never cancel for silence; not built).
+Status: Accepted (2026-11-05). Built in inventory: the use cases (inventory-service#39) and the outbox replies (inventory-service#40); the connector `inventory-outbox-cdc` (development#7); the command consumers (inventory-service `feature/stock-command-consumers`); order-service: the producer and the reply consumers (see `flows/checkout-placement.md`). Obligation 3 is decided in ADR 0007 (re-send the confirm, never cancel for silence) and built with it; obligations 2 and 4 amended 2026-11-22 (met by the order's state).
 
 ## Context
-order-service (not built) orchestrates the order saga and "other services execute commands and report back with
+order-service orchestrates the order saga and "other services execute commands and report back with
 events" (BR-ORD-12, Q6). inventory-service already has reserve / confirm / expire logic but no entry point, no release
 implementation and no way to publish anything. The alternative of synchronous internal REST calls was considered and
 rejected by the product owner (2026-11-05) in favour of messaging, so that order and inventory stay decoupled in time
@@ -35,14 +35,24 @@ and every step is durable on both sides.
 - **Obligations of order-service** (the saga owner), part of the contract:
   1. A saga that sent `ReserveStock` and did not get `StockReservationRejected` ends with a confirmed order or with
      `ReleaseStockReservation`, **including when no reply arrives** (command in a DLT, timeout); giving up means sending
-     a release, never just stopping (for a confirm step without a reply see open question 54). A confirmed order that is cancelled
+     a release, never just stopping (a confirm step without a reply is re-sent, obligation 3). A confirmed order that is cancelled
      later is released too (with `restock`, BR-ORD-09). After `StockReservationRejected` nothing is held and no release
      is needed (one is harmless).
   2. A `StockReserved` arriving for a saga that is already closed is compensated with a release, not ignored.
+     *Amended 2026-11-22:* met by the order's state, with no branch in the reply handler. A saga closes only by a
+     reject or a `ConfirmationFailed`, and both send a release for every order still holding or still awaiting its
+     reserve (`RELEASE_SENT`) in the same transaction; the release is re-sent until `StockReservationReleased`.
+     inventory applies a release before or after the reserve (tombstone), so a late `StockReserved` finds the order in
+     `RELEASE_SENT` or `RELEASED` and changes nothing.
   3. No release is sent while a sent `ConfirmStockReservation` has no reply yet. ADR 0007 resolves a lost reply: the
      confirm is re-sent until a reply arrives (the first reply to any copy counts).
-  4. Replies to commands are deduplicated by `(orderId, causationId, eventType)` and the saga state, not by `eventId` (a
-     re-published reply has a new `eventId`). `StockReservationExpired` has no command (`causationId` null) and is
+  4. Replies to commands are deduplicated **by the order's state**, not by `eventId` (a re-published reply has a new
+     `eventId`) and not by `causationId` (*amended 2026-11-22*: a re-sent command has a new `eventId`, so a reply to an
+     earlier copy would fail a causationId check; `causationId` is only logged). Each reply moves the order only out of
+     the state its command put it in, and the order has left that state before any later command is sent, so a
+     repeated, late or changed reply changes nothing. For each command type inventory answers a later copy from the
+     order header; the one change is that a confirm after a release answers `ConfirmationFailed{ORDER_CLOSED}`, which
+     then finds the order no longer `CONFIRM_SENT`. `StockReservationExpired` has no command (`causationId` null) and is
      never re-published: deduplicate it by `eventId`. An order may get several, each covering some of its lines.
   5. `restock` on a release follows BR-ORD-09.
 - inventory rejects a `ReserveStock` whose `occurredAt` is older than the hold TTL (`STALE_COMMAND`, BR-INV-11), with a
@@ -58,8 +68,8 @@ and every step is durable on both sides.
 ## Consequences
 - Checkout latency adds two outbox → Debezium hops (≈ 0.5–2 s estimated); order-service must treat placement as
   asynchronous.
-- A command in a DLT gets no reply: the saga notices by timeout and releases (obligation 1; for a confirm step see open
-  question 54); the hold TTL is the last safety net.
+- A command in a DLT gets no reply: the saga notices by timeout and releases (obligation 1; a confirm or release is re-sent
+  until its reply); the hold TTL is the last safety net.
 - Each producing service runs its own connector and replication slot; a stopped connector keeps WAL on that database.
 - System rule 8 now covers commands too: topic = message type, unique across services, key = aggregate id.
 - Kafka has no ACLs locally; in production only order-service may write the command topics.

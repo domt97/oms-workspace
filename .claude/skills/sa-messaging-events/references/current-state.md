@@ -25,7 +25,7 @@ open-question number is not yet in `architecture/open-questions.md`.
 ## Known gaps
 - Kafka DLT topics have no alerting and no replay tool (open questions 17, 40); no DLQ on SQS.
 - Both outboxes are always empty: a lost or recreated replication slot loses the gap's events for good (no resync tool, open question 40; runbooks in `development` `docs/connectors.md`).
-- The stock command topics have no producer yet (order-service is not built); a command in a DLT gets no reply.
+- The stock commands are produced by order-service's outbox (`order-outbox-cdc`); a command in a DLT gets no reply (the reserve times out, a confirm or release is re-sent with an alert).
 - `ProductCreatedEvent` DTO duplicated in producer and consumer; no Schema Registry subject although Schema Registry runs locally.
 - Consumer group name `product-consumer` is generic.
 - Working example of the failure classes of rule 5: inventory-service `KafkaErrorHandlingConfig` (`setBackOffFunction` for connection failures).
