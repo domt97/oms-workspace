@@ -13,25 +13,43 @@
 | Transport | Topic / queue | Group | Class | Active |
 |---|---|---|---|---|
 | kafka | `PlaceCheckout` | order-place-checkout | `PlaceCheckoutConsumer` | yes |
+| kafka | `StockReserved` | order-stock-reserved | `StockReplyConsumers` | yes |
+| kafka | `StockReservationRejected` | order-stock-reservation-rejected | `StockReplyConsumers` | yes |
+| kafka | `StockReservationConfirmed` | order-stock-reservation-confirmed | `StockReplyConsumers` | yes |
+| kafka | `StockReservationConfirmationFailed` | order-stock-reservation-confirmation-failed | `StockReplyConsumers` | yes |
+| kafka | `StockReservationReleased` | order-stock-reservation-released | `StockReplyConsumers` | yes |
 
 ## Published events (outbox `eventType`)
 
+- `CheckoutPlaced` — order-service/src/main/java/com/dotran/oms/order/application/event/CheckoutPlacedEvent.java
 - `CheckoutRejected` — order-service/src/main/java/com/dotran/oms/order/application/event/CheckoutRejectedEvent.java
+- `ConfirmStockReservation` — order-service/src/main/java/com/dotran/oms/order/application/event/ConfirmStockReservationCommand.java
+- `ReleaseStockReservation` — order-service/src/main/java/com/dotran/oms/order/application/event/ReleaseStockReservationCommand.java
+- `ReserveStock` — order-service/src/main/java/com/dotran/oms/order/application/event/ReserveStockCommand.java
 
-> **Contract check failed.** `architecture/contracts/events/` says this service publishes `CheckoutPlaced`, but no such event type was found in its code. Either the code does not publish it, or `scripts/extract_facts.py` does not recognise how it is declared: do not trust this list until that is settled.
+Contract check: all 2 events that `architecture/contracts/events/` attributes to this service were found.
 
-## Database tables (latest migration: `V2__checkouts.sql`)
+## Database tables (latest migration: `V3__orders.sql`)
 
 - `checkouts` (created in V2__checkouts.sql)
+- `order_lines` (created in V3__orders.sql)
+- `order_transitions` (created in V3__orders.sql)
+- `orders` (created in V3__orders.sql)
 - `outbox_events` (created in V1__outbox_events.sql)
+- `store_day_counters` (created in V3__orders.sql)
 
 ## Aggregates / domain models
 
 - `Checkout`
+- `Order`
+- `OrderLine`
 
 ## Use cases (inbound ports)
 
+- `ExpireDueReservesUseCase`
+- `HandleStockReplyUseCase`
 - `PlaceCheckoutUseCase`
+- `ResendStockCommandsUseCase`
 
 ## Outbound clients (ports to other services)
 
